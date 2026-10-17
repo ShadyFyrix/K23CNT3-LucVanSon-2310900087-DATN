@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul 2>&1
 title EXAMGUARD AI - HE THONG KHOI CHAY TOAN DIEN
 color 0B
 
@@ -9,7 +8,7 @@ echo       Sinh vien: Luc Van Son - MSV: 2310900087 - Lop: K23CNT3
 echo ==============================================================================
 echo.
 
-set "ROOT_DIR=%~dp0"
+set ROOT_DIR=%~dp0
 cd /d "%ROOT_DIR%"
 
 echo [0/3] Tu dong giai phong Port 3011 va Port 8000 (Chong xung dot EADDRINUSE)...
@@ -40,7 +39,7 @@ echo.
 cd /d "%ROOT_DIR%"
 
 echo ==============================================================================
-echo  🎉 HE THONG EXAMGUARD AI DA DUOC KHOI CHAY!
+echo  [SUCCESS] HE THONG EXAMGUARD AI DA DUOC KHOI CHAY!
 echo  - Frontend Web and Backend: http://localhost:3011
 echo  - Python Face AI Service:   http://127.0.0.1:8000
 echo.
