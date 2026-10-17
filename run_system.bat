@@ -13,19 +13,19 @@ set "ROOT_DIR=%~dp0"
 cd /d "%ROOT_DIR%"
 
 echo [1/3] Kiem tra ket noi MongoDB (Port 27017)...
-powershell -NoProfile -Command "try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1', 27017); $client.Close(); Write-Host '  -> MongoDB dang hoat dong tot (Port 27017).' -ForegroundColor Green } catch { Write-Host '  [!] CANH BAO: Chua ket noi duoc MongoDB tai port 27017. Vui long bat MongoDB service truoc khi chay!' -ForegroundColor Yellow }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1', 27017); $client.Close(); Write-Host '  [OK] MongoDB dang hoat dong tot (Port 27017).' -ForegroundColor Green } catch { Write-Host '  [!] CANH BAO: Chua ket noi duoc MongoDB tai port 27017. Vui long bat MongoDB service truoc khi chay!' -ForegroundColor Yellow }"
 echo.
 
 echo [2/3] Khoi chay Python Face AI Microservice (Port 8000)...
 cd /d "%ROOT_DIR%examguard-ai"
-start "ExamGuard - Python Face AI Microservice (Port 8000)" cmd /k "title Face AI Microservice (Port 8000) && color 0D && echo Dang khoi dong Python FastAPI Face AI... && python main.py"
+start "Face AI Microservice (Port 8000)" cmd /c "title Face AI Microservice (Port 8000) && color 0D && echo Dang khoi dong Python FastAPI Face AI... && python main.py"
 ping 127.0.0.1 -n 3 >nul 2>&1
 echo   [OK] Da gui lenh khoi chay Face AI Microservice (Port 8000).
 echo.
 
 echo [3/3] Khoi chay ExamGuard Core Server (Port 3011)...
 cd /d "%ROOT_DIR%examguard-core"
-start "ExamGuard - Core Server and Frontend (Port 3011)" cmd /k "title ExamGuard Core Web (Port 3011) && color 0A && echo Dang khoi dong ExamGuard Core... && node server/server.js"
+start "ExamGuard Core Web (Port 3011)" cmd /c "title ExamGuard Core Web (Port 3011) && color 0A && echo Dang khoi dong ExamGuard Core... && node server/server.js"
 ping 127.0.0.1 -n 4 >nul 2>&1
 echo   [OK] Da gui lenh khoi chay ExamGuard Core Server (Port 3011).
 echo.
@@ -47,5 +47,11 @@ echo Dang tu dong mo trinh duyet toi he thong sau 2 giay...
 ping 127.0.0.1 -n 3 >nul 2>&1
 start http://localhost:3011
 echo.
-echo Nhan phim bat ky de dong cua so khoi chay nay (cac server van tiep tuc chay).
+echo ==============================================================================
+echo  [CHU Y] Nhan phim bat ky de DUNG HE THONG va DONG HET CAC TAB TERMINAL...
+echo ==============================================================================
 pause >nul
+echo.
+echo Dang tat he thong va dong tat ca cac cua so/tab terminal...
+call "%ROOT_DIR%stop_system.bat"
+exit
