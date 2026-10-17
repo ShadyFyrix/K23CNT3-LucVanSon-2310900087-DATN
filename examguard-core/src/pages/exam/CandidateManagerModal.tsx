@@ -39,12 +39,24 @@ interface CandidateManagerModalProps {
 
 interface ExamStudentItem {
   _id: string;
-  sessionId: string;
+  sessionId?: string;
+  session?: string;
   candidateCode: string;
   seatRow: number;
   seatCol: number;
   status: string;
   score?: number;
+  student?: {
+    _id: string;
+    fullName: string;
+    studentCode: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    faceImage?: string;
+    isFaceKyc?: boolean;
+    classId?: { name: string };
+  };
   studentId?: {
     _id: string;
     fullName: string;
@@ -145,7 +157,7 @@ export function CandidateManagerModal({
 
   // Lọc thí sinh hiển thị
   const filteredCandidates = candidates.filter(c => {
-    const student = c.studentId;
+    const student = c.student || c.studentId;
     const nameMatch = student?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
     const codeMatch = student?.studentCode?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
     const sbdMatch = c.candidateCode?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
@@ -160,7 +172,7 @@ export function CandidateManagerModal({
 
   // Thống kê KYC
   const totalCount = candidates.length;
-  const kycCount = candidates.filter(c => c.studentId?.isFaceKyc).length;
+  const kycCount = candidates.filter(c => (c.student || c.studentId)?.isFaceKyc).length;
   const notKycCount = totalCount - kycCount;
 
   // Xử lý lưu inline SBD
@@ -243,7 +255,8 @@ export function CandidateManagerModal({
 
   // Xóa thí sinh khỏi ca thi
   const handleRemoveStudent = async (item: ExamStudentItem) => {
-    const studentName = item.studentId?.fullName || item.candidateCode;
+    const student = item.student || item.studentId;
+    const studentName = student?.fullName || item.candidateCode;
     if (!window.confirm(`Bạn có chắc chắn muốn xóa thí sinh ${studentName} (${item.candidateCode}) khỏi ca thi này?`)) {
       return;
     }
@@ -260,7 +273,7 @@ export function CandidateManagerModal({
   };
 
   // Thí sinh chưa có trong ca thi (để chọn thêm)
-  const enrolledStudentIds = new Set(candidates.map(c => c.studentId?._id));
+  const enrolledStudentIds = new Set(candidates.map(c => (c.student || c.studentId)?._id));
   const availableStudentsToAdd = allStudents
     .filter(st => !enrolledStudentIds.has(st._id))
     .filter(st => {
@@ -655,7 +668,7 @@ export function CandidateManagerModal({
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {filteredCandidates.map((item, idx) => {
-                    const student = item.studentId;
+                    const student = item.student || item.studentId;
                     const isEditing = editingId === item._id;
                     const isKyc = !!student?.isFaceKyc;
 
@@ -844,22 +857,25 @@ export function CandidateManagerModal({
       </div>
 
       {/* Face Registration Modal Pop-up */}
-      {kycCandidate && (
-        <FaceRegistrationModal
-          isOpen={!!kycCandidate}
-          onClose={() => setKycCandidate(null)}
-          user={{
-            _id: kycCandidate.studentId?._id,
-            employeeId: kycCandidate.studentId?.studentCode,
-            fullName: kycCandidate.studentId?.fullName,
-            department: kycCandidate.studentId?.classId?.name || 'Thí sinh ca thi'
-          }}
-          onSuccess={() => {
-            fetchSessionDetails();
-            toast.success(`Đã cập nhật sinh trắc học khuôn mặt cho ${kycCandidate.studentId?.fullName}!`);
-          }}
-        />
-      )}
+      {kycCandidate && (() => {
+        const student = kycCandidate.student || kycCandidate.studentId;
+        return (
+          <FaceRegistrationModal
+            isOpen={!!kycCandidate}
+            onClose={() => setKycCandidate(null)}
+            user={{
+              _id: student?._id,
+              employeeId: student?.studentCode,
+              fullName: student?.fullName,
+              department: student?.classId?.name || 'Thí sinh ca thi'
+            }}
+            onSuccess={() => {
+              fetchSessionDetails();
+              toast.success(`Đã cập nhật sinh trắc học khuôn mặt cho ${student?.fullName}!`);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
