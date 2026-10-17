@@ -30,7 +30,11 @@ import {
   FileCode,
   Info,
   ExternalLink,
-  RotateCcw
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Monitor,
+  Maximize2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -42,6 +46,7 @@ interface ConfiguredQuestion {
   options: string[];
   selectionMode: 'SINGLE' | 'MULTIPLE' | 'ALTERNATIVE';
   correctAnswers: number[]; // [0] for A, [0, 2] for A and C
+  prompt?: string;
   minWords?: number;
   explanation?: string;
 }
@@ -107,7 +112,8 @@ export default function ExamPapers() {
   // Danh sách các câu hỏi đã cấu hình cho đề thi
   const [configuredQuestions, setConfiguredQuestions] = useState<ConfiguredQuestion[]>([]);
   const [rawQuickKeyInput, setRawQuickKeyInput] = useState<string>('');
-  const [previewTab, setPreviewTab] = useState<'MATRIX' | 'CANDIDATE_PREVIEW'>('MATRIX');
+  const [previewTab, setPreviewTab] = useState<'FILE' | 'FORMATTED' | 'CANDIDATE'>('FORMATTED');
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
   const [filterQuestionType, setFilterQuestionType] = useState<'ALL' | 'MCQ' | 'ESSAY' | 'MULTI_CORRECT'>('ALL');
 
   // Lấy danh sách đề thi từ server
@@ -211,7 +217,8 @@ export default function ExamPapers() {
     setFileName('');
     setFileSize(0);
     setRawQuickKeyInput('');
-    setPreviewTab('MATRIX');
+    setPreviewTab('FORMATTED');
+    setPreviewZoom(100);
     setParsedExamInfo(null);
     if (courses.length > 0 && !selectedCourseId) {
       setSelectedCourseId(courses[0]._id);
@@ -807,122 +814,584 @@ export default function ExamPapers() {
 
       {/* ── MODAL SOẠN ĐỀ THI MỚI (CHUYÊN NGHIỆP: HỖ TRỢ TRẮC NGHIỆM, TỰ LUẬN & ĐA ĐÁP ÁN) ── */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <form
             onSubmit={handleCreatePaper}
-            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl animate-in zoom-in-95"
+            className="bg-slate-900 border border-slate-800 rounded-3xl w-[98vw] max-w-[1720px] h-[95vh] flex flex-col p-4 sm:p-5 shadow-2xl animate-in zoom-in-95"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 shrink-0">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-bold">
-                  <Edit3 className="w-4 h-4" />
+            {/* Header: Title & Studio Badges */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-cyan-500/20">
+                  <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Soạn Đề Thi Mới (Exam Paper Builder)</h3>
-                  <p className="text-[11px] text-slate-400">Hỗ trợ đề thi thuần trắc nghiệm, đề thi tự luận và đề thi hỗn hợp đa đáp án</p>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-bold text-white">Assessment Studio & Dual-View Builder</h3>
+                    <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                      <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+                      <span>Live Sync Preview</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Xem trước đề thi trực quan bên trái • Cấu hình ma trận đáp án và phân bổ điểm số bên phải</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="p-2 text-slate-400 hover:text-white rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* TAB SELECTOR: Phương Thức Soạn Đề */}
-            <div className="flex items-center space-x-2 p-1 bg-slate-950 rounded-2xl border border-slate-800 mt-3 text-xs shrink-0">
-              <button
-                type="button"
-                onClick={() => setCreateMode('FILE_ATTACHED')}
-                className={`flex-1 py-2.5 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
-                  createMode === 'FILE_ATTACHED'
-                    ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/20'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                <span>1. Đính Kèm File Đề Thi & Tạo Phiếu Trả Lời (Khuyên dùng)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCreateMode('STRUCTURED')}
-                className={`flex-1 py-2.5 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
-                  createMode === 'STRUCTURED'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>2. Nhập Câu Hỏi Từng Câu Trực Tiếp (Quiz Bank)</span>
-              </button>
-            </div>
-
-            {/* Body Form */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar my-3 space-y-4 pr-1 text-xs">
+            {/* BODY SPLIT-SCREEN (2 CỘT): TRÁI = LIVE PREVIEW ĐỀ THI, PHẢI = CẤU HÌNH & MA TRẬN ĐÁP ÁN */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden min-h-0 my-3">
               
-              {/* KHỐI 1: THÔNG TIN CƠ BẢN CỦA ĐỀ THI */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
-                <div className="sm:col-span-2">
-                  <label className="text-slate-400 block mb-1 font-medium">Tiêu đề đề thi:</label>
-                  <input
-                    type="text"
-                    placeholder="VD: Kiểm tra Kết thúc Học phần Kỹ thuật Lập trình C..."
-                    value={newTitle}
-                    onChange={e => setNewTitle(e.target.value)}
-                    required
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 font-medium focus:border-cyan-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-medium">Mã đề thi:</label>
-                  <input
-                    type="text"
-                    value={newCode}
-                    onChange={e => setNewCode(e.target.value)}
-                    required
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-cyan-300 uppercase font-mono font-bold focus:border-cyan-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-medium">Thời gian thi (phút):</label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="300"
-                    value={newDuration}
-                    onChange={e => setNewDuration(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 font-bold focus:border-cyan-500 focus:outline-none"
-                  />
+              {/* ── CỘT TRÁI (COL 1-7): LIVE PREVIEW ĐỀ THI ── */}
+              <div className="lg:col-span-6 xl:col-span-7 flex flex-col bg-slate-950/90 border border-slate-800 rounded-2xl overflow-hidden shadow-inner min-h-0">
+                {/* Thanh công cụ xem trước (Preview Toolbar) */}
+                <div className="p-2.5 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  {/* Các Tab xem trước */}
+                  <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('FORMATTED')}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+                        previewTab === 'FORMATTED'
+                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>Đề Thi Chi Tiết</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('FILE')}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+                        previewTab === 'FILE'
+                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Tệp Gốc</span>
+                      {fileUrl && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5"></span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('CANDIDATE')}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+                        previewTab === 'CANDIDATE'
+                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Monitor className="w-3.5 h-3.5 text-indigo-300" />
+                      <span>Thí Sinh Thấy</span>
+                    </button>
+                  </div>
+
+                  {/* Nhóm điều khiển Zoom & Thao tác */}
+                  <div className="flex items-center space-x-1.5 text-xs text-slate-400">
+                    <button
+                      type="button"
+                      title="Thu nhỏ"
+                      onClick={() => setPreviewZoom(z => Math.max(60, z - 10))}
+                      className="p-1.5 hover:text-white bg-slate-950 hover:bg-slate-800 rounded-lg border border-slate-800 transition"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Đặt lại 100%"
+                      onClick={() => setPreviewZoom(100)}
+                      className="px-2 py-1 font-mono font-bold text-[11px] bg-slate-950 hover:bg-slate-800 rounded-lg border border-slate-800 text-cyan-300 transition"
+                    >
+                      {previewZoom}%
+                    </button>
+                    <button
+                      type="button"
+                      title="Phóng to"
+                      onClick={() => setPreviewZoom(z => Math.min(160, z + 10))}
+                      className="p-1.5 hover:text-white bg-slate-950 hover:bg-slate-800 rounded-lg border border-slate-800 transition"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+
+                    {fileUrl && (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Mở tệp đề gốc trong tab mới"
+                        className="p-1.5 text-cyan-400 hover:text-cyan-300 bg-slate-950 hover:bg-slate-800 rounded-lg border border-slate-800 transition"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
 
-                <div className="sm:col-span-3">
-                  <label className="text-slate-400 block mb-1 font-medium">Học phần / Môn học:</label>
-                  <select
-                    value={selectedCourseId}
-                    onChange={e => setSelectedCourseId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 font-medium focus:border-cyan-500 focus:outline-none"
-                  >
-                    {courses.map(c => (
-                      <option key={c._id} value={c._id}>
-                        {c.courseCode ? `[${c.courseCode}] ` : ''}{c.name}
-                      </option>
-                    ))}
-                    {courses.length === 0 && (
-                      <option value="">Kỹ thuật lập trình C (Mặc định)</option>
+                {/* Vùng nội dung xem trước cuộn độc lập */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-5 min-h-0 bg-slate-950/60">
+                  <div style={{ zoom: `${previewZoom}%` }} className="transition-all duration-200">
+                    {/* TAB 1: ĐỀ THI CHI TIẾT (CHUẨN HỌC THUẬT) */}
+                    {previewTab === 'FORMATTED' && (
+                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-7 text-slate-100 shadow-xl space-y-6 max-w-4xl mx-auto">
+                        {/* Header đề thi học thuật */}
+                        <div className="grid grid-cols-2 gap-4 pb-4 border-b-2 border-slate-700/80">
+                          <div className="text-center font-serif space-y-0.5">
+                            <p className="text-[10px] uppercase tracking-wider text-slate-400">TRƯỜNG ĐẠI HỌC CÔNG NGHỆ</p>
+                            <p className="text-xs font-bold uppercase text-slate-200">KHOA CÔNG NGHỆ THÔNG TIN</p>
+                            <div className="w-16 h-0.5 bg-slate-600 mx-auto mt-1"></div>
+                          </div>
+                          <div className="text-center font-serif space-y-0.5">
+                            <p className="text-xs font-bold uppercase text-cyan-400">ĐỀ THI KẾT THÚC HỌC PHẦN</p>
+                            <p className="text-[11px] text-slate-300">Năm học 2025 - 2026</p>
+                            <p className="text-[10px] text-slate-400 italic">
+                              (Đề thi gồm {configuredQuestions.length} câu • {newTotalScore} điểm)
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Metadata Box */}
+                        <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 text-xs grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <span className="text-slate-400">Học phần: </span>
+                            <span className="font-bold text-white">
+                              {courses.find(c => c._id === selectedCourseId)?.name || 'Kỹ thuật lập trình C'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Mã đề thi: </span>
+                            <span className="font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/80">
+                              {newCode || 'CHƯA ĐẶT'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Thời gian làm bài: </span>
+                            <span className="font-bold text-white">{newDuration} phút</span>
+                            <span className="text-[10px] text-slate-500 ml-1">(Không kể phát đề)</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Hình thức: </span>
+                            <span className="font-bold text-indigo-300">
+                              {configuredQuestions.some(q => q.type === 'ESSAY')
+                                ? configuredQuestions.some(q => q.type === 'MULTIPLE_CHOICE')
+                                  ? 'Hỗn hợp (Trắc nghiệm + Tự luận)'
+                                  : '100% Tự luận'
+                                : '100% Trắc nghiệm'}
+                            </span>
+                          </div>
+                          <div className="sm:col-span-2 text-[11px] text-slate-400 italic pt-1 border-t border-slate-800/60 flex items-center space-x-1.5">
+                            <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span>Thí sinh KHÔNG được sử dụng tài liệu. Cán bộ coi thi không giải thích gì thêm.</span>
+                          </div>
+                        </div>
+
+                        {/* Danh sách câu hỏi */}
+                        {configuredQuestions.length === 0 ? (
+                          <div className="text-center py-12 space-y-3">
+                            <BookOpen className="w-12 h-12 text-slate-600 mx-auto" />
+                            <p className="text-sm font-semibold text-slate-400">Chưa có câu hỏi nào trong đề thi</p>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto">
+                              Hãy tải tệp đề thi (Word / PDF) hoặc cấu hình số lượng câu hỏi trắc nghiệm & tự luận ở cột bên phải.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-6">
+                            {/* PHẦN I: TRẮC NGHIỆM */}
+                            {configuredQuestions.some(q => q.type === 'MULTIPLE_CHOICE') && (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center space-x-2">
+                                    <CheckSquare className="w-4 h-4 text-cyan-400" />
+                                    <span>
+                                      Phần I. Trắc Nghiệm (
+                                      {configuredQuestions.filter(q => q.type === 'MULTIPLE_CHOICE').length} câu -{' '}
+                                      {Math.round(
+                                        configuredQuestions
+                                          .filter(q => q.type === 'MULTIPLE_CHOICE')
+                                          .reduce((sum, q) => sum + (Number(q.score) || 0), 0) * 100
+                                      ) / 100}đ
+                                      )
+                                    </span>
+                                  </h4>
+                                  <span className="text-[10px] text-emerald-400 font-medium">
+                                    ✓ Màu xanh: Đáp án đúng chuẩn
+                                  </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {configuredQuestions
+                                    .filter(q => q.type === 'MULTIPLE_CHOICE')
+                                    .map(q => {
+                                      return (
+                                        <div
+                                          key={q.stt}
+                                          className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition space-y-2.5"
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="text-xs font-medium text-slate-200 leading-relaxed">
+                                              <span className="font-bold text-cyan-400 mr-1.5 font-mono">
+                                                Câu {q.stt}:
+                                              </span>
+                                              <span>
+                                                {q.prompt || `Chọn phương án đúng cho câu hỏi số ${q.stt}:`}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center space-x-1.5 shrink-0">
+                                              {q.selectionMode === 'MULTIPLE' && (
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                                                  Nhiều đáp án đúng
+                                                </span>
+                                              )}
+                                              <span className="text-[10px] font-mono text-cyan-300 font-bold bg-cyan-950/90 px-2 py-0.5 rounded border border-cyan-800/60">
+                                                {q.score}đ
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Options Grid */}
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                            {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
+                                              const isCorrect = q.correctAnswers?.includes(optIdx);
+                                              return (
+                                                <div
+                                                  key={letter}
+                                                  className={`flex items-start space-x-2 p-2 rounded-lg text-xs transition ${
+                                                    isCorrect
+                                                      ? 'bg-emerald-950/40 border border-emerald-500/60 text-emerald-200 shadow-sm'
+                                                      : 'bg-slate-900/60 border border-slate-800/90 text-slate-300'
+                                                  }`}
+                                                >
+                                                  <span
+                                                    className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                                      isCorrect
+                                                        ? 'bg-emerald-500 text-slate-950 shadow'
+                                                        : 'bg-slate-800 text-slate-400'
+                                                    }`}
+                                                  >
+                                                    {letter}
+                                                  </span>
+                                                  <div className="flex-1 min-w-0">
+                                                    <span className="break-words">
+                                                      {q.options && q.options[optIdx] && q.options[optIdx] !== letter
+                                                        ? q.options[optIdx]
+                                                        : `Phương án ${letter}`}
+                                                    </span>
+                                                    {isCorrect && (
+                                                      <span className="ml-2 text-[10px] text-emerald-400 font-semibold inline-flex items-center space-x-0.5">
+                                                        <Check className="w-3 h-3" />
+                                                        <span>(Đáp án đúng)</span>
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* PHẦN II: TỰ LUẬN */}
+                            {configuredQuestions.some(q => q.type === 'ESSAY') && (
+                              <div className="space-y-3 pt-2">
+                                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-2">
+                                    <AlignLeft className="w-4 h-4 text-amber-400" />
+                                    <span>
+                                      Phần II. Tự Luận (
+                                      {configuredQuestions.filter(q => q.type === 'ESSAY').length} câu -{' '}
+                                      {Math.round(
+                                        configuredQuestions
+                                          .filter(q => q.type === 'ESSAY')
+                                          .reduce((sum, q) => sum + (Number(q.score) || 0), 0) * 100
+                                      ) / 100}đ
+                                      )
+                                    </span>
+                                  </h4>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {configuredQuestions
+                                    .filter(q => q.type === 'ESSAY')
+                                    .map(q => {
+                                      return (
+                                        <div
+                                          key={q.stt}
+                                          className="p-3.5 rounded-xl bg-slate-950/60 border border-amber-500/20 hover:border-amber-500/40 transition space-y-2.5"
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="text-xs font-medium text-slate-200 leading-relaxed">
+                                              <span className="font-bold text-amber-400 mr-1.5 font-mono">
+                                                Câu {q.stt} (Tự luận):
+                                              </span>
+                                              <span>
+                                                {q.prompt || `Yêu cầu tự luận cho câu số ${q.stt}: Trình bày chi tiết lý thuyết hoặc thuật toán theo yêu cầu đề bài.`}
+                                              </span>
+                                            </div>
+                                            <span className="text-[10px] font-mono text-amber-300 font-bold bg-amber-950/90 px-2 py-0.5 rounded border border-amber-500/40 shrink-0">
+                                              {q.score}đ
+                                            </span>
+                                          </div>
+                                          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 italic">
+                                            <span>📝 Thí sinh trả lời trực tiếp hoặc đính kèm ảnh bài làm. Tiêu chuẩn: tối thiểu {q.minWords || 50} từ.</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Chân đề thi học thuật */}
+                            <div className="text-center pt-6 pb-2 border-t border-slate-800 space-y-1">
+                              <p className="font-bold tracking-widest text-slate-400 text-xs">── HẾT ──</p>
+                              <p className="text-[11px] text-slate-500 italic">Cán bộ coi thi không giải thích gì thêm.</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-medium">Thang điểm tổng:</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={newTotalScore}
-                    onChange={e => setNewTotalScore(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-emerald-400 font-bold focus:border-cyan-500 focus:outline-none"
-                  />
+
+                    {/* TAB 2: TỆP GỐC ĐÃ TẢI LÊN */}
+                    {previewTab === 'FILE' && (
+                      <div className="h-full flex flex-col justify-center">
+                        {fileUrl ? (
+                          fileName.toLowerCase().endsWith('.pdf') ? (
+                            <iframe
+                              src={`${fileUrl}#toolbar=0`}
+                              title="File Preview PDF"
+                              className="w-full h-[72vh] rounded-xl border border-slate-800 bg-slate-900"
+                            />
+                          ) : fileName.toLowerCase().match(/\.(png|jpe?g|webp)$/) ? (
+                            <div className="flex items-center justify-center p-4 bg-slate-950 rounded-xl border border-slate-800">
+                              <img
+                                src={fileUrl}
+                                alt="Exam Document Preview"
+                                className="max-w-full max-h-[72vh] object-contain rounded-lg shadow-2xl"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 max-w-lg mx-auto">
+                              <FileText className="w-16 h-16 text-cyan-400 mx-auto" />
+                              <div>
+                                <h4 className="font-bold text-white text-base">{fileName}</h4>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Tệp Word (.docx) hoặc tài liệu văn bản • Dung lượng: {(fileSize / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                              <p className="text-xs text-slate-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                                ExamGuard AI đã trích xuất toàn bộ câu hỏi và đáp án từ tệp này. Bạn có thể xem đề định dạng ở tab <b>"Đề Thi Chi Tiết"</b> hoặc tải tệp gốc về máy.
+                              </p>
+                              <div className="flex items-center justify-center space-x-3 pt-2">
+                                <a
+                                  href={fileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center space-x-2 transition"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  <span>Mở tệp gốc</span>
+                                </a>
+                                <a
+                                  href={fileUrl}
+                                  download={fileName}
+                                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs flex items-center space-x-2 transition"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  <span>Tải về</span>
+                                </a>
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center py-16 space-y-3 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800 p-8">
+                            <Upload className="w-12 h-12 text-slate-600 mx-auto" />
+                            <h4 className="text-sm font-bold text-slate-300">Chưa có tệp đề thi nào được tải lên</h4>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto">
+                              Kéo thả hoặc tải lên tệp PDF, Word (.docx) ở khu vực cấu hình bên phải để xem trực tiếp tại đây.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB 3: THÍ SINH NHÌN THẤY (CANDIDATE SIMULATOR) */}
+                    {previewTab === 'CANDIDATE' && (
+                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-7 text-slate-100 shadow-xl space-y-5 max-w-3xl mx-auto">
+                        <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center space-x-3 text-xs text-indigo-200">
+                          <Monitor className="w-5 h-5 text-indigo-400 shrink-0" />
+                          <div>
+                            <span className="font-bold">Mô phỏng góc nhìn của Thí sinh: </span>
+                            <span>Các đáp án đúng được bảo mật tuyệt đối, thí sinh sẽ tương tác chọn phương án hoặc viết bài tự luận như giao diện dưới đây.</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {configuredQuestions.slice(0, 10).map(q => (
+                            <div key={q.stt} className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
+                              <div className="flex items-center justify-between text-xs font-bold text-white">
+                                <span>
+                                  <span className="text-cyan-400 font-mono">Câu {q.stt}:</span> {q.prompt || (q.type === 'ESSAY' ? 'Câu hỏi tự luận' : 'Chọn đáp án đúng')}
+                                </span>
+                                <span className="text-slate-400 font-mono text-[11px]">{q.score} điểm</span>
+                              </div>
+
+                              {q.type === 'MULTIPLE_CHOICE' ? (
+                                <div className="space-y-2 pt-1">
+                                  {['A', 'B', 'C', 'D'].map((letter, optIdx) => (
+                                    <label
+                                      key={letter}
+                                      className="flex items-center space-x-3 p-2.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800/80 cursor-pointer text-xs text-slate-200 transition"
+                                    >
+                                      <input
+                                        type={q.selectionMode === 'MULTIPLE' ? 'checkbox' : 'radio'}
+                                        name={`mock_q_${q.stt}`}
+                                        disabled
+                                        className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                                      />
+                                      <span className="font-bold text-cyan-400">{letter}.</span>
+                                      <span>
+                                        {q.options && q.options[optIdx] && q.options[optIdx] !== letter
+                                          ? q.options[optIdx]
+                                          : `Phương án ${letter}`}
+                                      </span>
+                                    </label>
+                                  ))}
+                                </div>
+                              ) : (
+                                <textarea
+                                  disabled
+                                  rows={3}
+                                  placeholder="Thí sinh sẽ nhập nội dung bài làm tự luận vào đây..."
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 italic resize-none"
+                                />
+                              )}
+                            </div>
+                          ))}
+
+                          {configuredQuestions.length > 10 && (
+                            <p className="text-center text-xs text-slate-500 italic py-2">
+                              ... và còn {configuredQuestions.length - 10} câu hỏi khác tiếp theo trong đề thi.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* ── CỘT PHẢI (COL 8-12): CẤU HÌNH & MA TRẬN ĐÁP ÁN ── */}
+              <div className="lg:col-span-6 xl:col-span-5 flex flex-col overflow-y-auto custom-scrollbar pr-1.5 space-y-4 text-xs">
+                
+                {/* TAB SELECTOR: Phương Thức Soạn Đề */}
+                <div className="flex items-center space-x-2 p-1 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode('FILE_ATTACHED')}
+                    className={`flex-1 py-2 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
+                      createMode === 'FILE_ATTACHED'
+                        ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/20'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>1. Đính Kèm File Đề & Tạo Phiếu</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode('STRUCTURED')}
+                    className={`flex-1 py-2 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
+                      createMode === 'STRUCTURED'
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>2. Soạn Từng Câu Trực Tiếp</span>
+                  </button>
+                </div>
+
+                {/* KHỐI 1: THÔNG TIN CƠ BẢN CỦA ĐỀ THI */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
+                  <div className="sm:col-span-2">
+                    <label className="text-slate-400 block mb-1 font-medium">Tiêu đề đề thi:</label>
+                    <input
+                      type="text"
+                      placeholder="VD: Kiểm tra Kết thúc Học phần Kỹ thuật Lập trình C..."
+                      value={newTitle}
+                      onChange={e => setNewTitle(e.target.value)}
+                      required
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 font-medium focus:border-cyan-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-medium">Mã đề thi:</label>
+                    <input
+                      type="text"
+                      value={newCode}
+                      onChange={e => setNewCode(e.target.value)}
+                      required
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-cyan-300 uppercase font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-medium">Thời gian thi (phút):</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="300"
+                      value={newDuration}
+                      onChange={e => setNewDuration(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 font-bold focus:border-cyan-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="text-slate-400 block mb-1 font-medium">Học phần / Môn học:</label>
+                    <select
+                      value={selectedCourseId}
+                      onChange={e => setSelectedCourseId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 font-medium focus:border-cyan-500 focus:outline-none"
+                    >
+                      {courses.map(c => (
+                        <option key={c._id} value={c._id}>
+                          {c.courseCode ? `[${c.courseCode}] ` : ''}{c.name}
+                        </option>
+                      ))}
+                      {courses.length === 0 && (
+                        <option value="">Kỹ thuật lập trình C (Mặc định)</option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-medium">Thang điểm tổng:</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={newTotalScore}
+                      onChange={e => setNewTotalScore(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-emerald-400 font-bold focus:border-cyan-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
 
               {/* KHỐI 2: KHU VỰC TẢI LÊN FILE ĐỀ THI (KHI CHỌN MODE FILE_ATTACHED) */}
               {createMode === 'FILE_ATTACHED' && (
@@ -1304,8 +1773,8 @@ export default function ExamPapers() {
                   })}
                 </div>
               </div>
-
             </div>
+          </div>
 
             {/* Footer Modal */}
             <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
