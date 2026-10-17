@@ -40,6 +40,48 @@
 | `BYOD_LAPTOP` | Thi Laptop cá nhân | SV mang laptop vào | SEB + IP VLAN + Seat PIN + Webcam laptop + Camera CCTV |
 | `ONLINE_QUIZ` | Thi Trắc nghiệm Quiz Trực tuyến | SV làm bài quiz tương tác trên Web/PC/Laptop | AI Face Tracking + Anti-tab switch + Đếm ngược câu hỏi + Auto-save & Chấm điểm tức thì |
 
+### 1.1 Triết lý Kiến trúc Cốt lõi: Biometric Ground-Truth Identity First
+ExamGuard AI thiết lập nguyên tắc kiến trúc **"Khuôn mặt là Căn cước Sinh trắc học Số Gốc" (Biometric Ground-Truth Identity First)** làm hạt nhân vận hành cho toàn bộ quy trình quản lý đào tạo và tổ chức khảo thí:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│              BIOMETRIC GROUND-TRUTH BASELINE (DỮ LIỆU CĂN CƯỚC SINH TRẮC HỌC GỐC)                │
+│    • Thu thập KYC 5 góc (Thẳng, Trái, Phải, Ngửa, Cúi) + Liveness Anti-Spoofing (MiniFASNet)    │
+│    • Trích xuất Vector ArcFace 512-D chuẩn hóa, lưu trữ an toàn trong Cơ sở dữ liệu             │
+└───────────────────────────────────────────────┬─────────────────────────────────────────────────┘
+                                                │
+                 ┌──────────────────────────────┴──────────────────────────────┐
+                 ▼                                                             ▼
+   ┌───────────────────────────┐                                 ┌───────────────────────────┐
+   │        SINH VIÊN          │                                 │        GIẢNG VIÊN         │
+   ├───────────────────────────┤                                 ├───────────────────────────┤
+   │ 1. Điều kiện tiên quyết:  │                                 │ 1. Điều kiện phân công:   │
+   │    Bắt buộc KYC APPROVED  │                                 │    Bắt buộc KYC APPROVED  │
+   │    mới được xếp chỗ & thi │                                 │    mới được gán Giám thị  │
+   │ 2. Check-in phòng thi:    │                                 │ 2. Staff Face Whitelist:  │
+   │    1:1 Face Match ≥ 0.75  │                                 │    Nạp Vector vào Cache   │
+   │    (Ngăn 100% thi hộ cổng)│                                 │    trước giờ thi 15 phút  │
+   │ 3. Continuous Proctored:  │                                 │ 3. Miễn trừ Giám thị:     │
+   │    So khớp ngầm mỗi 20s   │                                 │    STAFF_EXEMPTION (0đ)   │
+   │    bắt tráo người giữa giờ│                                 │    khi lại gần bàn kiểm tra│
+   │ 4. Chống tạo hồ sơ ảo     │                                 │ 4. Xác thực ký biên bản   │
+   └───────────────────────────┘                                 └───────────────────────────┘
+```
+
+1. **Bắt buộc đối với Sinh viên (Mandatory Student Ground-Truth):**
+   - Hồ sơ sinh viên trong hệ thống quản lý đào tạo phải có ảnh chân dung chuẩn KYC và vector ArcFace 512 chiều được duyệt (`face_status = 'APPROVED'`).
+   - Đây là **Ground-Truth Baseline** đối chiếu danh tính xuyên suốt:
+     + Khi xếp chỗ ca thi: Chỉ sinh viên có Face KYC hợp lệ mới được cấp Số báo danh (SBD) và gán vị trí bàn.
+     + Khi vào phòng thi: AI đối chiếu 1:1 giữa khuôn mặt trước camera và Vector Gốc (ngưỡng Cosine Similarity $\ge 0.75$) kèm kiểm tra Liveness.
+     + Trong suốt thời gian làm bài: AI thực hiện **Continuous Biometric Verification (Xác thực Sinh trắc học Liên tục)** định kỳ mỗi 15–20 giây. Nếu người ngồi thi khác với Vector Gốc $\rightarrow$ Báo động đỏ `IMPERSONATION_DETECTED` (Nghi ngờ tráo người/thi hộ giữa giờ), trừ ngay 50 điểm hoặc tự động đình chỉ thi.
+
+2. **Bắt buộc đối với Giảng viên (Mandatory Proctor Ground-Truth):**
+   - Giảng viên tham gia hệ thống phải hoàn tất đăng ký khuôn mặt chuẩn KYC để kích hoạt tư cách Cán bộ Coi thi / Cán bộ Thanh tra.
+   - Vector Gốc của Giảng viên được hệ thống tự động biên soạn thành **Staff Biometric Whitelist (Danh sách Cán bộ được phép xuất hiện)** nạp sẵn vào Redis/In-Memory Cache của ca thi:
+     + Khi Giảng viên đi lại quanh lớp hoặc đứng cạnh bàn thí sinh để kiểm tra máy/giấy tờ, camera AI phát hiện $\ge 2$ khuôn mặt (`MULTIPLE_FACES`) sẽ so khớp ngay với Staff Whitelist.
+     + Nếu khuôn mặt thứ hai trùng khớp với Giám thị ca thi $\rightarrow$ Kích hoạt cơ chế `STAFF_EXEMPTION` (**0 điểm trừ - Không phạt thí sinh**), hiển thị thông báo "Cán bộ coi thi đang kiểm tra bàn".
+     + Giảng viên điểm danh nhận phòng thi và ký số xác nhận đóng ca thi bằng Face Verification.
+
 ---
 
 ## 2. ACTOR & ROLE MATRIX
@@ -50,13 +92,13 @@ Hệ thống ExamGuard AI áp dụng kết hợp **RBAC (Role-Based Access Contr
 
 | Actor | DB Role | Ngữ cảnh chuyên môn (Context Scope) | Mô tả trách nhiệm chính |
 |---|---|---|---|
-| **Admin / Khảo thí** | `admin` | **Toàn hệ thống (System-wide)** | Quản lý cấu hình AI, danh mục cơ cấu (Khoa - Khóa - Lớp - Môn), tạo ca thi, xếp chỗ, duyệt đề, giám sát toàn diện |
+| **Admin / Khảo thí** | `admin` | **Toàn hệ thống (System-wide)** | Quản lý cấu hình AI, danh mục cơ cấu (Khoa - Khóa - Lớp - Môn), tạo ca thi, xếp chỗ, duyệt đề, giám sát toàn diện, phê duyệt KYC ngoại lệ |
 | **Giảng viên** | `teacher` | **1. GV Bộ môn (Course Instructor)** | Quản lý ngân hàng câu hỏi, soạn đề thi kèm đáp án đúng & giải thích, chấm bài thi tự luận/code |
-| | | **2. Cán bộ Coi thi (Proctor)** | Coi thi ca thi được phân công cụ thể, giám sát phòng 3D realtime, xử lý vi phạm, override khi kiểm tra bàn |
-| | | **3. Cán bộ Thanh tra (Inspector)** | Giám sát ngẫu nhiên nhiều phòng thi cùng lúc, hậu kiểm tra biên bản ca thi |
-| | | **4. Cố vấn học tập (Class Advisor)** | Theo dõi tiến độ học tập, lịch thi và điểm rèn luyện uy tín của lớp mình phụ trách |
-| **Sinh viên** | `student` | **Cá nhân (Self-only)** | Đăng ký khuôn mặt (KYC), xem lịch thi của mình, check-in, làm bài thi, xem điểm uy tín realtime, xem kết quả kèm đáp án sau duyệt |
-| **AI Service** | — | **Background Engine (FastAPI)** | Tự động phân tích stream camera (YuNet, ArcFace, YOLOv8 Pose), tính điểm uy tín, so khớp mặt giám thị, tự động chấm trắc nghiệm |
+| | | **2. Cán bộ Coi thi (Proctor)** | **Bắt buộc KYC Face ID**: Coi thi ca thi được phân công, nạp Face Whitelist để miễn trừ vi phạm khi kiểm tra bàn, giám sát phòng 3D realtime, xử lý vi phạm |
+| | | **3. Cán bộ Thanh tra (Inspector)** | **Bắt buộc KYC Face ID**: Giám sát ngẫu nhiên nhiều phòng thi cùng lúc, hậu kiểm tra biên bản ca thi |
+| | | **4. Cố vấn học tập (Class Advisor)** | Theo dõi tiến độ học tập, lịch thi, trạng thái KYC và điểm rèn luyện uy tín của lớp mình phụ trách |
+| **Sinh viên** | `student` | **Cá nhân (Self-only)** | **Bắt buộc KYC Face ID**: Đăng ký khuôn mặt gốc (KYC 5 góc), xem lịch thi, check-in 1:1, làm bài thi, xác thực liên tục chống thi hộ, xem điểm uy tín realtime |
+| **AI Service** | — | **Background Engine (FastAPI)** | Tự động phân tích stream camera (YuNet, ArcFace, YOLOv8 Pose), so sánh đối chiếu liên tục với Vector Gốc, nhận diện cán bộ coi thi, tính điểm uy tín |
 | **SEB Agent** | — | **Client Lockdown (Desktop App)** | Khóa màn hình laptop thí sinh (BYOD), chặn đa màn hình, máy ảo, phím tắt gian lận |
 
 ---
@@ -68,44 +110,47 @@ Hệ thống ExamGuard AI áp dụng kết hợp **RBAC (Role-Based Access Contr
 | **A. Quản trị Tổ chức & Người dùng** | Tạo / sửa / xóa Khoa, Khóa học, Lớp học | ✅ | ❌ | ❌ | Admin Khoa / Đào tạo |
 | | Import danh sách Sinh viên / Giảng viên bằng Excel | ✅ | ❌ | ❌ | Tự động tạo user & gán lớp |
 | | Phân công Giảng viên làm Cố vấn học tập cho Lớp | ✅ | ❌ | ❌ | |
-| | Đăng ký Face ID (KYC khuôn mặt 5 góc) | ❌ | ✅ *(Chính mình)* | ✅ *(Chính mình)* | Điều kiện bắt buộc để coi thi / thi |
+| | **Đăng ký Face ID Gốc (KYC khuôn mặt 5 góc)** | ❌ | ✅ *(Chính mình)* | ✅ *(Chính mình)* | **Điều kiện TIÊN QUYẾT BẮT BUỘC để được coi thi / dự thi** |
 | | Khóa / Mở khóa tài khoản người dùng | ✅ | ❌ | ❌ | |
+| | Hủy / Yêu cầu đăng ký lại Face ID khi thay đổi nhận dạng | ✅ | ❌ | ❌ | Admin Khảo thí thẩm định |
 | **B. Ngân hàng Đề & Soạn đề** | Quản lý Ngân hàng câu hỏi (MCQ, Essay, Code) | ✅ | ✅ *(Môn phụ trách)* | ❌ | Theo phân công giảng dạy |
 | | Soạn đề thi kèm đáp án đúng & lời giải thích | ✅ | ✅ *(Môn phụ trách)* | ❌ | Hỗ trợ Excel/Word/JSON |
 | | Phê duyệt đề thi & Mã hóa gán vào Ca thi | ✅ | ❌ | ❌ | Bảo mật tuyệt đối trước giờ thi |
 | **C. Khảo thí & Chuẩn bị Ca thi** | Tạo phòng thi 3D, cấu hình số dãy/cột bàn | ✅ | ❌ | ❌ | Khảo thí |
 | | Gắn camera CCTV RTSP, vẽ ROI Polygon bàn ngồi | ✅ | ❌ | ❌ | |
 | | Tạo Ca thi, chọn môn, hình thức (LAB/BYOD/QUIZ) | ✅ | ❌ | ❌ | |
-| | Xếp chỗ sinh viên (Seat allocation) & sinh Seat PIN | ✅ | ❌ | ❌ | Tự động hoặc thủ công |
-| | Phân công Giám thị 1, Giám thị 2, Thanh tra | ✅ | ❌ | ❌ | Chỉ gán GV đã hoàn tất KYC |
+| | Xếp chỗ sinh viên & cấp Số Báo Danh (SBD) | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ xếp chỗ SV đã KYC APPROVED** |
+| | Phân công Giám thị 1, Giám thị 2, Thanh tra | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ gán GV đã KYC APPROVED** |
 | | Xem lịch thi cá nhân, số báo danh, vị trí bàn | ✅ | ✅ *(Lịch coi thi)* | ✅ *(Lịch thi của mình)* | |
-| **D. Trong Ca thi (Realtime Proctoring)** | Check-in khuôn mặt + Liveness detection | ❌ | ❌ | ✅ *(Chính mình)* | AI tự động verify |
+| **D. Trong Ca thi (Realtime Proctoring)** | Check-in 1:1 khuôn mặt + Liveness detection | ❌ | ❌ | ✅ *(Chính mình)* | So khớp Cosine $\ge 0.75$ với Vector Gốc |
 | | Check-in thủ công (Override khi SV hỏng cam) | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Ghi audit log danh tính người duyệt |
 | | Xem Dashboard Phòng thi 3D Realtime | ✅ *(Tất cả phòng)* | ✅ *(Chỉ phòng được gán)* | ❌ | Giám sát avatar, cone mắt, vi phạm |
 | | Nhận cảnh báo vi phạm AI (Webcam + CCTV) | ✅ | ✅ *(Chỉ phòng được gán)* | ❌ | Kèm ảnh snapshot bằng chứng |
+| | Cảnh báo Nghi vấn Tráo người (`IMPERSONATION`) | ✅ *(Tất cả phòng)* | ✅ *(Chỉ phòng được gán)* | ❌ | AI so sánh liên tục với Vector Gốc |
+| | Miễn trừ vi phạm Giám thị (`STAFF_EXEMPTION`) | 🤖 | 🤖 | ❌ | Tự động so khớp với Proctor Whitelist |
 | | Xem Điểm uy tín (Reputation Score) Realtime | ✅ | ✅ *(Chỉ phòng được gán)* | ✅ *(Chỉ xem điểm mình)* | Thang điểm 0–100 |
 | | Gửi Cảnh báo nhắc nhở tới màn hình SV | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Hiện popup nhắc nhở trên máy SV |
-| | Đình chỉ thi (Suspension) — Khóa bài làm | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Khi SV gian lận nghiêm trọng |
+| | Đình chỉ thi (Suspension) — Khóa bài làm | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Khi SV gian lận / tráo người nghiêm trọng |
 | | Cộng bù giờ (Extra Time) khi SV gặp sự cố | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Tối đa 15 phút, lưu lý do audit |
 | | Tạm dừng giám sát bàn (Proctor Override 2 phút) | ❌ | ✅ *(Giám thị ca đó)* | ❌ | Dành khi GT trực tiếp đứng kiểm tra |
 | | Bỏ qua vi phạm do AI bắt nhầm (Dismiss) | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Đánh dấu flag, khôi phục điểm uy tín |
 | | Gửi yêu cầu trợ giúp kỹ thuật khẩn cấp | ❌ | ❌ | ✅ | Gửi tín hiệu SOS tới bàn giám thị |
 | | Làm bài thi & Nộp bài thi | ❌ | ❌ | ✅ | Giao diện 2 panel, auto-save |
-| | Thu bài thi cả phòng / Đóng ca thi | ✅ | ✅ *(Giám thị 1 ca đó)* | ❌ | Tự động khi hết giờ |
+| | Thu bài thi cả phòng / Đóng ca thi | ✅ | ✅ *(Giám thị 1 ca đó)* | ❌ | Ký đóng ca thi bằng Face Biometric Auth |
 | **E. Chấm thi & Công bố Điểm** | Tự động chấm Trắc nghiệm (MCQ) | 🤖 *(Hệ thống)* | ❌ | ❌ | Tự động tính ngay khi SV nộp bài |
 | | Chấm bài Tự luận (Essay) & Code | ❌ | ✅ *(GV được phân công)* | ❌ | Rọc phách (ẩn danh tính sinh viên) |
 | | Rà soát bảng điểm tự động & kiểm tra phân tích đề | ✅ | ✅ *(GV chấm thi)* | ❌ | Kiểm tra 1 lần trước khi chốt |
 | | Phê duyệt bảng điểm chính thức (Approve) | ✅ | ✅ *(Trưởng bộ môn/GV chấm)* | ❌ | Chốt điểm không cho sửa tự do |
 | | Công bố Điểm đi kèm Đáp án & Lời giải cho SV | ✅ | ❌ | ❌ | Kích hoạt quyền tra cứu của SV |
 | | Xem kết quả thi chi tiết kèm đối chiếu đáp án | ❌ | ❌ | ✅ *(Chính mình)* | Sau khi ca thi được công bố |
-| **F. Hậu kiểm, Audit Log & Phúc khảo** | Xem Integrity Report (Báo cáo vi phạm toàn vẹn) | ✅ | ✅ *(Chỉ ca mình coi)* | ❌ | Gồm timeline + video/ảnh S3 |
+| **F. Hậu kiểm, Audit Log & Phúc khảo** | Xem Integrity Report (Báo cáo vi phạm toàn vẹn) | ✅ | ✅ *(Chỉ ca mình coi)* | ❌ | Gồm timeline + video/ảnh S3 + Log KYC |
 | | Gửi đơn phúc khảo bài thi / Điểm uy tín | ❌ | ❌ | ✅ | Trong thời hạn 7 ngày sau công bố |
-| | Thẩm tra phúc khảo (Xem lại video CCTV/Webcam) | ✅ *(Khảo thí)* | ✅ *(Hội đồng chấm)* | ❌ | Đối soát toàn bộ log AI |
+| | Thẩm tra phúc khảo (Xem lại video CCTV/Webcam) | ✅ *(Khảo thí)* | ✅ *(Hội đồng chấm)* | ❌ | Đối soát toàn bộ log AI & Vector Gốc |
 | | Xuất dữ liệu báo cáo (Excel, PDF Biên bản ca thi) | ✅ | ✅ *(Biên bản ca coi)* | ❌ | |
 
 ---
 
-### 2.3 Bốn Giới hạn Tuyệt đối để Chống Tiêu cực (Zero-Trust Boundaries)
+### 2.3 Năm Giới hạn Tuyệt đối để Chống Tiêu cực (Zero-Trust Boundaries)
 
 ```
 RULE-SEC-01: Tính Độc lập giữa Soạn đề và Coi thi (Conflict of Interest)
@@ -127,67 +172,130 @@ RULE-SEC-04: Tính Bất biến của Nhật ký Vi phạm AI (Immutable Audit L
   → Cả Admin lẫn Giám thị ĐỀU KHÔNG THỂ XÓA các bản ghi vi phạm trong MongoDB ai_proctoring_logs.
   → Thao tác "Bỏ qua bắt nhầm (Dismiss)" chỉ cập nhật cờ is_dismissed = true kèm lý do và ID người bấm
     để phục vụ thanh tra và hội đồng phúc khảo đối soát.
+
+RULE-SEC-05: Ràng buộc Căn cước Sinh trắc học Gốc (Mandatory Biometric Ground-Truth)
+  → KHÔNG MỘT SINH VIÊN NÀO được phép vào phòng thi nếu chưa hoàn thành Đăng ký Khuôn mặt Gốc (face_status != 'APPROVED').
+  → KHÔNG MỘT GIẢNG VIÊN NÀO được phân công Giám thị nếu hồ sơ chưa có Vector Khuôn mặt Gốc hợp lệ.
+  → Trong ca thi, việc tráo người thi hộ sẽ bị phát hiện bởi Continuous Biometric Verification và đình chỉ thi ngay lập tức.
 ```
 
 ---
 
 ## 3. STATE MACHINE
 
-### 3.1 Trạng thái Sinh viên trong Ca thi (`sinh_vien_ca_thi.trang_thai`)
+### 3.1 Vòng đời Căn cước Sinh trắc học Gốc (`face_status` của Sinh viên & Giảng viên)
+
+Mọi cá nhân tham gia vào hoạt động thi trực tuyến hoặc coi thi đều phải trải qua quy trình thẩm định Căn cước Sinh trắc học Gốc:
 
 ```
-                     ┌──────────────────┐
-                     │   not_checkin    │  ← Trạng thái khởi tạo sau xếp chỗ
-                     └────────┬─────────┘
-                              │ Check-in thành công (face match ≥ 0.75)
-                              ▼
-                     ┌──────────────────┐
-                ┌───▶│    checkin       │  ← Đang thi, đang bị giám sát
-                │    └────────┬─────────┘
-                │             │
-          ┌─────┴──────┐      │ ┌──────────────────────────────────┐
-          │ [Dọn vi    │      │ │ Vi phạm tích lũy (diem_uy_tin    │
-          │  phạm,     │      │ │ xuống ngưỡng WARNING <50)        │
-          │  khôi phục]│      ▼ ▼                                  │
-          │            │ ┌──────────────────┐                      │
-          └────────────┘ │   suspicious     │◀─────────────────────┘
-                         └────────┬─────────┘
-                                  │ Giám thị click "Đình chỉ"
-                                  │ HOẶC diem_uy_tin = 0
-                                  ▼
-                         ┌──────────────────┐
-                         │   suspended      │  ← Bị đình chỉ, không làm bài được
-                         └──────────────────┘
-                         
-                     ┌──────────────────┐
-                     │    checkout      │  ← Kết thúc thi (nộp bài / hết giờ)
-                     └──────────────────┘
+                      ┌──────────────────┐
+                      │   NOT_ENROLLED   │  ← Khởi tạo khi tạo tài khoản
+                      └────────┬─────────┘
+                               │ Bắt đầu KYC (Quét 5 góc + Liveness Anti-spoofing)
+                               ▼
+                      ┌──────────────────┐
+                      │    ENROLLING     │  ← Đang thu nhận hình ảnh & vector
+                      └────────┬─────────┘
+                               │ Gửi vector ArcFace 512-D
+                               ▼
+                      ┌──────────────────┐
+                 ┌───▶│ PENDING_APPROVAL │  ← Chờ thẩm định (Tự động hoặc Khảo thí)
+                 │    └────────┬─────────┘
+                 │             │
+        Chụp lại │             ├────────────────────────────────┐
+        khi bị   │             │ Đạt chuẩn                      │ Bị từ chối
+        từ chối  │             │ (Liveness pass + Đủ 5 góc)     │ (Ảnh mờ, che mặt, spoofing)
+                 │             ▼                                ▼
+                 │    ┌──────────────────┐             ┌──────────────────┐
+                 └────┤     APPROVED     │             │     REJECTED     │
+                      │  (GROUND TRUTH)  │             └──────────────────┘
+                      └────────┬─────────┘
+                               │
+                               ├─► SINH VIÊN: Mở khóa xếp chỗ & cấp quyền vào ca thi
+                               └─► GIẢNG VIÊN: Mở khóa phân công Giám thị & nạp Staff Whitelist
+```
+
+**Bảng Chuyển trạng thái Face KYC:**
+
+| Trạng thái | Quyền của Sinh viên | Quyền của Giảng viên | Điều kiện kích hoạt |
+|---|---|---|---|
+| `NOT_ENROLLED` | ❌ Không được xếp ca thi, không được vào phòng thi | ❌ Không được phân công làm Giám thị / Thanh tra | Mặc định khi tài khoản mới tạo |
+| `ENROLLING` | Đang thực hiện quét 5 góc trên Web/App | Đang thực hiện quét 5 góc trên Web/App | Bật camera KYC |
+| `PENDING_APPROVAL` | Chờ hệ thống / Khảo thí đối soát ảnh căn cước | Chờ hệ thống / Khảo thí đối soát ảnh cán bộ | Đã gửi đủ 5 góc & vector 512-D |
+| `APPROVED` (Ground Truth) | ✅ Đủ điều kiện xếp chỗ, cấp SBD, check-in và dự thi | ✅ Đủ điều kiện coi thi, nạp vào Staff Face Whitelist | Vector chất lượng cao, liveness pass |
+| `REJECTED` | ❌ Bị chặn thi, thông báo chụp lại ảnh KYC | ❌ Bị chặn phân công coi thi, thông báo chụp lại | Phát hiện giả mạo ảnh / sai góc |
+
+---
+
+### 3.2 Trạng thái Sinh viên trong Ca thi (`sinh_vien_ca_thi.trang_thai`)
+
+```
+                      ┌──────────────────┐
+                      │  BLOCKED_NO_KYC  │  ← Chưa có Face Ground Truth APPROVED (Chặn tuyệt đối)
+                      └────────┬─────────┘
+                               │ Đã hoàn thành Face KYC APPROVED
+                               ▼
+                      ┌──────────────────┐
+                      │   not_checkin    │  ← Đã xếp chỗ, chờ giờ vào phòng thi
+                      └────────┬─────────┘
+                               │ Check-in 1:1 với Vector Gốc (similarity ≥ 0.75 + Liveness pass)
+                               ▼
+                      ┌──────────────────┐
+                 ┌───▶│    checkin       │  ← Đang làm bài thi, AI giám sát liên tục
+                 │    └────────┬─────────┘
+                 │             │
+           ┌─────┴──────┐      │ ┌──────────────────────────────────────────────┐
+           │ [Dọn vi    │      │ │ 1. Vi phạm tích lũy (diem_uy_tin < 50)        │
+           │  phạm,     │      │ │ 2. Continuous Verification:                  │
+           │  khôi phục]│      │ │    Khuôn mặt lệch Vector Gốc kéo dài > 15s   │
+           │            │      ▼ ▼                                              │
+           └────────────┘ ┌──────────────────┐                                  │
+                          │   suspicious     │◀─────────────────────────────────┘
+                          └────────┬─────────┘
+                                   │ Giám thị click "Đình chỉ"
+                                   │ HOẶC diem_uy_tin = 0
+                                   │ HOẶC AI xác nhận Tráo người (IMPERSONATION)
+                                   ▼
+                          ┌──────────────────┐
+                          │   suspended      │  ← Bị đình chỉ, khóa bài thi ngay lập tức
+                          └──────────────────┘
+                          
+                      ┌──────────────────┐
+                      │    checkout      │  ← Kết thúc thi (nộp bài / hết giờ)
+                      └──────────────────┘
 ```
 
 **Điều kiện chuyển trạng thái:**
 
 | Từ | Sang | Điều kiện | Ai trigger |
 |---|---|---|---|
-| `not_checkin` | `checkin` | similarity_score ≥ 0.75 + liveness pass | AI Service |
-| `checkin` | `suspicious` | `diem_uy_tin` < 50 | AI Service (auto) |
-| `suspicious` | `checkin` | Giám thị reset cảnh báo | Giám thị |
-| `checkin/suspicious` | `suspended` | Giám thị ra lệnh HOẶC `diem_uy_tin` = 0 | Giám thị / AI |
-| `checkin/suspicious` | `checkout` | Hết giờ / Nộp bài / Giám thị thu bài | System / SV / GT |
+| `BLOCKED_NO_KYC` | `not_checkin` | Sinh viên hoàn thành KYC và được duyệt `face_status = 'APPROVED'` | Hệ thống (auto) |
+| `not_checkin` | `checkin` | So khớp 1:1 với Vector Gốc: `similarity_score ≥ 0.75` + Liveness pass | AI Service |
+| `checkin` | `suspicious` | `diem_uy_tin` < 50 HOẶC AI nghi vấn tráo người (`similarity < 0.70` trong 15s) | AI Service (auto) |
+| `suspicious` | `checkin` | Giám thị kiểm tra bàn xác nhận thí sinh hợp lệ và reset cảnh báo | Giám thị |
+| `checkin/suspicious` | `suspended` | Giám thị ra lệnh HOẶC `diem_uy_tin` = 0 HOẶC xác nhận thi hộ | Giám thị / AI |
+| `checkin/suspicious` | `checkout` | Hết giờ làm bài / Thí sinh chủ động nộp bài / Giám thị thu bài | System / SV / GT |
 
-### 3.2 Điểm uy tín (`diem_uy_tin`) — Thang 0-100
+---
 
-| Vi phạm | Trừ điểm | Mức độ |
-|---|---|---|
-| Quay đầu > 3 giây (HEAD_TURN) | -5 | LOW |
-| Liếc mắt > 4 giây (GAZE_OFF) | -3 | LOW |
-| Chuyển tab (TAB_SWITCH) | -10 | MEDIUM |
-| Phát hiện 2 khuôn mặt (MULTI_FACE) | -15 | HIGH |
-| Mất khuôn mặt > 10 giây (NO_FACE) | -10 | MEDIUM |
-| Phát hiện máy ảo (VM_DETECTED) | -20 | CRITICAL |
-| Màn hình thứ 2 (SECONDARY_MONITOR) | -15 | HIGH |
-| Rời vị trí ngồi (LEAVE_SEAT) | -10 | MEDIUM |
-| Xoay vai sang bên (SHOULDER_TURN) | -8 | MEDIUM |
-| Cúi gằm (HEAD_DOWN) | -8 | MEDIUM |
+### 3.3 Bảng Trừ Điểm Uy Tín (`diem_uy_tin`) — Thang 0-100
+
+| Vi phạm | Trừ điểm | Mức độ | Ghi chú kỹ thuật |
+|---|---|---|---|
+| **Tráo người thi hộ (`IMPERSONATION_DETECTED`)** | **-50** | **CRITICAL** | **So khớp webcam với Vector Gốc Cosine < 0.70 liên tục > 15s** |
+| Phát hiện máy ảo (`VM_DETECTED`) | -20 | CRITICAL | SEB / OS Agent phát hiện môi trường ảo hóa |
+| Mở Developer Tools (`DEVTOOLS_OPEN`) | -30 | CRITICAL | Bấm F12, Ctrl+Shift+I, inspect phần tử |
+| Cúi đầu nhìn điện thoại (`PHONE_LOOK_DOWN`) | -20 | HIGH | Pitch $\le -22^\circ$ gập mặt xem màn hình phụ |
+| Phát hiện 2 người lạ (`MULTI_FACE_UNKNOWN`) | -15 | HIGH | Không khớp với Staff Proctor Whitelist |
+| Màn hình thứ 2 (`SECONDARY_MONITOR`) | -15 | HIGH | Phát hiện mở rộng desktop ra màn hình ngoài |
+| Chuyển Tab / Ẩn ứng dụng (`TAB_SWITCH`) | -10 | MEDIUM | Bắt sự kiện `visibilitychange` của trình duyệt |
+| Rời vị trí ngồi / Che webcam (`NO_FACE`) | -10 | MEDIUM | Mất dấu khuôn mặt quá 10 giây |
+| Liếc bài bên cạnh (`SUSPICIOUS_SIDE`) | -10 | MEDIUM | Góc quay ngang $\|Yaw\| \ge 30^\circ$ |
+| Xoay vai sang bên (`SHOULDER_TURN`) | -8 | MEDIUM | YOLOv8 Pose phát hiện xoay lệch người |
+| Quay đầu sang bên (`HEAD_TURN`) | -5 | LOW | Góc quay ngang $15^\circ \le \|Yaw\| < 30^\circ$ |
+| Liếc mắt rời màn hình (`GAZE_OFF`) | -3 | LOW | Mống mắt nhìn lệch khỏi màn hình > 4 giây |
+| Chuột phải / Copy-paste (`BROWSER_VIOLATION`) | -5 đến -10 | MEDIUM | Chặn các hành vi sao chép đề bài |
+| **Cán bộ coi thi ghé bàn (`STAFF_EXEMPTION`)** | **0** | **INFO** | **Trùng khớp ArcFace với Staff Whitelist $\rightarrow$ Miễn trừ phạt** |
 
 ---
 
@@ -240,106 +348,136 @@ BƯỚC 5: Import Sinh viên + Xếp chỗ
 
 ---
 
-### WF-02: Đăng ký Khuôn mặt KYC (Onboarding)
+### WF-02: Đăng ký Căn cước Khuôn mặt Gốc (Biometric Ground-Truth Enrollment) cho Sinh viên & Giảng viên
 
-**Actor:** Sinh viên  
-**Precondition:** Sinh viên đã có tài khoản, chưa có `face_embedding`  
-**Postcondition:** `sinh_vien.face_embedding` = vector 512 chiều, `face_updated_at` = now  
-**Thực hiện:** 1 lần duy nhất (hoặc cập nhật lại khi cần)
+**Actor:** Sinh viên & Giảng viên (Thực hiện bắt buộc trước khi tham gia kỳ thi / coi thi)  
+**Precondition:** Người dùng đã có tài khoản, trạng thái `face_status = 'NOT_ENROLLED'` hoặc `'REJECTED'`  
+**Postcondition:** `face_status = 'APPROVED'`, lưu ảnh gốc KYC chuẩn HD, lưu Vector ArcFace 512-D làm Ground Truth  
+**Tần suất:** 1 lần duy nhất khi nhập học/nhận việc (hoặc cập nhật lại khi có thẩm định của Hội đồng Khảo thí)
 
 ```
-BƯỚC 1: Sinh viên vào trang KYC
-  UI: Hướng dẫn: Ngồi trước camera, đủ ánh sáng, mặt không bị che
+BƯỚC 1: Người dùng truy cập trang Đăng ký Khuôn mặt (KYC Onboarding)
+  UI: Hướng dẫn tiêu chuẩn:
+    - Ngồi thẳng, khoảng cách 50–70cm trước webcam, môi trường đủ sáng (≥ 300 lux).
+    - Tháo kính râm, khẩu trang, không để tóc che khuất trán và mắt.
 
-BƯỚC 2: Chụp 3 góc khuôn mặt
-  Góc 1: Thẳng (STRAIGHT)  → Webcam tự nhận diện pose → Auto capture khi đạt chuẩn
-  Góc 2: Nghiêng trái (TURN_LEFT)
-  Góc 3: Nghiêng phải (TURN_RIGHT)
-  
-  Kỹ thuật: WebSocket /v1/ws/face-stream
-    - Client gửi frame base64 liên tục (10 FPS)
-    - Server trả về: {face_detected, pose, quality, target_matched}
-    - Khi target_matched = true → Client tự capture ảnh → POST lên
+BƯỚC 2: Thu thập 5 Góc Khuôn mặt (Multi-angle Biometric Capture)
+  Kỹ thuật: WebSocket /v1/ws/face-stream hoặc Client Auto-capture qua YuNet:
+    • Góc 1: Nhìn thẳng (STRAIGHT)       → Pitch ∈ [-5°, 5°], Yaw ∈ [-5°, 5°]
+    • Góc 2: Nghiêng trái (TURN_LEFT)    → Yaw ∈ [25°, 35°]
+    • Góc 3: Nghiêng phải (TURN_RIGHT)   → Yaw ∈ [-35°, -25°]
+    • Góc 4: Ngửa lên (LOOK_UP)          → Pitch ∈ [15°, 25°]
+    • Góc 5: Cúi xuống (LOOK_DOWN)       → Pitch ∈ [-25°, -15°]
 
-BƯỚC 3: POST /ai/kyc/register-face
-  Input:  {sinh_vien_id, images: [base64_straight, base64_left, base64_right]}
-  
+BƯỚC 3: Kiểm định Chất lượng & Chống Giả mạo (Quality Check & Anti-Spoofing)
   AI xử lý:
-    a. MiniFASNet → Liveness check từng ảnh (chống giơ ảnh)
-    b. YuNet → Detect face → Crop
-    c. ArcFace → Extract 512-D embedding từng góc
-    d. Average 3 vectors → 1 embedding tổng hợp
-    
-  Output:
-    - Nếu fail: {success: false, reason: "SPOOFING_DETECTED" | "NO_FACE" | "POOR_QUALITY"}
-    - Nếu pass: Lưu embedding vào MySQL sinh_vien.face_embedding (JSON array 512 số)
-                Trả về {success: true, face_updated_at}
+    a. Liveness Detection (MiniFASNet / Silent-Face-Anti-Spoofing):
+       - Chặn 100% hình thức gian lận: Giơ ảnh in trên giấy, video phát lại trên điện thoại/iPad, mặt nạ 3D.
+       - Trả về Liveness Score ∈ [0.0, 1.0]. Yêu cầu score ≥ 0.90 để đạt chuẩn.
+    b. Image Quality Analysis:
+       - Độ sắc nét (Laplacian Variance ≥ 100).
+       - Cân bằng sáng (Mean Intensity ∈ [80, 200]).
+
+BƯỚC 4: Trích xuất & Hợp nhất Vector Căn cước Gốc (Ground-Truth Vector Extraction)
+  AI xử lý:
+    - Trích xuất 5 vector ArcFace 512-D tương ứng 5 góc.
+    - Hợp nhất có trọng số (Weighted Fusion) và chuẩn hóa L2-norm:
+      Vector_Ground_Truth = Normalize(0.4 × V_straight + 0.15 × (V_left + V_right + V_up + V_down))
+    - Lưu vào DB: users/sinh_vien/giang_vien.face_embedding (JSON Array 512 float32).
+    - Lưu ảnh chụp thẳng chất lượng cao vào Storage (S3 / Local Vault) làm ảnh đối soát.
+
+BƯỚC 5: Kích hoạt Quyền Hạn Nghiệp vụ (Post-enrollment Privileges Activation)
+  → ĐỐI VỚI SINH VIÊN:
+    - Cập nhật face_status = 'APPROVED'.
+    - Hệ thống mở khóa: Cho phép xếp chỗ vào Ca thi, cấp Số báo danh (SBD) và mở quyền Check-in.
+  → ĐỐI VỚI GIẢNG VIÊN:
+    - Cập nhật face_status = 'APPROVED'.
+    - Hệ thống mở khóa: Cho phép Phân công Giám thị 1, Giám thị 2, Thanh tra phòng thi.
+    - Vector Gốc được đồng bộ vào Redis Cache ca thi để nhận diện Miễn trừ vi phạm khi coi thi.
 ```
 
 ---
 
-### WF-03: Check-in Phòng thi (3 Chế độ)
+### WF-03: Check-in Phòng thi & Giám sát Liên tục với Dữ liệu Gốc (Continuous Biometric Verification)
 
 **Actor:** Sinh viên  
-**Precondition:** `ca_thi.trang_thai = 'ACTIVE'`, SV có `face_embedding`, SV có `sinh_vien_ca_thi.trang_thai = 'not_checkin'`  
-**Postcondition:** `trang_thai = 'checkin'`, bàn 3D bật xanh, đề thi được mở khóa
+**Precondition:** `ca_thi.trang_thai = 'ACTIVE'`, SV có `face_status = 'APPROVED'` (Ground Truth), SV có `sinh_vien_ca_thi.trang_thai = 'not_checkin'`  
+**Postcondition:** `trang_thai = 'checkin'`, bàn 3D bật xanh, đề thi mở khóa, AI kích hoạt vòng lặp giám sát liên tục
 
 #### Chế độ LAB_PC
 
 ```
-1. SV ngồi vào PC lab → Mở trình duyệt (đã cài kiosk/khóa sẵn)
-2. Nhập SBD hoặc tự nhận diện khuôn mặt
+1. SV ngồi vào PC lab → Mở trình duyệt khóa sẵn
+2. Nhập SBD hoặc nhận diện khuôn mặt tự động
 3. POST /ai/checkin/verify {image_base64, sinh_vien_ca_thi_id}
-4. [AI] Liveness check → Face match với face_embedding
-5. [Nếu pass] → checkin thành công
-6. [Flask Core] → Ghi checkin, publish Redis event
-7. [SocketIO] → Bàn R{x}-C{y} bật XANH trên phòng 3D giám thị
-8. Giao diện làm bài hiện ra
+4. [AI] Liveness check → So khớp Cosine Similarity với Vector Gốc (Ground-Truth):
+   - Ngưỡng đạt chuẩn: similarity_score ≥ 0.75
+5. [Nếu pass] → Check-in thành công:
+   - Ghi checkin, publish Socket.IO event proctor:student_update
+   - Bàn thi bật XANH trên màn hình Giám thị
+   - Kích hoạt giao diện làm bài thi
 ```
 
 #### Chế độ BYOD_LAPTOP
 
 ```
-1. SV mở Safe Exam Browser (SEB) → SEB gửi X-SEB-Key header
-2. Backend kiểm tra:
-   a. Header X-SEB-Key hợp lệ → nếu không: chặn, hiện trang lỗi
-   b. IP nguồn thuộc allowed_ip_subnet phòng thi → nếu không: chặn
-3. SV nhập mã Seat PIN (đã được phát bởi giám thị hoặc hiển thị tại kiosk cửa)
-4. POST /core/byod/activate-seat {seat_pin_code, sinh_vien_id}
-   → Validate PIN → Trả về {ca_thi_id, vi_tri_ngoi: "R2-C3"}
-5. SV chụp mặt qua webcam laptop
-6. POST /ai/checkin/verify {image_base64, sinh_vien_ca_thi_id, device_fingerprint}
-   → Ghi device_fingerprint (chống đăng nhập 2 máy)
-   → Ghi client_ip_address
-7. [Nếu pass] → Tương tự LAB_PC từ bước 6
+1. SV mở Safe Exam Browser (SEB) → Gửi kèm header bảo mật X-SEB-Key
+2. Backend kiểm tra hợp lệ X-SEB-Key và subnet IP phòng thi
+3. SV nhập mã Seat PIN (6 số) được cấp tại bàn
+4. Chụp ảnh webcam check-in:
+   - POST /ai/checkin/verify {image_base64, sinh_vien_ca_thi_id, device_fingerprint}
+   - So khớp 1:1 với Vector Gốc + Liveness check (similarity ≥ 0.75)
+5. [Nếu pass] → Khóa máy theo thiết bị (device_fingerprint) và mở giao diện thi
 ```
 
-#### Chế độ ONLINE_QUIZ (Trang Quiz Trực tuyến Linh hoạt & Tương tác cao)
+#### Chế độ ONLINE_QUIZ (Trang Quiz Trực tuyến Linh hoạt)
 
 ```
-1. SV truy cập vào phòng thi Quiz trực tuyến từ thiết bị có Webcam (PC / Laptop / Tablet)
-2. Nhập Mã Ca thi (Exam Code) & Mã PIN Bàn thi (Seat PIN) hoặc quét Face ID tự động
-3. POST /ai/checkin/verify {image_base64, sinh_vien_ca_thi_id, device_fingerprint}
-   → [AI] Liveness check (chống giả mạo ảnh) + So khớp khuôn mặt với hồ sơ KYC
-4. [Nếu pass] → Check-in thành công:
-   → Bàn thi tương ứng trên sơ đồ phòng 3D của Giám thị bật XANH
-   → Kích hoạt Giao diện Trang Quiz Trực tuyến (Interactive Quiz Layout)
-5. Sinh viên bắt đầu làm bài Quiz:
-   - Hiển thị câu hỏi dạng thẻ trực quan (Interactive Question Cards) kèm thanh tiến độ hoàn thành
-   - Đếm ngược toàn bài & đếm ngược từng câu hỏi (Quiz Speed Timer)
-   - Tự động xáo trộn thứ tự câu hỏi và thứ tự các đáp án (A, B, C, D) cho từng thí sinh
-   - Chế độ tự động lưu câu trả lời thời gian thực (Auto-save sau mỗi lựa chọn)
-   - Đánh dấu cờ (Flag) câu hỏi cần xem lại và lọc danh sách câu hỏi: Đã làm / Chưa làm / Cần xem lại
-   - AI Proctored Quiz: Giám sát khuôn mặt liên tục qua Webcam (phát hiện quay mặt, vắng mặt, người lạ) và chống gian lận chuyển tab / thoát toàn màn hình (Anti-tab switch & Fullscreen lockdown)
+1. SV truy cập phòng thi Quiz từ máy tính cá nhân có Webcam
+2. Nhập Mã Ca thi (Exam Code) & Mã PIN bàn thi
+3. AI quét camera 1:1 đối chiếu với Vector Gốc (Ground-Truth) + Liveness Anti-spoofing
+4. [Nếu pass] → Bàn thi bật XANH, mở bài thi Quiz với các câu hỏi tương tác
 ```
 
-**Xử lý khi fail check-in:**
+#### WF-03.1: Xác thực Sinh trắc học Liên tục (Continuous Biometric Verification Trong Ca Thi)
+Trong suốt thời gian làm bài, camera thí sinh được AI kiểm tra định kỳ (chu kỳ 10s–20s):
 
 ```
-similarity_score < 0.75:
-  → Màn hình đỏ: "Xác thực thất bại. Vui lòng thử lại"
-  → Sau 3 lần fail: Báo đỏ tới màn hình giám thị
-  → Giám thị tới kiểm tra thủ công, có thể force-checkin
+                       [Webcam Frame Thí sinh]
+                                  │
+                                  ▼
+                       [AI YuNet Face Detector]
+                                  │
+          ┌───────────────────────┴───────────────────────┐
+          │ (1 khuôn mặt)                                 │ (≥ 2 khuôn mặt)
+          ▼                                               ▼
+[Trích xuất Vector ArcFace]                     [So khớp với Staff Proctor Whitelist]
+          │                                               │
+          ▼                                    ┌──────────┴──────────┐
+[Cosine Similarity với Vector Gốc              │ Khớp Giám thị       │ Không khớp
+       (Ground-Truth) của SV]                  │ (Cosine ≥ 0.75)     │ (Người lạ xuất hiện)
+          │                                    ▼                     ▼
+ ┌────────┴────────┐                  ┌───────────────────┐ ┌───────────────────┐
+ │ Similarity ≥0.75│ Similarity <0.70 │ STAFF_EXEMPTION   │ │ MULTI_FACE_UNKNOWN│
+ │                 │ kéo dài > 15s    │ 0 điểm trừ (INFO) │ │ -15 điểm (HIGH)   │
+ ▼                 ▼                  │ Hiện badge giám thị│ │ Chuông báo Giám thị│
+[HỢP LỆ (NORMAL)]  [TRÁO NGƯỜI THI HỘ │ trên màn hình SV  │ └───────────────────┘
+ 0 điểm trừ        │ IMPERSONATION]   └───────────────────┘
+                   │ -50 điểm (CRITICAL)
+                   │ Báo động đỏ Giám thị
+                   │ Khóa bài thi ngay lập tức!
+                   └──────────────────┘
+```
+
+**Xử lý khi fail check-in ban đầu:**
+
+```
+similarity_score < 0.75 hoặc Liveness Fail:
+  → Màn hình đỏ: "Xác thực không trùng khớp với hồ sơ khuôn mặt gốc. Vui lòng thử lại"
+  → Thử lại tối đa 3 lần. Nếu vẫn thất bại:
+    • Bắn cờ cảnh báo đỏ CHECKIN_FAILED lên Dashboard Giám thị.
+    • Giám thị trực tiếp kiểm tra Thẻ SV / CCCD và có quyền Force Check-in kèm Audit Log.
+```
 
 liveness fail:
   → "Phát hiện giả mạo. Không thể check-in"
@@ -556,8 +694,14 @@ CREATE TABLE sinh_vien (
   email           VARCHAR(100),
   lop_id          INT,
   avatar_url      VARCHAR(255),
-  face_embedding  JSON,          -- Array 512 float32 numbers
-  face_updated_at DATETIME,
+  -- BIOMETRIC GROUND-TRUTH BASELINE (Căn cước sinh trắc học gốc):
+  face_status     ENUM('NOT_ENROLLED','PENDING_APPROVAL','APPROVED','REJECTED') DEFAULT 'NOT_ENROLLED',
+  face_image_url  VARCHAR(255),  -- Ảnh chân dung chuẩn KYC HD làm ảnh gốc đối soát
+  face_embedding  JSON,          -- Array 512 float32 ArcFace chuẩn hóa (Ground-Truth Vector)
+  face_angles     JSON,          -- 5 góc đã thu nhận: ["straight","left","right","up","down"]
+  face_quality_score FLOAT,      -- Điểm chất lượng ảnh & độ sắc nét (0.0 - 1.0)
+  face_enrolled_at DATETIME,     -- Thời điểm hoàn tất KYC
+  face_verified_by INT,          -- ID Admin/Hệ thống duyệt
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (lop_id)  REFERENCES lop(id)
 );
@@ -571,9 +715,35 @@ CREATE TABLE giang_vien (
   email           VARCHAR(100),
   khoa_id         INT,
   avatar_url      VARCHAR(255),
-  face_embedding  JSON,
+  -- BIOMETRIC GROUND-TRUTH BASELINE (Nhận diện Cán bộ Coi thi / Staff Whitelist):
+  face_status     ENUM('NOT_ENROLLED','PENDING_APPROVAL','APPROVED','REJECTED') DEFAULT 'NOT_ENROLLED',
+  face_image_url  VARCHAR(255),
+  face_embedding  JSON,          -- Vector ArcFace 512-D nạp vào Staff Face Cache
+  face_angles     JSON,
+  face_quality_score FLOAT,
+  face_enrolled_at DATETIME,
+  face_verified_by INT,
   FOREIGN KEY (user_id)  REFERENCES users(id),
   FOREIGN KEY (khoa_id)  REFERENCES khoa(id)
+);
+
+-- BẢNG 5B: face_enrollment_history (Nhật ký Thay đổi & Thẩm định Căn cước Sinh trắc học Gốc)
+CREATE TABLE face_enrollment_history (
+  id              INT PRIMARY KEY AUTO_INCREMENT,
+  user_id         INT NOT NULL,
+  user_type       ENUM('student', 'teacher') NOT NULL,
+  enrollment_type ENUM('INITIAL_KYC', 'UPDATE_REQUEST', 'SYSTEM_RECALIBRATE'),
+  captured_image_url VARCHAR(255) NOT NULL,
+  vector_hash     VARCHAR(64),   -- SHA-256 của Vector ArcFace 512-D
+  liveness_score  FLOAT NOT NULL,
+  quality_score   FLOAT NOT NULL,
+  angles_captured JSON,
+  status          ENUM('APPROVED', 'REJECTED') NOT NULL,
+  reject_reason   VARCHAR(255),
+  ip_address      VARCHAR(45),
+  device_info     VARCHAR(255),
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- BẢNG 6: mon_hoc
@@ -668,8 +838,11 @@ CREATE TABLE sinh_vien_ca_thi (
   client_ip_address  VARCHAR(45),            -- IPv4 hoặc IPv6
   device_fingerprint VARCHAR(255),           -- Hash thiết bị — chống đăng nhập 2 máy
   thoi_gian_checkin  DATETIME,
-  similarity_score   FLOAT,                  -- Cosine similarity lúc check-in (0.0-1.0)
+  similarity_score   FLOAT,                  -- Cosine similarity lúc check-in với Vector Gốc (0.0-1.0)
   captured_image_url VARCHAR(255),           -- Ảnh chụp lúc check-in
+  last_continuous_verified_at DATETIME,     -- Thời điểm gần nhất AI đối chiếu lại với Vector Gốc
+  continuous_similarity       FLOAT,        -- Điểm khớp mặt ngầm trong lúc làm bài
+  impersonation_flag          BOOLEAN DEFAULT FALSE, -- Bật TRUE nếu AI nghi vấn tráo người thi hộ
   trang_thai         ENUM('not_checkin','checkin','checkout','suspicious','suspended')
                      DEFAULT 'not_checkin',
   diem_uy_tin        INT DEFAULT 100,        -- 0-100
@@ -847,21 +1020,26 @@ CREATE TABLE sinh_vien_ca_thi (
 
 ### AI Service (FastAPI — Port 8000)
 
-#### KYC
+#### KYC & Biometric Ground-Truth Enrollment (Sinh viên & Giảng viên)
 
 | Method | Endpoint | Input | Output |
 |---|---|---|---|
-| POST | `/v1/kyc/register-face` | `{sinh_vien_id, images[]}` | `{success, face_updated_at}` |
-| GET | `/v1/kyc/status/:sinh_vien_id` | — | `{has_embedding, face_updated_at}` |
+| POST | `/v1/face/enroll-multi-angle` | `FormData: {user_id, user_type ('student'\|'teacher'), image_straight, image_left, image_right, image_up, image_down, check_quality}` | `{success, user_id, registered_angles[], vector_dim: 512, quality_score, liveness_score}` |
+| POST | `/v1/face/enroll` | `FormData: {user_id, user_type, image, check_quality}` | `{success, user_id, vector_dim: 512, message}` |
+| GET | `/v1/face/status/:user_type/:user_id` | — | `{has_embedding, face_status, registered_angles[], face_updated_at}` |
+| GET | `/v1/faces/list` | `?user_type=student\|teacher` | `[{user_id, full_name, user_type, registered_angles[], created_at}]` |
+| DELETE | `/v1/faces/:user_id` | — | `{success: true, message: "Deleted face identity"}` |
 
-#### Check-in
+#### Check-in & Continuous Verification (Đối chiếu với Vector Gốc)
 
 | Method | Endpoint | Input | Output |
 |---|---|---|---|
+| POST | `/v1/face/verify` | `FormData: {user_id, image, threshold: 0.75, check_liveness: true}` | `{matched: bool, similarity: float, liveness_passed: bool}` |
 | POST | `/v1/checkin/verify` | `{image_base64, sinh_vien_ca_thi_id, device_fingerprint?}` | `{verified, similarity_score, captured_url}` |
-| POST | `/v1/checkin/kiosk-identify` | `{image_base64, ca_thi_id}` | `{verified, sinh_vien_ca_thi_id, vi_tri_ngoi}` |
+| POST | `/v1/proctor/inspect-frame` | `FormData: {sessionStudentId, frame}` | `{success, detectedEvent, isProctorPresence, proctorName, trustScore, penalty}` |
+| POST | `/v1/proctor/continuous-verify` | `FormData: {sinh_vien_ca_thi_id, frame}` | `{is_impersonation: bool, similarity_to_ground_truth: float, matched_with_staff_whitelist: bool}` |
 
-#### Proctoring
+#### Proctoring & CCTV
 
 | Method | Endpoint | Input | Output |
 |---|---|---|---|
@@ -873,7 +1051,7 @@ CREATE TABLE sinh_vien_ca_thi (
 
 | Endpoint | Mô tả |
 |---|---|
-| `WS /v1/ws/face-stream` | Stream frames để KYC — nhận pose realtime |
+| `WS /v1/ws/face-stream` | Stream frames để KYC — nhận hướng pose realtime (pitch, yaw, roll) và auto-capture |
 
 ---
 
@@ -902,14 +1080,49 @@ CREATE TABLE sinh_vien_ca_thi (
 
 ## 8. BUSINESS RULES & VALIDATION
 
+### BR-KYC: Bộ Quy tắc Dữ liệu Gốc Sinh trắc học & Giám sát Online (Ground-Truth Rules)
+
+- **BR-KYC-01: Điều kiện Dự thi Tiên quyết của Sinh viên (Mandatory Student KYC)**:
+  - Sinh viên **BẮT BUỘC** phải có `face_status = 'APPROVED'` trong hồ sơ đào tạo mới được phép:
+    1. Import vào danh sách ca thi và cấp Số báo danh (SBD).
+    2. Check-in vào phòng thi trực tuyến.
+  - Nếu sinh viên chưa đăng ký hoặc bị từ chối KYC (`face_status != 'APPROVED'`), hệ thống tự động khóa quyền truy cập ca thi với thông báo lỗi: `BLOCKED_REQUIRE_FACE_KYC`.
+
+- **BR-KYC-02: Điều kiện Phân công Coi thi của Giảng viên (Mandatory Proctor KYC)**:
+  - Giảng viên **BẮT BUỘC** phải có `face_status = 'APPROVED'` mới được Admin/Phòng Đào tạo phân công làm `GIAM_THI_1`, `GIAM_THI_2` hoặc `THANH_TRA`.
+  - Hệ thống tự động lọc danh sách phân công: Chỉ hiển thị các Giảng viên đã hoàn tất Face KYC.
+  - Vector Gốc của Giảng viên được tự động nạp vào **Staff Proctor Whitelist Cache** của ca thi trước giờ G 15 phút.
+
+- **BR-KYC-03: Ngưỡng So khớp Vector Gốc (Ground-Truth Cosine Thresholds)**:
+  - **Check-in 1:1 ban đầu:** Cosine Similarity $\ge 0.75$ VÀ Liveness Score $\ge 0.90$.
+  - **Xác thực Liên tục giữa giờ (Continuous Verification):** Cosine Similarity $\ge 0.70$.
+  - **Nhận diện Cán bộ Coi thi (Staff Exemption):** Cosine Similarity $\ge 0.75$ với bất kỳ cán bộ nào trong Staff Whitelist.
+
+- **BR-KYC-04: Xử lý Vi phạm Tráo người Thi hộ (Continuous Impersonation Detection)**:
+  - Nếu AI phát hiện khuôn mặt ngồi thi có Cosine Similarity $< 0.70$ so với Vector Gốc kéo dài quá 15 giây (hoặc 3 chu kỳ camera liên tiếp):
+    + Bật cờ `impersonation_flag = true`.
+    + Ghi nhận vi phạm `IMPERSONATION_DETECTED` (Mức độ: `CRITICAL`, Trừ 50 điểm uy tín).
+    + Bắn còi cảnh báo đỏ khẩn cấp tới màn hình Giám thị kèm ảnh chụp đối chiếu (Ảnh gốc KYC vs Ảnh camera hiện tại).
+    + Tự động khóa giao diện làm bài thi của thí sinh (`suspended`).
+
+- **BR-KYC-05: Miễn trừ Cán bộ Coi thi Ghé bàn (Staff Exemption Protocol)**:
+  - Khi camera phát hiện $\ge 2$ khuôn mặt (`MULTIPLE_FACES`), AI lập tức trích xuất vector khuôn mặt phụ và so khớp với Staff Proctor Whitelist.
+  - Nếu trùng khớp với Giám thị / Thanh tra ca thi:
+    + Ghi nhận sự kiện `STAFF_EXEMPTION` (Trừ 0 điểm).
+    + Bàn thi trên màn hình Giám thị chuyển sang icon Cán bộ màu tím an tâm.
+    + Thí sinh nhận thông báo "Cán bộ coi thi đang kiểm tra bàn", KHÔNG bị trừ điểm uy tín.
+
+---
+
 ### BR-01: Xếp chỗ tự động
 - Tổng SV không được vượt quá `phong_thi.so_day × phong_thi.so_cot`
 - Shuffle trước khi xếp → đảm bảo ngẫu nhiên
 - Một SV chỉ có 1 bàn trong 1 ca thi (UNIQUE constraint)
 - Seat PIN: 6 chữ số, UNIQUE trong `ca_thi_id` (không unique global)
+- **Chỉ xếp chỗ cho sinh viên đã có `face_status = 'APPROVED'`**
 
 ### BR-02: Check-in
-- `similarity_score >= 0.75` để pass (configurable)
+- `similarity_score >= 0.75` với Vector Gốc để pass (configurable)
 - Liveness check phải pass trước khi so sánh embedding
 - Cho phép thử lại tối đa 3 lần trước khi báo giám thị
 - `device_fingerprint` UNIQUE trong `ca_thi_id` — chặn 1 tài khoản login 2 máy
@@ -945,54 +1158,48 @@ CREATE TABLE sinh_vien_ca_thi (
 
 ```
 Login → Dashboard (Thống kê tổng quan)
-  ├── Quản lý Phòng thi
-  │     ├── Danh sách phòng
-  │     ├── Tạo phòng → Form (rows/cols/IP) → Preview 3D grid
-  │     └── Chi tiết phòng → Tab Cameras → Thêm camera → Vẽ ROI
+  ├── Quản lý Cơ cấu (Khoa - Khóa - Lớp - Sinh viên - Giảng viên)
+  │     ├── Danh sách SV/GV kèm trạng thái Face KYC (APPROVED / PENDING / NOT_ENROLLED)
+  │     └── Phê duyệt / Thẩm định lại ảnh Căn cước Gốc
+  ├── Quản lý Phòng thi (Grid 3D + Camera ROI)
   ├── Ngân hàng Đề thi (CRUD đề trong MongoDB)
-  ├── Quản lý Ca thi
-  │     ├── Tạo ca thi
-  │     ├── Import sinh viên → Preview danh sách
-  │     ├── Xếp chỗ tự động → Xem preview sơ đồ
-  │     └── Gán giám thị
-  └── Báo cáo
-        └── Integrity Report (sau khi ca thi kết thúc)
+  ├── Quản lý Ca thi (Chặn tự động: Chỉ xếp chỗ SV đã KYC APPROVED, chỉ gán GV đã KYC APPROVED)
+  └── Báo cáo & Audit Log (Integrity Report + Đối soát Face KYC)
 ```
 
 ### 9.2 Giám thị Flow
 
 ```
-Login → Danh sách Ca thi được phân công
-  └── Vào Ca thi
-        ├── Tab 1: Phòng thi 3D (góc nhìn isometric)
-        │     ├── Grid bàn theo trạng thái màu sắc
-        │     ├── Avatar 3D trên mỗi bàn đã check-in
-        │     ├── Camera positions hiển thị trên tường 3D
-        │     └── Click bàn → Xem chi tiết SV + ảnh bằng chứng
-        ├── Tab 2: Feed Vi phạm realtime (lọc theo mức độ)
-        ├── Tab 3: Danh sách SV (tìm kiếm, lọc trạng thái)
-        └── Actions: Cảnh báo / Đình chỉ / Thu bài / Force check-in
+Login → Kiểm tra Căn cước Sinh trắc học Gốc
+  ├── [Chưa có Face KYC APPROVED] → Chặn nhận ca thi, mở Modal: "Bắt buộc Đăng ký Face ID Giám thị"
+  └── [Đã có Face KYC APPROVED] → Danh sách Ca thi được phân công
+        └── Vào Ca thi (Trước giờ thi 15 phút: Vector Gốc tự nạp vào Staff Whitelist)
+              ├── Tab 1: Phòng thi 3D (góc nhìn isometric)
+              │     ├── Grid bàn theo trạng thái màu sắc
+              │     ├── Avatar 3D trên mỗi bàn đã check-in
+              │     ├── Khi Giám thị lại gần bàn → Icon Giám thị tím (STAFF_EXEMPTION, 0đ phạt)
+              │     └── Click bàn → Xem chi tiết SV + ảnh KYC gốc + ảnh bằng chứng
+              ├── Tab 2: Feed Vi phạm realtime (lọc theo mức độ)
+              │     └── Báo động đỏ đặc biệt khi phát hiện Tráo người (IMPERSONATION)
+              ├── Tab 3: Danh sách SV (tìm kiếm, lọc trạng thái)
+              └── Actions: Cảnh báo / Đình chỉ / Thu bài / Force check-in / Bàn giao ca thi bằng Face Auth
 ```
 
 ### 9.3 Sinh viên Flow
 
 ```
-Login → Trang chủ
-  ├── [Chưa có embedding] → Banner "Đăng ký khuôn mặt"
-  │     └── KYC Page: Hướng dẫn → Capture 3 góc → Submit → Done
-  └── [Đã có embedding] → Danh sách ca thi sắp diễn ra
-        └── Vào Ca thi (khi ACTIVE)
-              ├── [BYOD] Validate SEB → Validate IP → Nhập Seat PIN
-              ├── Check-in: Camera → Chụp mặt → Xác nhận
-              ├── [Nếu pass] → Giao diện làm bài
-              │     ├── Header: Đồng hồ đếm ngược + Điểm uy tín
-              │     ├── Sidebar: Danh sách câu hỏi
-              │     ├── Main: Nội dung câu hỏi
-              │     │     ├── Trắc nghiệm: Radio buttons
-              │     │     ├── Tự luận: Textarea
-              │     │     └── Code: Monaco Editor + Run test
-              │     └── Auto-save mỗi 10s + Nút "Nộp bài"
-              └── [Kết thúc] → Màn hình "Đã nộp bài" + Điểm uy tín tổng kết
+Login → Kiểm tra Căn cước Sinh trắc học Gốc
+  ├── [face_status != 'APPROVED'] → Chặn toàn bộ ca thi, hiện Banner đỏ bắt buộc:
+  │     └── KYC Onboarding Page: Hướng dẫn → Quét 5 góc khuôn mặt + Liveness → Lưu Vector Gốc
+  └── [face_status == 'APPROVED'] → Trang chủ (Xem lịch thi, SBD, vị trí bàn)
+        └── Vào Ca thi khi đến giờ:
+              ├── Check-in 1:1 (Quét camera đối chiếu với Vector Gốc ArcFace ≥ 0.75)
+              ├── Mở giao diện làm bài thi (Interactive Quiz / Essay / Code)
+              ├── Vòng lặp giám sát liên tục (Continuous Verification ngầm mỗi 20s)
+              │     ├── Góc đầu, hướng mắt, tư thế ngồi
+              │     ├── Chống gian lận trình duyệt (Tab switch, DevTools F12, Right click)
+              │     └── Xác thực danh tính liên tục chống thi hộ giữa giờ
+              └── Nộp bài thi → Xem tổng kết kết quả & tra cứu đáp án giải thích sau khi công bố
 ```
 
 ---
@@ -2507,8 +2714,21 @@ Response 200:
 - Điểm uy tín 70–89đ: Tăng tần suất kiểm tra lên mỗi **15 giây**.
 - Điểm uy tín < 70đ (Nghi vấn cao): Tăng tần suất kiểm tra lên mỗi **10 giây**.
 
+### 17.5. Xác thực Khuôn mặt Liên tục & Chống Tráo người / Thi hộ (Continuous Biometric Verification)
+- **Hạt nhân**: Vector Gốc ArcFace 512-D được lưu trữ an toàn trong DB sau khi Sinh viên hoàn thành KYC 5 góc (`face_status = 'APPROVED'`).
+- **Cơ chế kiểm soát thời gian thực**:
+  1. Trong mỗi chu kỳ Camera Thích ứng, ngoài việc phân tích góc cúi/nghiêng đầu (Head Pose), AI trích xuất vector khuôn mặt hiện tại từ frame webcam.
+  2. Tính Cosine Similarity giữa khuôn mặt trước camera và Vector Gốc của thí sinh đang dự thi:
+     $$\text{Similarity} = \frac{\mathbf{u}_{\text{live}} \cdot \mathbf{v}_{\text{ground\_truth}}}{\|\mathbf{u}_{\text{live}}\| \|\mathbf{v}_{\text{ground\_truth}}\|}$$
+  3. **Ngưỡng quyết định & Phản ứng tự động**:
+     - $\text{Similarity} \ge 0.75$: Danh tính hợp lệ (`IDENTITY_VERIFIED`), không can thiệp.
+     - $\text{Similarity} < 0.70$ kéo dài liên tiếp $\ge 15$ giây (3 frame):
+       + Kích hoạt vi phạm `IMPERSONATION_DETECTED` (Trừ 50đ uy tín, Mức độ: `CRITICAL`).
+       + Phát còi báo động khẩn cấp tới Giám thị kèm Popup ảnh đối chiếu kép: **[Ảnh Gốc KYC]** vs **[Ảnh Frame Hiện Tại]**.
+       + Server tự động gửi lệnh Socket.IO `student:suspended` khóa ngay lập tức giao diện làm bài thi của thí sinh.
+
 ---
 
-*Blueprint version 2.0 — Cập nhật: 2026-10-17*  
-*Bổ sung: Socket.IO Realtime Proctoring Protocol, Face AI 3D Pose Suspicious Behavior (PHONE_LOOK_DOWN, SUSPICIOUS_SIDE), Multi-layer Browser Anti-Cheat Suite, Debounce Vi phạm 30s, Adaptive Camera Loop & Giám sát LiveProctor/TakeExam v2.0.*  
+*Blueprint version 2.1 — Cập nhật: 2026-10-17*  
+*Bổ sung: Triết lý Kiến trúc Biometric Ground-Truth Identity First (Bắt buộc Đăng ký Khuôn mặt Gốc cho Sinh viên & Giảng viên để quản lý và khảo thí), Quy trình KYC 5 góc + Liveness Anti-Spoofing, Continuous Biometric Verification chống tráo người thi hộ, Staff Proctor Whitelist Exemption, Socket.IO Realtime Proctoring Protocol, Multi-layer Browser Anti-Cheat Suite & Adaptive Camera Inspection v2.1.*  
 *Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*
