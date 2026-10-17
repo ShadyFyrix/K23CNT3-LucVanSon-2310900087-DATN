@@ -32,13 +32,20 @@ async function parseExamFile(filePath, originalName = '') {
       rawText = fs.readFileSync(filePath, 'utf-8');
     } else if (ext === '.pdf') {
       try {
-        const { PDFParse } = require('pdf-parse');
+        const pdfParseModule = require('pdf-parse');
         const dataBuffer = fs.readFileSync(filePath);
-        if (typeof PDFParse === 'function') {
-          const parser = new PDFParse(dataBuffer);
-          if (typeof parser.getText === 'function') {
-            rawText = await parser.getText();
-          }
+        const uint8 = new Uint8Array(dataBuffer);
+
+        if (pdfParseModule.PDFParse) {
+          const parser = new pdfParseModule.PDFParse({ data: uint8 });
+          const textResult = await parser.getText();
+          rawText = (textResult && textResult.text) ? textResult.text : (typeof textResult === 'string' ? textResult : '');
+        } else if (typeof pdfParseModule === 'function') {
+          const res = await pdfParseModule(uint8);
+          rawText = res.text || '';
+        } else if (pdfParseModule.default && typeof pdfParseModule.default === 'function') {
+          const res = await pdfParseModule.default(uint8);
+          rawText = res.text || '';
         }
       } catch (pdfErr) {
         console.warn('Lỗi đọc văn bản PDF (có thể là file scan dạng ảnh):', pdfErr.message);
@@ -70,6 +77,7 @@ function parseExamContent(rawText, htmlText = '') {
     essayCount: 0,
     hasAnswers: false,
     quickAnswerString: '',
+    metadata: {},
     questions: []
   };
 
@@ -106,10 +114,32 @@ function parseExamContent(rawText, htmlText = '') {
     }
   }
 
-  // 2. Cắt bỏ khối đáp án để không làm lẫn việc phân tích câu hỏi
+  // 1.1 Trích xuất siêu dữ liệu tổng quan của đề thi (Metadata)
+  const codeMatch = rawText.match(/Mã\s*đề\s*[:.\-]?\s*([A-Za-z0-9_-]+)/i);
+  const rawSubject = rawText.match(/(?:Tên\s*học\s*phần|Học\s*phần|Môn\s*học)\s*[:.\-]?\s*([^\n\r]+)/i);
+  const cleanSubject = rawSubject ? rawSubject[1].replace(/^(?:Tên\s*học\s*phần|Học\s*phần|Môn\s*học)\s*[:.\-]?\s*/i, '').trim() : null;
+  const durationMatch = rawText.match(/Thời\s*gian(?:\s*làm\s*bài)?\s*[:.\-]?\s*(\d+)/i);
+  const formMatch = rawText.match(/Hình\s*thức(?:\s*làm\s*bài)?\s*[:.\-]?\s*([^\n\r]+)/i);
+  const titleMatch = rawText.match(/(?:ĐỀ\s+THI[^\n\r]+)/i);
+
+  result.metadata = {
+    code: codeMatch ? codeMatch[1].trim() : null,
+    subject: cleanSubject,
+    duration: durationMatch ? parseInt(durationMatch[1]) : null,
+    form: formMatch ? formMatch[1].trim() : null,
+    title: titleMatch ? titleMatch[0].trim() : null
+  };
+
+  // 2. Cắt bỏ khối đáp án và phân tách mã đề đầu tiên nếu tài liệu chứa nhiều mã đề
   let questionBody = rawText;
   if (answerBlockMatch && answerBlockMatch.index > 50) {
     questionBody = rawText.substring(0, answerBlockMatch.index);
+  }
+
+  // Nếu đề thi chứa nhiều mã đề (VD: Mã đề 01 rồi đến HẾT, sau đó sang Mã đề 02)
+  const hetDelimiterMatch = questionBody.match(/(?:^|\n)\s*-+\s*HẾT\s*-+/i);
+  if (hetDelimiterMatch && hetDelimiterMatch.index > 80) {
+    questionBody = questionBody.substring(0, hetDelimiterMatch.index);
   }
 
   // 3. Nhận diện vị trí bắt đầu của phần Tự luận (nếu có)
@@ -120,14 +150,17 @@ function parseExamContent(rawText, htmlText = '') {
     essayStartIndex = essaySectionMatch.index;
   }
 
-  // 4. Nhận diện vị trí bắt đầu của mỗi câu hỏi:
-  // "Câu 1:", "Câu 1.", "Câu 1 -", "Question 1:", "1. "
-  const qHeaderRegex = /(?:^|\n)\s*(?:Câu|Question)\s*(\d+)[:.-]?/gi;
+  // 4. Nhận diện vị trí bắt đầu của mỗi câu hỏi / bài tập:
+  // Hỗ trợ: "Câu 1:", "Question 1:", "Bài 1 (3 điểm):", "Bài 2 (7 điểm):", "1. "
+  const qHeaderRegex = /(?:^|\n)\s*(?:(Câu|Question|Bài))\s*(\d+)(?:\s*\(([^)]+)\))?[:.-]?/gi;
   const matches = [];
   let m;
   while ((m = qHeaderRegex.exec(questionBody)) !== null) {
     matches.push({
-      qNum: parseInt(m[1]),
+      prefix: m[1],
+      isBai: m[1].toLowerCase() === 'bài',
+      qNum: parseInt(m[2]),
+      scoreStr: m[3] ? m[3].trim() : null,
       index: m.index,
       headerLength: m[0].length
     });
@@ -137,14 +170,17 @@ function parseExamContent(rawText, htmlText = '') {
     const numHeaderRegex = /(?:^|\n)\s*(\d+)[\.\/]\s+/g;
     while ((m = numHeaderRegex.exec(questionBody)) !== null) {
       matches.push({
+        prefix: 'Câu',
+        isBai: false,
         qNum: parseInt(m[1]),
+        scoreStr: null,
         index: m.index,
         headerLength: m[0].length
       });
     }
   }
 
-  // 5. Trích xuất chi tiết từng câu hỏi
+  // 5. Trích xuất chi tiết từng câu hỏi / bài tập
   const questions = [];
   for (let i = 0; i < matches.length; i++) {
     const cur = matches[i];
@@ -173,7 +209,13 @@ function parseExamContent(rawText, htmlText = '') {
     }
 
     const fromAnswerMap = answerKeyMap.get(cur.qNum);
-    const isExplicitEssay = fromAnswerMap?.isEssay || isAfterEssayDivider || (optionMatches.length < 2);
+    const isExplicitEssay = fromAnswerMap?.isEssay || isAfterEssayDivider || (cur.isBai && optionMatches.length < 2) || (optionMatches.length < 2);
+
+    let parsedScore = null;
+    if (cur.scoreStr) {
+      const sMatch = cur.scoreStr.match(/(\d+(?:[.,]\d+)?)/);
+      if (sMatch) parsedScore = parseFloat(sMatch[1].replace(',', '.'));
+    }
 
     let type = isExplicitEssay ? 'ESSAY' : 'MULTIPLE_CHOICE';
     let options = [];
@@ -219,7 +261,9 @@ function parseExamContent(rawText, htmlText = '') {
       }
     }
 
-    const qText = content.replace(/^(?:Câu|Question|\d+)\s*\d*[:.-]?\s*/i, '').trim() || `Câu ${cur.qNum || (i + 1)}`;
+    const qText = content.replace(/^(?:Câu|Question|Bài)\s*\d*(?:\s*\([^)]+\))?[:.-]?\s*/i, '').trim() || `${cur.prefix || 'Câu'} ${cur.qNum || (i + 1)}`;
+    const finalScore = parsedScore !== null ? parsedScore : (type === 'ESSAY' ? 1.5 : 0.25);
+
     questions.push({
       stt: cur.qNum || (i + 1),
       type,
@@ -228,7 +272,7 @@ function parseExamContent(rawText, htmlText = '') {
       options,
       correctAnswers: correctAnswers.sort((a, b) => a - b),
       selectionMode,
-      score: type === 'ESSAY' ? 1.5 : 0.25,
+      score: finalScore,
       minWords: type === 'ESSAY' ? 50 : 0
     });
   }

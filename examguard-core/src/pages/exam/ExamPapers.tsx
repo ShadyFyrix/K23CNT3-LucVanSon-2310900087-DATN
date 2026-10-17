@@ -48,6 +48,7 @@ interface ConfiguredQuestion {
   correctAnswers: number[]; // [0] for A, [0, 2] for A and C
   prompt?: string;
   content?: string;
+  submissionMethod?: 'AUTO' | 'MCQ_SELECT' | 'TEXT_EDITOR' | 'FILE_UPLOAD' | 'HYBRID_TEXT_FILE';
   minWords?: number;
   explanation?: string;
 }
@@ -279,6 +280,39 @@ export default function ExamPapers() {
           setEssayCountInput(parsed.essayCount);
           setRawQuickKeyInput(parsed.quickAnswerString || '');
 
+          // Tự động nhận diện và điền siêu dữ liệu đề thi (Metadata) từ tệp
+          if (parsed.metadata) {
+            if (parsed.metadata.code) {
+              const c = parsed.metadata.code.trim();
+              setNewCode(c.length <= 3 ? `DE-${c}` : c);
+            }
+            if (parsed.metadata.duration && parsed.metadata.duration > 0) {
+              setNewDuration(parsed.metadata.duration);
+            }
+            if (parsed.metadata.subject && courses.length > 0) {
+              const subLower = parsed.metadata.subject.toLowerCase();
+              const matchedCourse = courses.find(c => 
+                c.name.toLowerCase().includes(subLower) || 
+                subLower.includes(c.name.toLowerCase()) ||
+                (c.courseCode && subLower.includes(c.courseCode.toLowerCase()))
+              );
+              if (matchedCourse) {
+                setSelectedCourseId(matchedCourse._id);
+              }
+            }
+            if (!newTitle) {
+              const subj = parsed.metadata.subject || 'Kỹ thuật lập trình';
+              const codeStr = parsed.metadata.code ? ` (Mã đề ${parsed.metadata.code})` : '';
+              setNewTitle(`Kiểm tra Kết thúc Học phần ${subj}${codeStr}`);
+            }
+          }
+
+          // Tự động đồng bộ thang điểm tổng
+          const sumScore = parsed.questions.reduce((sum: number, q: any) => sum + (Number(q.score) || 0), 0);
+          if (sumScore > 0) {
+            setNewTotalScore(Math.round(sumScore * 100) / 100);
+          }
+
           if (parsed.essayCount > 0 && parsed.mcqCount > 0) {
             setStructureType('HYBRID');
           } else if (parsed.essayCount > 0 && parsed.mcqCount === 0) {
@@ -287,8 +321,10 @@ export default function ExamPapers() {
             setStructureType('PURE_MCQ');
           }
 
+          setPreviewTab('FORMATTED');
+
           toast.success(
-            `✨ AI đã bóc tách đề thi: Nhận diện ${parsed.detectedQuestionsCount} câu hỏi (${parsed.mcqCount} trắc nghiệm, ${parsed.essayCount} tự luận) & tự động cấu hình ma trận đáp án!`,
+            `✨ AI đã bóc tách đề thi: Nhận diện ${parsed.detectedQuestionsCount} câu hỏi (${parsed.mcqCount} trắc nghiệm, ${parsed.essayCount} tự luận) & cấu hình đầy đủ thời gian, điểm số!`,
             { duration: 6000 }
           );
         } else {
@@ -332,6 +368,15 @@ export default function ExamPapers() {
       }
 
       updated[qIndex] = q;
+      return updated;
+    });
+  };
+
+  // Thay đổi phương thức nộp bài của câu tự luận (Gõ text vs Chụp ảnh giấy/Upfile vs Kết hợp)
+  const handleChangeSubmissionMethod = (qIndex: number, method: 'TEXT_EDITOR' | 'FILE_UPLOAD' | 'HYBRID_TEXT_FILE') => {
+    setConfiguredQuestions(prev => {
+      const updated = [...prev];
+      updated[qIndex] = { ...updated[qIndex], submissionMethod: method };
       return updated;
     });
   };
@@ -492,6 +537,8 @@ export default function ExamPapers() {
           correctAnswer: corr,
           correctAnswers: q.correctAnswers,
           selectionMode: q.selectionMode,
+          submissionMethod: q.submissionMethod || (isMcq ? 'MCQ_SELECT' : 'FILE_UPLOAD'),
+          allowAttachment: q.submissionMethod !== 'TEXT_EDITOR',
           scoringMode: 'ALL_OR_NOTHING',
           score: Number(q.score) || 0.5,
           minWords: q.minWords || 0,
@@ -1150,9 +1197,29 @@ export default function ExamPapers() {
                                               {q.score}đ
                                             </span>
                                           </div>
-                                          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 italic">
-                                            <span>📝 Thí sinh trả lời trực tiếp hoặc đính kèm ảnh bài làm. Tiêu chuẩn: tối thiểu {q.minWords || 50} từ.</span>
-                                          </div>
+                                          {q.submissionMethod === 'TEXT_EDITOR' ? (
+                                            <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 italic">
+                                              <span>📝 Thí sinh gõ trực tiếp lời giải / công thức vào khung soạn thảo. Tiêu chuẩn: tối thiểu {q.minWords || 50} từ.</span>
+                                            </div>
+                                          ) : q.submissionMethod === 'HYBRID_TEXT_FILE' ? (
+                                            <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                                              <div className="flex items-center space-x-2 font-bold text-indigo-300">
+                                                <Sliders className="w-4 h-4 text-indigo-400" />
+                                                <span>Phương thức Kết hợp: Vừa gõ tóm tắt kết quả vừa đính kèm ảnh bài giải chi tiết</span>
+                                              </div>
+                                              <p className="text-[10px] text-slate-400">Thí sinh nhập đáp án số/công thức vào khung soạn thảo và đính kèm ảnh vẽ đồ thị/mạch logic.</p>
+                                            </div>
+                                          ) : (
+                                            <div className="p-3 bg-slate-900/90 rounded-xl border border-dashed border-amber-500/40 text-[11px] text-amber-200 space-y-1">
+                                              <div className="flex items-center space-x-2 font-bold text-amber-300">
+                                                <Upload className="w-4 h-4 text-amber-400" />
+                                                <span>Phương thức: Chụp ảnh bài làm giấy / Tải tệp vẽ sơ đồ, mạch logic</span>
+                                              </div>
+                                              <p className="text-[10px] text-slate-400">
+                                                🔒 Thí sinh quét mã QR bằng điện thoại để kích hoạt <b>Camera trực tiếp</b> (khóa thư viện ảnh). Webcam AI trên máy tính liên tục giám sát ánh mắt và bàn thi trong suốt quá trình chụp.
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                       );
                                     })}
@@ -1720,11 +1787,53 @@ export default function ExamPapers() {
 
                         {/* Body câu */}
                         {isEssay ? (
-                          <div className="text-[11px] text-slate-400 space-y-1">
-                            <p className="italic">Thí sinh làm bài tự luận trong hộp bài làm.</p>
-                            <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <div className="text-[11px] text-slate-400 space-y-2">
+                            <div>
+                              <span className="text-[10px] text-slate-400 block mb-1">Phương thức nộp bài:</span>
+                              <div className="grid grid-cols-3 gap-1 text-[9px] font-bold">
+                                <button
+                                  type="button"
+                                  onClick={() => handleChangeSubmissionMethod(originalIdx, 'FILE_UPLOAD')}
+                                  className={`py-1 rounded px-1 transition text-center truncate ${
+                                    (q.submissionMethod === 'FILE_UPLOAD' || !q.submissionMethod)
+                                      ? 'bg-amber-500 text-slate-950 shadow'
+                                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                  title="Chụp ảnh bài làm giấy / Tải tệp vẽ sơ đồ mạch logic, đồ thị, bài toán"
+                                >
+                                  📷 Chụp giấy
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleChangeSubmissionMethod(originalIdx, 'TEXT_EDITOR')}
+                                  className={`py-1 rounded px-1 transition text-center truncate ${
+                                    q.submissionMethod === 'TEXT_EDITOR'
+                                      ? 'bg-cyan-500 text-slate-950 shadow'
+                                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                  title="Soạn thảo văn bản / công thức trực tiếp trên máy"
+                                >
+                                  📝 Gõ Text
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleChangeSubmissionMethod(originalIdx, 'HYBRID_TEXT_FILE')}
+                                  className={`py-1 rounded px-1 transition text-center truncate ${
+                                    q.submissionMethod === 'HYBRID_TEXT_FILE'
+                                      ? 'bg-indigo-500 text-white shadow'
+                                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                  title="Kết hợp: Vừa gõ text vừa đính kèm ảnh bài giải"
+                                >
+                                  ⚡ Kết hợp
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
                               <span>Tối thiểu: {q.minWords || 50} từ</span>
-                              <span className="text-amber-400">Chấm tay / AI</span>
+                              <span className="text-amber-400">
+                                {(q.submissionMethod === 'FILE_UPLOAD' || !q.submissionMethod) ? 'QR Scan Safe' : 'Giám sát gõ'}
+                              </span>
                             </div>
                           </div>
                         ) : (

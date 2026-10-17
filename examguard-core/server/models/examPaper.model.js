@@ -34,6 +34,12 @@ const QuestionSchema = new mongoose.Schema({
   },
 
   // Dành riêng cho ESSAY
+  submissionMethod: {
+    type: String,
+    enum: ['AUTO', 'MCQ_SELECT', 'TEXT_EDITOR', 'FILE_UPLOAD', 'HYBRID_TEXT_FILE'],
+    default: 'AUTO' // Tùy biến phương thức nộp bài: Chọn đáp án, Gõ text, Nộp ảnh bài làm giấy/file, hoặc Kết hợp
+  },
+  allowAttachment: { type: Boolean, default: true },
   gradingGuide: { type: String, default: '' },
   suggestedKeywords: [{ type: String }],
   minWords: { type: Number, default: 0 },

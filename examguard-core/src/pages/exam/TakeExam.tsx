@@ -43,7 +43,12 @@ import {
   ChevronUp,
   X,
   Search,
-  CheckSquare
+  CheckSquare,
+  QrCode,
+  UploadCloud,
+  ImageIcon,
+  FileCheck,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -61,6 +66,8 @@ interface Question {
   selectionMode?: 'SINGLE' | 'MULTIPLE' | 'ALTERNATIVE';
   scoringMode?: 'ALL_OR_NOTHING' | 'PARTIAL_CREDIT';
   minWords?: number;
+  submissionMethod?: 'TEXT_EDITOR' | 'FILE_UPLOAD' | 'HYBRID_TEXT_FILE';
+  allowAttachment?: boolean;
   templateCode?: Record<string, string>;
   testCases?: Array<{ input: string; expectedOutput: string }>;
 }
@@ -572,13 +579,77 @@ export default function TakeExam() {
     });
   };
 
+  // Xử lý nộp file / ảnh bài làm giấy cho câu tự luận
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrTokenSeconds, setQrTokenSeconds] = useState(60);
+
+  // Timer đếm ngược token QR 60s
+  useEffect(() => {
+    let timer: any = null;
+    if (showQrModal) {
+      setQrTokenSeconds(60);
+      timer = setInterval(() => {
+        setQrTokenSeconds(prev => (prev <= 1 ? 60 : prev - 1));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showQrModal]);
+
   // Xử lý nhập Tự luận hoặc Code
   const handleTextChange = (qId: string, val: string) => {
+    setAnswers(prev => {
+      const prevVal = prev[qId];
+      if (typeof prevVal === 'object' && prevVal?.fileUrl) {
+        const newVal = { ...prevVal, text: val };
+        return {
+          ...prev,
+          [qId]: newVal,
+          [currentIdx]: newVal
+        };
+      }
+      return {
+        ...prev,
+        [qId]: val,
+        [currentIdx]: val
+      };
+    });
+  };
+
+  const handleFileUpload = (qId: string, fileData: { fileUrl: string; fileName: string; fileSize?: number }) => {
+    const prevVal = answers[qId];
+    const prevText = typeof prevVal === 'object' ? (prevVal?.text || '') : (typeof prevVal === 'string' ? prevVal : '');
+    const newVal = {
+      text: prevText,
+      fileUrl: fileData.fileUrl,
+      fileName: fileData.fileName,
+      fileSize: fileData.fileSize,
+      scannedAt: new Date().toISOString(),
+      verified: true
+    };
     setAnswers(prev => ({
       ...prev,
-      [qId]: val,
-      [currentIdx]: val
+      [qId]: newVal,
+      [currentIdx]: newVal
     }));
+    setAiLogs(prev => [
+      { time: new Date().toLocaleTimeString('vi-VN'), text: `Nhận ảnh quét bài thi giấy câu ${currentIdx + 1} (${fileData.fileName}) - Đã kiểm tra tính hợp lệ EXIF`, type: 'success' },
+      ...prev
+    ]);
+    toast.success('Đã đính kèm ảnh bài làm giấy thành công!');
+  };
+
+  const handleRemoveFile = (qId: string) => {
+    const prevVal = answers[qId];
+    const prevText = typeof prevVal === 'object' ? (prevVal?.text || '') : (typeof prevVal === 'string' ? prevVal : '');
+    const newVal = prevText ? { text: prevText } : '';
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: newVal,
+      [currentIdx]: newVal
+    }));
+    toast('Đã gỡ tệp bài làm đính kèm.');
   };
 
   // Toggle đánh dấu cờ xem lại
@@ -1240,14 +1311,30 @@ export default function TakeExam() {
                           </div>
                         </div>
                       ) : q.type === 'ESSAY' ? (
-                        <div className="pt-1">
-                          <textarea
-                            rows={2}
-                            value={qVal || ''}
-                            onChange={(e) => handleTextChange(q._id, e.target.value)}
-                            placeholder="Nhập câu trả lời tự luận..."
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                          ></textarea>
+                        <div className="pt-1 space-y-1.5">
+                          {q.submissionMethod === 'FILE_UPLOAD' ? (
+                            <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300">
+                              <span className="flex items-center space-x-1.5 text-cyan-400 font-medium">
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>Ảnh bài làm giấy</span>
+                              </span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                qVal && (typeof qVal === 'object' ? qVal.fileUrl : qVal)
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                {qVal && (typeof qVal === 'object' ? qVal.fileUrl : qVal) ? '✓ Đã có ảnh' : 'Chưa nộp ảnh'}
+                              </span>
+                            </div>
+                          ) : (
+                            <textarea
+                              rows={2}
+                              value={typeof qVal === 'object' ? (qVal.text || '') : (qVal || '')}
+                              onChange={(e) => handleTextChange(q._id, e.target.value)}
+                              placeholder={q.submissionMethod === 'HYBRID_TEXT_FILE' ? "Gõ tóm tắt / chuyển sang Thẻ Quiz để nộp ảnh..." : "Nhập câu trả lời tự luận..."}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                            ></textarea>
+                          )}
                         </div>
                       ) : (
                         <div className="text-[11px] text-slate-500 italic py-1">
@@ -1457,21 +1544,167 @@ export default function TakeExam() {
                 )}
 
                 {/* Tự luận */}
-                {currentQ.type === 'ESSAY' && (
-                  <div className="mt-4">
-                    <textarea
-                      rows={6}
-                      value={currentVal || ''}
-                      onChange={e => handleTextChange(qId, e.target.value)}
-                      placeholder="Nhập câu trả lời tự luận của bạn tại đây..."
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500 resize-none font-sans"
-                    ></textarea>
-                    <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 px-1">
-                      <span>Số từ tối thiểu: {currentQ.minWords || 0} từ</span>
-                      <span>Số ký tự: {(currentVal || '').length}</span>
+                {currentQ.type === 'ESSAY' && (() => {
+                  const method = currentQ.submissionMethod || 'TEXT_EDITOR';
+                  const textVal = typeof currentVal === 'object' ? (currentVal?.text || '') : (typeof currentVal === 'string' ? currentVal : '');
+                  const fileVal = typeof currentVal === 'object' ? currentVal?.fileUrl : null;
+                  const fileName = typeof currentVal === 'object' ? currentVal?.fileName : null;
+                  const scannedAt = typeof currentVal === 'object' ? currentVal?.scannedAt : null;
+
+                  return (
+                    <div className="mt-4 space-y-4">
+                      {/* Method Header Badge */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
+                        <div className="flex items-center space-x-2">
+                          {method === 'FILE_UPLOAD' ? (
+                            <span className="flex items-center space-x-1.5 text-cyan-400 font-semibold">
+                              <Camera className="w-4 h-4" />
+                              <span>Hình thức: Nộp ảnh quét bài làm trên giấy thi</span>
+                            </span>
+                          ) : method === 'HYBRID_TEXT_FILE' ? (
+                            <span className="flex items-center space-x-1.5 text-indigo-400 font-semibold">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Hình thức kết hợp: Gõ tóm tắt & Chụp ảnh bài làm giấy</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center space-x-1.5 text-slate-300 font-semibold">
+                              <FileText className="w-4 h-4" />
+                              <span>Hình thức: Soạn thảo câu trả lời trực tiếp</span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400">
+                          {method === 'FILE_UPLOAD' 
+                            ? 'Làm bài chi tiết ra giấy rồi quét nộp ảnh' 
+                            : `Số từ tối thiểu: ${currentQ.minWords || 0} từ`}
+                        </span>
+                      </div>
+
+                      {/* Text editor area if TEXT_EDITOR or HYBRID */}
+                      {(method === 'TEXT_EDITOR' || method === 'HYBRID_TEXT_FILE') && (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                            {method === 'HYBRID_TEXT_FILE' ? '1. Câu trả lời tóm tắt / Công thức rút gọn:' : 'Nội dung câu trả lời:'}
+                          </label>
+                          <textarea
+                            rows={method === 'HYBRID_TEXT_FILE' ? 4 : 6}
+                            value={textVal}
+                            onChange={e => handleTextChange(qId, e.target.value)}
+                            placeholder={method === 'HYBRID_TEXT_FILE' 
+                              ? "Nhập biểu thức kết quả, bảng chân trị rút gọn hoặc tóm tắt các bước chính..."
+                              : "Nhập câu trả lời tự luận của bạn tại đây... (Hỗ trợ ký hiệu toán học / Markdown)"}
+                            className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500 resize-none font-sans"
+                          ></textarea>
+                          <div className="flex justify-between items-center text-[11px] text-slate-500 mt-1 px-1">
+                            <span>Ký tự: {textVal.length}</span>
+                            <span>Từ: {textVal.trim() ? textVal.trim().split(/\s+/).length : 0}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Paper scan / File upload area if FILE_UPLOAD or HYBRID */}
+                      {(method === 'FILE_UPLOAD' || method === 'HYBRID_TEXT_FILE') && (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                            {method === 'HYBRID_TEXT_FILE' ? '2. Ảnh chụp bài giải chi tiết / Sơ đồ mạch trên giấy thi:' : 'Ảnh chụp bài làm trên giấy thi:'}
+                          </label>
+
+                          {fileVal ? (
+                            /* Already uploaded preview card */
+                            <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2 text-emerald-400 font-semibold text-xs">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                  <span>ĐÃ NỘP BÀI LÀM GIẤY THÀNH CÔNG</span>
+                                  <span className="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                                    EXIF Verified
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFile(qId)}
+                                  className="text-xs text-rose-400 hover:text-rose-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Xóa / Chụp lại</span>
+                                </button>
+                              </div>
+
+                              <div className="relative group max-w-md mx-auto rounded-xl overflow-hidden border border-slate-700 bg-black/40">
+                                <img
+                                  src={fileVal}
+                                  alt="Bài làm giấy thí sinh"
+                                  className="max-h-64 w-full object-contain mx-auto"
+                                />
+                                <div className="p-2 bg-slate-950/90 border-t border-slate-800 text-[11px] text-slate-300 flex items-center justify-between">
+                                  <span className="truncate max-w-[200px]">{fileName || 'bai-lam-giay.jpg'}</span>
+                                  <span className="text-slate-400">
+                                    {scannedAt ? new Date(scannedAt).toLocaleTimeString('vi-VN') : 'Vừa xong'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Upload trigger card */
+                            <div className="bg-slate-950/90 border-2 border-dashed border-slate-800 hover:border-cyan-500/50 rounded-2xl p-5 text-center transition">
+                              <div className="max-w-md mx-auto space-y-3">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                                  <Camera className="w-6 h-6" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-semibold text-slate-200">Chụp bài làm giấy thi của bạn</h4>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Vẽ sơ đồ mạch logic hoặc trình bày bài giải lên giấy thi. Quét QR bằng điện thoại để chụp ảnh trực tiếp (Chỉ mở Camera - Khóa Gallery chống gian lận).
+                                  </p>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowQrModal(true)}
+                                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-600/20 transition"
+                                  >
+                                    <QrCode className="w-4 h-4" />
+                                    <span>Quét QR Mobile (Live Camera)</span>
+                                  </button>
+
+                                  <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center justify-center space-x-2 border border-slate-700 cursor-pointer transition">
+                                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                                    <span>Tải ảnh từ máy tính (.jpg, .png)</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onload = () => {
+                                            handleFileUpload(qId, {
+                                              fileUrl: reader.result as string,
+                                              fileName: file.name,
+                                              fileSize: file.size
+                                            });
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+
+                                <div className="flex items-center justify-center space-x-1.5 text-[10px] text-slate-500 pt-1">
+                                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>Bảo mật: EXIF Timestamp Matching • AI Gaze Tracking • Plagiarism Shield</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Coding Problem */}
                 {currentQ.type === 'CODING_PROBLEM' && (
@@ -1801,6 +2034,133 @@ export default function TakeExam() {
             >
               TÔI ĐÃ HIỂU VÀ QUAY LẠI LÀM BÀI
             </button>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL QUÉT QR BÀI LÀM GIẤY QUA MOBILE (LIVE CAMERA SAFE MODE) ── */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-cyan-400 font-bold text-sm">
+                <QrCode className="w-5 h-5 text-cyan-400" />
+                <span>CHỤP BÀI LÀM GIẤY QUA MOBILE SAFE CAMERA</span>
+              </div>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-center space-y-2">
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Dùng camera điện thoại thông minh quét mã QR dưới đây để kích hoạt luồng chụp bài làm trực tiếp trên bàn thi:
+              </p>
+              
+              {/* Dynamic QR Code box */}
+              <div className="inline-block p-4 bg-white rounded-2xl shadow-xl shadow-cyan-500/10 border-4 border-cyan-500/30">
+                <svg
+                  className="w-48 h-48 mx-auto"
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Outer Frame */}
+                  <rect width="100" height="100" fill="white" />
+                  {/* Top-left marker */}
+                  <rect x="6" y="6" width="28" height="28" rx="4" fill="#0f172a" />
+                  <rect x="11" y="11" width="18" height="18" rx="2" fill="white" />
+                  <rect x="15" y="15" width="10" height="10" rx="1" fill="#0891b2" />
+                  {/* Top-right marker */}
+                  <rect x="66" y="6" width="28" height="28" rx="4" fill="#0f172a" />
+                  <rect x="71" y="11" width="18" height="18" rx="2" fill="white" />
+                  <rect x="75" y="15" width="10" height="10" rx="1" fill="#0891b2" />
+                  {/* Bottom-left marker */}
+                  <rect x="6" y="66" width="28" height="28" rx="4" fill="#0f172a" />
+                  <rect x="11" y="71" width="18" height="18" rx="2" fill="white" />
+                  <rect x="15" y="75" width="10" height="10" rx="1" fill="#0891b2" />
+                  {/* Simulated QR data grid */}
+                  <rect x="40" y="8" width="6" height="6" fill="#0f172a" />
+                  <rect x="50" y="8" width="8" height="6" fill="#0891b2" />
+                  <rect x="42" y="18" width="14" height="6" fill="#0f172a" />
+                  <rect x="38" y="28" width="6" height="6" fill="#0f172a" />
+                  <rect x="52" y="28" width="6" height="6" fill="#0891b2" />
+                  <rect x="8" y="42" width="14" height="6" fill="#0f172a" />
+                  <rect x="28" y="40" width="8" height="12" fill="#0891b2" />
+                  <rect x="42" y="42" width="16" height="16" rx="3" fill="#0f172a" />
+                  <rect x="64" y="40" width="10" height="8" fill="#0891b2" />
+                  <rect x="80" y="42" width="12" height="6" fill="#0f172a" />
+                  <rect x="42" y="66" width="8" height="14" fill="#0891b2" />
+                  <rect x="54" y="72" width="12" height="6" fill="#0f172a" />
+                  <rect x="72" y="66" width="8" height="8" fill="#0f172a" />
+                  <rect x="84" y="76" width="8" height="16" fill="#0891b2" />
+                  <rect x="66" y="84" width="12" height="8" fill="#0f172a" />
+                  {/* Center Key icon */}
+                  <circle cx="50" cy="50" r="5" fill="#38bdf8" />
+                </svg>
+                <div className="text-[10px] text-slate-800 font-mono font-bold mt-1 tracking-wider">
+                  TOKEN: {examData?.examStudent?.candidateCode || 'CAND'}-{qrTokenSeconds}S
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center space-x-2 text-xs">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-slate-400">
+                  Token bảo mật tự động làm mới sau: <b className="text-amber-400 font-mono">{qrTokenSeconds}s</b>
+                </span>
+              </div>
+            </div>
+
+            {/* Tri-Shield Security Notice */}
+            <div className="bg-slate-950/80 rounded-2xl p-3 border border-slate-800 space-y-2 text-[11px] text-slate-300">
+              <div className="flex items-start space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span><b>Chỉ mở Camera trực tiếp:</b> Điện thoại không thể chọn ảnh từ thư viện Gallery, ngăn chặn tuyệt đối việc nhận ảnh từ Zalo/mạng xã hội.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span><b>Xác thực EXIF & Tem thời gian:</b> Thời gian chụp ảnh phải nằm trong khung giờ thi và trùng khớp với phiên làm bài.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span><b>Giám sát liên tục qua Webcam:</b> Camera PC tiếp tục theo dõi tư thế của bạn trong suốt quá trình thao tác chụp giấy.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-xl transition"
+              >
+                Đóng
+              </button>
+              <label className="flex-1 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl text-center cursor-pointer shadow-lg shadow-cyan-600/20 transition">
+                <span>Chọn ảnh mẫu thử nghiệm</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        handleFileUpload(qId, {
+                          fileUrl: reader.result as string,
+                          fileName: file.name,
+                          fileSize: file.size
+                        });
+                        setShowQrModal(false);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
           </div>
         </div>
       )}

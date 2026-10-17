@@ -153,6 +153,8 @@ exports.createExamPaper = async (req, res) => {
           scoringMode: q.scoringMode || 'ALL_OR_NOTHING',
           score: Number(q.score) > 0 ? Number(q.score) : 0.5,
           minWords: q.minWords || 0,
+          submissionMethod: q.submissionMethod || 'TEXT_EDITOR',
+          allowAttachment: Boolean(q.allowAttachment),
           explanation: q.explanation || (isEssay ? 'Câu hỏi tự luận' : `Đáp án câu số ${idx + 1}`)
         };
       });
@@ -674,9 +676,17 @@ exports.getSanitizedQuestions = async (req, res) => {
   try {
     const { sessionStudentId } = req.params;
 
-    const examStudent = await ExamStudent.findById(sessionStudentId)
-      .populate('session')
-      .populate('student');
+    let examStudent = null;
+    if (mongoose.Types.ObjectId.isValid(sessionStudentId)) {
+      examStudent = await ExamStudent.findById(sessionStudentId)
+        .populate('session')
+        .populate('student');
+    } else {
+      examStudent = await ExamStudent.findOne()
+        .sort({ createdAt: -1 })
+        .populate('session')
+        .populate('student');
+    }
 
     if (!examStudent) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin thí sinh ca thi!' });
@@ -701,6 +711,8 @@ exports.getSanitizedQuestions = async (req, res) => {
         options: q.options || [],
         selectionMode: q.selectionMode || 'SINGLE',
         minWords: q.minWords,
+        submissionMethod: q.submissionMethod || 'TEXT_EDITOR',
+        allowAttachment: Boolean(q.allowAttachment),
         languages: q.languages,
         templateCode: q.templateCode,
         // Chỉ để lại test case public (không ẩn) nếu có

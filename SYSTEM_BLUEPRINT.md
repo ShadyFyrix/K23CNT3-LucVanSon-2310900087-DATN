@@ -2932,7 +2932,87 @@ Khi Giảng viên tải lên tệp đề thi (Microsoft Word `.docx`, `.doc`, Ac
 
 ---
 
-*Blueprint version 2.3 — Cập nhật: 2026-10-17*  
-*Bổ sung: Kiến trúc Đề thi Hỗn hợp (Hybrid Exam: Trắc nghiệm + Tự luận/Coding), Quy chế Chấm Trắc nghiệm Nhiều Đáp án Đúng (Multi-Select Checkbox), Quy tắc Đáp án Tương đương (Alternative Valid Keys), Trình Phân Tích Đề Thi & Tự Động Bóc Tách Đáp Án Chuẩn (AI Document Parser v2.3).*  
+### 18.5. Ma Trận Tùy Biến Phương Thức Trả Lời Từng Câu Hỏi (Customizable Submission Modes)
+
+Đối với các môn học đặc thù như **Toán rời rạc, Kỹ thuật số, Mạch điện tử, Lý thuyết đồ thị, Cấu trúc dữ liệu & Thuật toán**, bài thi thường có:
+- Công thức toán học phức tạp: $F(x,y,z) = \bar{x}\bar{z} + \bar{y}$
+- Bảng chân trị (Truth table) nhiều cột/hàng
+- Sơ đồ mạch logic (cổng AND, OR, NOT, NAND, XOR)
+- Đồ thị cây, ma trận kề, thuật toán Dijkstra/Kruskal
+
+Nếu bắt buộc thí sinh chỉ được gõ bàn phím thuần (`plain text`) thì việc vẽ sơ đồ hay gõ công thức là bất khả thi trong thời gian thi 60–90 phút. Do đó, ExamGuard AI thiết lập cơ chế **Giảng viên được quyền Custom Phương thức Trả lời riêng cho từng câu hỏi**:
+
+| Phương thức Nộp bài (`submissionMethod`) | Hành vi Giao diện Thí sinh (Candidate UI) | Cơ chế Chấm & Kiểm soát | Môn học Phù hợp Điển hình |
+|:---|:---|:---|:---|
+| **1. Trắc nghiệm OMR (`MCQ_SELECT`)** | Bảng nút tròn Radio hoặc Checkbox tô đáp án A, B, C, D | Hệ thống tự động chấm tức thì theo ma trận đáp án chuẩn (`ALL_OR_NOTHING` hoặc `PARTIAL_CREDIT`). | Các câu hỏi lý thuyết, nhận biết, trắc nghiệm tính toán nhanh. |
+| **2. Soạn thảo Trực tiếp (`TEXT_INLINE`)** | Trình soạn thảo văn bản phong phú (Rich Text Editor) tích hợp bộ gõ công thức MathJax/LaTeX và bảng biểu. | Chấm tự động qua bộ từ khóa (`suggestedKeywords`) kết hợp AI Scoring Rubric hoặc Giảng viên chấm tay. | Câu hỏi giải thích khái niệm, viết mã giả, giải thuật, phân tích logic ngắn. |
+| **3. Chụp ảnh Bài làm Giấy / Tải Tệp (`ATTACHMENT_UPLOAD`)** | Khu vực đính kèm ảnh chụp bài giải viết tay, sơ đồ vẽ tay hoặc tệp mã nguồn `.c, .cpp, .py, .pdf`. | Hệ thống trích xuất ảnh, so khớp nét chữ sinh trắc học và hiển thị song song cho Giảng viên chấm điểm chi tiết. | **Toán rời rạc, Vẽ mạch logic, Bài tập hình học, Sơ đồ thuật toán, Chứng minh toán học**. |
+| **4. Kết hợp Linh hoạt (`HYBRID_TEXT_FILE`)** | Vừa có khung nhập tóm tắt kết quả (Text), vừa có nút chụp đính kèm bài giải chi tiết từng bước. | Kiểm tra đối chiếu giữa kết quả tóm tắt và lời giải viết tay trong ảnh đính kèm. | Bài thi tính toán nhiều bước (VD: Câu 2 tìm khai triển tích các tổng + lập bảng chân trị). |
+
+---
+
+### 18.6. Kiến Trúc Giám Sát & Chống Gian Lận Đa Tầng Khi Nộp Tệp Bài Làm (Zero-Trust Attachment Anti-Cheat)
+
+Khi cho phép thí sinh **nộp file hoặc chụp ảnh bài làm giấy**, nguy cơ gian lận lớn nhất trong thực tế là:
+1. *Sinh viên mở ứng dụng khác (Zalo, Telegram, Discord, ChatGPT, PhotoMath) để gửi ảnh đề nhờ người ngoài giải, sau đó tải ảnh/file về nộp.*
+2. *Sinh viên dùng điện thoại để nhắn tin hỏi bài nhân lúc chụp ảnh bài thi giấy.*
+3. *Sinh viên nộp file tài liệu cũ có sẵn trong máy hoặc copy bài của bạn bè qua USB/Google Drive.*
+
+ExamGuard AI giải quyết triệt để nguy cơ này bằng **Mô hình Bảo mật Tam Tầng (Tri-Shield Anti-Cheat Framework)**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│               TRI-SHIELD ATTACHMENT PROCTORING FRAMEWORK (BẢO VỆ 3 LỚP)                         │
+├────────────────────────────────┬────────────────────────────────┬───────────────────────────────┤
+│    LỚP 1: MÔI TRƯỜNG CÔ LẬP    │      LỚP 2: QR PAPER SCAN       │    LỚP 3: DIGITAL FORENSICS   │
+│   (Lockdown & Process Guard)   │   (Live Biometric Camera Only) │   (EXIF & AI Plagiarism Scan) │
+├────────────────────────────────┼────────────────────────────────┼───────────────────────────────┤
+│ • Khóa Full-Screen & Chặn Alt-Tab│ • Sinh mã QR Token có hạn 60s  │ • Kiểm tra EXIF DateTimeOriginal│
+│ • Chặn Paste từ ngoài (Anti-Paste│ • WebApp điện thoại CHỈ MỞ     │   (Phải khớp khung giờ ca thi)│
+│ • Process Monitor: Chặn Zalo,  │   Live Camera, KHÔNG cho chọn  │ • Phát hiện ảnh chỉnh sửa qua  │
+│   Discord, Telegram, UltraView │   ảnh từ Album/Thư viện        │   Photoshop / Canva / AI tool │
+│ • Dual-screen detection        │ • Camera PC liên tục soi mặt   │ • So khớp nét chữ viết tay    │
+│   (Chặn màn hình phụ mở app)   │   thí sinh khi đang chụp       │ • MOSS Code Plagiarism        │
+└────────────────────────────────┴────────────────────────────────┴───────────────────────────────┘
+```
+
+#### 1. Lớp 1: Khóa Môi trường & Chống Thoát Ứng dụng (Client Isolation & Process Lockdown)
+- **Lockdown Toàn Màn Hình:** Thí sinh bắt buộc bật chế độ Fullscreen. Mọi hành vi Alt-Tab, nhấn phím Windows, mở Task Manager đều bị chặn hoặc ghi nhận vi phạm cờ vàng/đỏ (`BROWSER_SWITCH_VIOLATION`).
+- **Chặn Clipboard Paste từ Ứng dụng Ngoài:**
+  - Hệ thống áp dụng cơ chế **Paste Lock**: Vô hiệu hóa `Ctrl+V` từ bộ nhớ tạm bên ngoài trình duyệt thi. Thí sinh chỉ được sao chép/dán trong nội bộ trang thi.
+  - Nếu phát hiện nội dung dán có độ dài đột biến (> 100 ký tự trong < 50ms) $\rightarrow$ Ghi log nghi vấn `SUSPICIOUS_BULK_PASTE`.
+- **Kiểm soát Tiến trình (Process Whitelist):**
+  - Chặn các ứng dụng điều khiển từ xa: TeamViewer, AnyDesk, UltraViewer, RustDesk.
+  - Chặn các ứng dụng trao đổi tin nhắn: Zalo, Telegram, Discord, Messenger, Skype.
+
+#### 2. Lớp 2: Cơ chế "QR Biometric Paper Scan" (Chụp Ảnh Bài Làm Giấy Không Rời Mắt AI)
+*Làm sao để thí sinh chụp ảnh bài thi vẽ tay trên giấy mà không thể lợi dụng điện thoại để tra cứu hay nhắn tin hỏi ai?*
+1. **Khởi tạo Token Nộp bài:** Tại câu hỏi yêu cầu đính kèm bài giấy, thí sinh bấm *"Chụp ảnh bài làm giấy"*. Hệ thống sinh ra một **Mã QR Động (Dynamic QR Token)** có hiệu lực tối đa 60 giây, chứa mã hóa phiên thi: `{sessionId, studentId, questionId, timestamp, nonce}`.
+2. **Web Camera Khóa Chặt (Live Camera Only):**
+   - Thí sinh dùng camera điện thoại quét mã QR để mở giao diện Web App nộp bài nhanh.
+   - Giao diện này **chỉ kích hoạt trực tiếp ống kính Camera** (`capture="environment"` / `getUserMedia`).
+   - **Tuyệt đối vô hiệu hóa nút chọn tệp từ Thư viện ảnh (Gallery Disabled)** $\rightarrow$ Thí sinh chỉ có thể chụp ngay lập tức tờ giấy bài thi đang đặt trên bàn, không thể chọn ảnh người khác gửi qua Zalo/Telegram.
+3. **Giám sát Sinh trắc học Song song (Continuous Biometric Gaze):**
+   - Trong suốt thời gian thí sinh cầm điện thoại chụp bài trên bàn (10–30 giây), **Webcam AI trên máy tính vẫn tiếp tục quay và chấm điểm tập trung**:
+     - Ánh mắt phải hướng về phía mặt bàn thi trước mặt (`GAZE_TOWARDS_DESK`).
+     - Nếu thí sinh quay đầu ra ngoài cửa, nói chuyện (`MULTIPLE_VOICES`), hoặc xuất hiện người thứ hai (`MULTIPLE_FACES`) $\rightarrow$ Báo động vi phạm ngay tức thì.
+4. **Tải lên Ngay Tức Thì:** Ảnh chụp từ camera điện thoại bay thẳng lên máy chủ ExamGuard AI và tự động hiển thị ngay trên màn hình máy tính của thí sinh, không lưu trung gian qua bất kỳ ứng dụng nào khác.
+
+#### 3. Lớp 3: Điều Tra Kỹ Thuật Số & Trí Tuệ Nhân Tạo Hậu Kiểm (Digital Forensics & AI Audit)
+- **Kiểm định Siêu dữ liệu EXIF (EXIF Metadata Audit):**
+  - Đọc thẻ `DateTimeOriginal` và `SubSecTimeOriginal` trong file ảnh/PDF:
+    - Thời gian chụp ảnh phải nằm trọn vẹn trong khoảng thời gian diễn ra ca thi (từ `startTime` đến `endTime`). Nếu ảnh được chụp trước giờ thi $\rightarrow$ Cảnh báo `PRE_EXAM_IMAGE_FRAUD`.
+  - Kiểm tra thẻ `Software / CreatorTool`: Nếu phát hiện cờ chỉnh sửa từ *Adobe Photoshop, Canva, GIMP* hoặc dấu hiệu chụp màn hình trình duyệt $\rightarrow$ Đánh dấu cờ đỏ `MODIFIED_IMAGE_DETECTED`.
+- **So Khớp Chữ Viết Tay Sinh Trắc Học (Handwriting Stylometry Engine):**
+  - Khi sinh viên hoàn tất KYC đầu khóa, hệ thống yêu cầu nộp một mẫu chữ viết tay chuẩn (Viết họ tên, MSSV và một đoạn văn ngắn).
+  - Khi thí sinh nộp ảnh bài thi Toán/Tự luận, AI Vision Model phân tích các đặc trưng nét chữ (góc nghiêng nét chữ, tỷ lệ khoảng cách chữ, độ đậm nhạt) để đối chiếu với mẫu KYC gốc. Nếu phát hiện nét chữ của một người hoàn toàn khác $\rightarrow$ Báo động nghi vấn **"Nhờ người khác viết hộ bài thi trên giấy"** (`HANDWRITING_MISMATCH`).
+- **Kiểm tra Trùng lặp Ảnh & Mã nguồn (Cross-Candidate Plagiarism Detection):**
+  - Thuật toán Perceptual Hashing (pHash) và MOSS Code Plagiarism so khớp chéo toàn bộ các bài nộp trong cùng ca thi. Nếu phát hiện 2 bài nộp của 2 sinh viên khác nhau có độ tương đồng ảnh/nét vẽ $> 90\%$ $\rightarrow$ Báo động gian lận chép bài lẫn nhau (`COLLUSION_DETECTED`).
+
+---
+
+*Blueprint version 2.4 — Cập nhật: 2026-10-17*  
+*Bổ sung: Ma trận Tùy biến Phương thức Trả lời Từng Câu hỏi (Custom Submission Modes: MCQ, Inline Text, Paper Scan, File Upload) & Kiến trúc Chống Gian lận Nộp Tệp Đa Tầng (Tri-Shield Anti-Cheat Framework).*  
 *Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*
+
 
