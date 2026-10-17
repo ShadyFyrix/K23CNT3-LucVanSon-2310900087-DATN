@@ -1392,17 +1392,58 @@ services:
 
 ---
 
+### 10.5 Kiến trúc Vận hành Đồng thời Nhiều Phòng thi (Concurrent Multi-Room & Multi-Session Architecture)
+
+Khi nhà trường tổ chức thi học kỳ tập trung với **nhiều phòng thi diễn ra cùng một thời điểm** (ví dụ đồng thời Phòng P301, P302, P303, Lab 1, Lab 2...):
+
+```
+                                  [HỆ THỐNG TRUNG TÂM EXAMGUARD AI]
+                                                 │
+            ┌────────────────────────────────────┼────────────────────────────────────┐
+            ▼                                    ▼                                    ▼
+┌───────────────────────────────┐  ┌───────────────────────────────┐  ┌───────────────────────────────┐
+│     CA THI 1 — PHÒNG P302     │  │     CA THI 2 — PHÒNG P303     │  │     CA THI 3 — PHÒNG LAB 1    │
+├───────────────────────────────┤  ├───────────────────────────────┤  ├───────────────────────────────┤
+│ • Room: P302 (40 bàn)         │  │ • Room: P303 (35 bàn)         │  │ • Room: LAB 1 (50 máy)        │
+│ • Giám thị: ThS. Nguyễn Văn A │  │ • Giám thị: TS. Trần Thị B    │  │ • Giám thị: ThS. Lê Văn C     │
+│ • Camera RTSP 1, 2 (P302)     │  │ • Camera RTSP 3 (P303)        │  │ • Camera RTSP 4, 5 (LAB 1)    │
+│ • Socket: `exam_ca1_id`       │  │ • Socket: `exam_ca2_id`       │  │ • Socket: `exam_ca3_id`       │
+│ • Thí sinh: SBD P302-001..040 │  │ • Thí sinh: SBD P303-001..035 │  │ • Thí sinh: SBD LAB1-001..050 │
+└───────────────┬───────────────┘  └───────────────┬───────────────┘  └───────────────┬───────────────┘
+                │                                  │                                  │
+                └──────────────────────────────────┼──────────────────────────────────┘
+                                                   ▼
+                       ┌───────────────────────────────────────────────────────┐
+                       │   DASHBOARD HỘI ĐỒNG KHẢO THÍ & THANH TRA TOÀN DIỆN   │
+                       │   • Giám sát tổng thể N phòng thi đồng thời           │
+                       │   • Chuyển đổi linh hoạt giữa các phòng 3D Live       │
+                       │   • Báo cáo vi phạm tập trung & Tỷ lệ hoàn thành      │
+                       └───────────────────────────────────────────────────────┘
+```
+
+1. **Cô lập Không gian Dữ liệu & Sự kiện (Data & Event Isolation):**
+   - Mỗi phòng thi gắn với một bản ghi `phong_thi` (sơ đồ hàng/cột, danh sách camera, subnet IP) và một `ca_thi` riêng biệt.
+   - Kênh WebSocket Socket.IO được phân chia theo Room ID: `room: exam_{ca_thi_id}`. Toàn bộ cảnh báo AI, vi phạm, nhịp tim sinh trắc học và cập nhật bàn thi của Phòng A **tuyệt đối không bị lẫn** sang Phòng B.
+2. **Phân quyền Giám thị Phòng vs. Thanh tra Đa phòng:**
+   - **Cán bộ coi thi (Proctor):** Được phân công vào phòng thi nào thì chỉ có quyền mở và giám sát phòng thi 3D Live của ca thi đó.
+   - **Thanh tra Khảo thí (Inspector / Admin):** Có quyền xem Bảng điều hành tổng quan (`/dashboard` hiển thị `ĐANG DIỄN RA: N/N CA THI`), có thể mở nhiều tab hoặc chuyển nhanh giữa các phòng thi 3D khác nhau để hậu kiểm tra ngẫu nhiên.
+3. **Xử lý Đa luồng AI Camera CCTV Song song:**
+   - Python FastAPI Microservice chạy kiến trúc xử lý video song song (Async Workers / Multi-processing). Mỗi luồng camera RTSP từ từng phòng được tính toán độc lập dựa trên ma trận ROI Polygon của phòng tương ứng, không gây hiện tượng nghẽn luồng chéo giữa các phòng.
+
+---
+
 ## 11. ĐỀ THI — CẤU TRÚC & NGHIỆP VỤ QUẢN LÝ
 
-### 11.1 Nguồn đề thi — Admin tạo như thế nào?
+### 11.1 Nguồn đề thi — Admin / Giảng viên tạo như thế nào?
 
-Admin có **3 cách** để đưa đề thi vào hệ thống:
+Admin và Giảng viên có **4 phương thức** để đưa đề thi vào hệ thống:
 
 | Cách | Mô tả | Khi nào dùng |
 |---|---|---|
-| **A. Tạo thủ công trên UI** | Nhập từng câu hỏi, chọn loại, nhập đáp án | Đề nhỏ < 20 câu |
-| **B. Import file Word/PDF → parse** | Upload file .docx/.pdf → AI parse ra JSON | Đề có sẵn từ Word |
-| **C. Import file JSON chuẩn** | Upload JSON theo schema hệ thống | Đề đã được chuẩn bị trước |
+| **A. Tạo thủ công trên UI** | Nhập từng câu hỏi trắc nghiệm/tự luận, chọn loại, nhập đáp án | Đề nhỏ < 20 câu, đề kiểm tra nhanh |
+| **B. Import file Word/PDF → parse** | Upload file .docx/.pdf → AI tự động bóc tách ra các câu hỏi JSON | Đề có sẵn từ tài liệu Word/PDF của trường |
+| **C. Import file JSON chuẩn** | Upload JSON theo cấu trúc schema định dạng hệ thống | Đề đã được số hóa sẵn trong ngân hàng |
+| **D. Đề thi Dạng File Đính Kèm (File-based Exam) + Phiếu Trả Lời Số** | Giảng viên tải lên file đề thi gốc (PDF / Word / Ảnh scan) kèm cấu hình Phiếu Điền Trả Lời Trực Tuyến | Giảng viên có sẵn file đề thi niêm phong, không cần nhập lại từng câu |
 
 **Schema JSON import chuẩn:**
 ```json
@@ -1491,7 +1532,55 @@ Khi Client Sinh viên gọi GET /api/exam/questions:
 
 ---
 
-### 11.4 Động cơ Tự động Chấm điểm Trắc nghiệm (Auto-Grading Engine)
+### 11.4 Chế độ Thi theo File Đề thi (PDF / Doc / Image) & Phiếu Trả Lời Trực Tuyến (Digital Answer Sheet)
+
+Trong thực tế thi cử đại học, rất nhiều môn học (Toán, Vật lý, Kỹ thuật, Ngoại ngữ, Đồ họa...) đã có sẵn **File đề thi chính thức** (định dạng PDF, Word hoặc Ảnh scan niêm phong của Hội đồng ra đề). Hệ thống ExamGuard AI hỗ trợ toàn diện mô hình này mà giảng viên không cần phải gõ lại từng câu hỏi:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                         GIAO DIỆN LÀM BÀI SPLIT-SCREEN WORKSPACE (TỶ LỆ 60% : 40%)               │
+├─────────────────────────────────────────────────┬────────────────────────────────────────────────┤
+│      KHUNG TRÁI (60%): TRÌNH XEM ĐỀ THI GỐC     │   KHUNG PHẢI (40%): PHIẾU ĐIỀN TRẢ LỜI SỐ      │
+├─────────────────────────────────────────────────┼────────────────────────────────────────────────┤
+│  [Trình đọc PDF / Document Viewer Bảo Mật]      │  [PHIẾU TÔ TRẮC NGHIỆM ĐIỆN TỬ - OMR SHEET]    │
+│  • Thanh công cụ: [Zoom + / -] [Lật trang 1/4]  │  • Tiến độ: Đã làm 28/40 câu (70%)             │
+│  • Khóa chức năng: Chặn Copy, Chặn Print,       │  • Lọc: [Tất cả] [Đã làm] [Chưa làm] [Cờ 🚩]   │
+│    Chặn Tải file về máy, Chống xem mã nguồn     │                                                │
+│                                                 │  Câu 1:  (A)  (B)  [C]  (D)    🚩 Đánh dấu cờ │
+│  ┌───────────────────────────────────────────┐  │  Câu 2:  [A]  (B)  (C)  (D)                   │
+│  │ BỘ GIÁO DỤC VÀ ĐÀO TẠO                     │  │  Câu 3:  (A)  [B]  (C)  (D)                   │
+│  │ ĐỀ THI HẾT HỌC PHẦN: KỸ THUẬT LẬP TRÌNH    │  │  ...                                        │
+│  │ Thời gian: 60 phút - Không sử dụng tài liệu│  │  Câu 40: (A)  (B)  (C)  [D]                   │
+│  │                                           │  ├────────────────────────────────────────────────┤
+│  │ Câu 1 (0.5đ): Cho đoạn mã sau trong C...  │  │  [KHU VỰC TỰ LUẬN / NỘP TẬP TIN ĐÍNH KÈM]     │
+│  │ Câu 2 (0.5đ): Con trỏ trong C là gì?...   │  │  • Khung soạn thảo lời giải chi tiết (nếu có) │
+│  │ ...                                       │  │  • Kéo thả file nộp bài (.zip, .c, .cpp, .pdf) │
+│  └───────────────────────────────────────────┘  │  ├────────────────────────────────────────────────┤
+│                                                 │  ⚡ Tự động lưu: Đã lưu 14:02:15               │
+│                                                 │  [ 🔘 NỘP BÀI THI CHÍNH THỨC ]                 │
+└─────────────────────────────────────────────────┴────────────────────────────────────────────────┘
+```
+
+#### Quy trình Nghiệp vụ Chi tiết:
+1. **Giảng viên Chuẩn bị Đề thi:**
+   - Upload file đề thi gốc (`file_url`: PDF, DOCX, hoặc Image).
+   - Khai báo cấu hình làm bài:
+     - Số lượng câu hỏi (ví dụ: `40 câu`).
+     - Thang điểm tổng (ví dụ: `10.0`).
+     - Chế độ nộp bài (`submission_mode`):
+       + `OMR_BUBBLE_SHEET`: Phiếu tô trắc nghiệm A-B-C-D.
+       + `ESSAY_TEXT`: Điền văn bản tự luận.
+       + `FILE_ATTACHMENT`: Upload file sản phẩm (code, đồ án, zip, pdf).
+       + `HYBRID`: Kết hợp vừa tô trắc nghiệm vừa nộp file/tự luận.
+     - Nhập ma trận đáp án đúng (Answer Key: `1-C, 2-A, 3-B...`) để hệ thống tự động chấm trắc nghiệm ngay khi nộp.
+2. **Sinh viên Làm bài trên Phiếu Điền Trả lời (Digital Answer Sheet):**
+   - Màn hình chia đôi: Sinh viên vừa đọc đề ở bên trái vừa trực tiếp tô chọn đáp án bên phải mà không cần chuyển qua lại giữa các trang hay ứng dụng khác.
+   - **Cơ chế Auto-save thời gian thực**: Mỗi khi thí sinh click chọn đáp án hoặc gõ văn bản, hệ thống gửi gói tin lưu ngầm (Debounced Auto-save) về máy chủ. Nếu thí sinh lỡ F5 hoặc gặp sự cố nguồn điện, toàn bộ đáp án đã điền sẽ được phục hồi 100%.
+   - **Tự động thu bài**: Khi đồng hồ đếm ngược hết giờ, hệ thống tự động đóng băng giao diện, khóa phiếu trả lời và kích hoạt nộp bài tự động.
+
+---
+
+### 11.5 Động cơ Tự động Chấm điểm Trắc nghiệm (Auto-Grading Engine)
 
 Ngay khi sinh viên nhấn **"Nộp bài"** hoặc **hết giờ làm bài** (Hệ thống tự động kích hoạt `checkout`), Động cơ chấm điểm tự động chạy ngay lập tức trong vòng **dưới 100 millisecond** cho mỗi bài thi:
 
