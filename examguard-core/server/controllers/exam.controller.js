@@ -27,7 +27,29 @@ function generatePin() {
  * ==========================================
  */
 
-// Tạo đề thi mới (Thủ công hoặc kèm câu hỏi)
+// Tải lên file đề thi (PDF, DOCX, Ảnh)
+exports.uploadPaperFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Chưa có file đề thi nào được tải lên!' });
+    }
+    const fileUrl = `/uploads/exam-papers/${req.file.filename}`;
+    return res.json({
+      success: true,
+      message: 'Tải lên file đề thi thành công!',
+      data: {
+        fileUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Tạo đề thi mới (Thủ công hoặc kèm File đề thi)
 exports.createExamPaper = async (req, res) => {
   try {
     const { 
@@ -35,10 +57,18 @@ exports.createExamPaper = async (req, res) => {
       title, 
       subject, 
       durationMinutes, 
-      totalScore, 
+      totalScore = 10.0, 
       shuffleQuestions, 
       shuffleOptions, 
-      questions 
+      questions,
+      paperType = 'STRUCTURED_QUIZ',
+      fileUrl = null,
+      fileName = null,
+      fileSize = 0,
+      totalQuestions = 0,
+      submissionMode = 'OMR_BUBBLE_SHEET',
+      answerKeyString = '',
+      answerKey = [] // mảng đáp án index [0, 1, 2, 3...]
     } = req.body;
 
     // Kiểm tra mã trùng
@@ -49,6 +79,28 @@ exports.createExamPaper = async (req, res) => {
 
     const courseDoc = await Course.findById(subject);
 
+    let finalQuestions = questions || [];
+    // Nếu là đề thi dạng file đính kèm mà chưa có câu hỏi chi tiết, tự động sinh các câu hỏi OMR
+    if (paperType === 'FILE_ATTACHED' && finalQuestions.length === 0 && Number(totalQuestions) > 0) {
+      const qCount = Number(totalQuestions);
+      const scorePerQ = Math.round((Number(totalScore) / qCount) * 100) / 100;
+      for (let i = 1; i <= qCount; i++) {
+        let corrAns = 0;
+        if (Array.isArray(answerKey) && answerKey[i - 1] !== undefined) {
+          corrAns = Number(answerKey[i - 1]);
+        }
+        finalQuestions.push({
+          stt: i,
+          type: 'MULTIPLE_CHOICE',
+          content: `Câu ${i}`,
+          options: ['A', 'B', 'C', 'D'],
+          correctAnswer: corrAns,
+          score: scorePerQ,
+          explanation: `Đáp án câu số ${i} theo file đề thi.`
+        });
+      }
+    }
+
     const newPaper = await ExamPaper.create({
       code: code.trim().toUpperCase(),
       title: title.trim(),
@@ -57,9 +109,16 @@ exports.createExamPaper = async (req, res) => {
       createdBy: req.user ? req.user._id : null,
       durationMinutes: durationMinutes || 60,
       totalScore: totalScore || 10.0,
-      shuffleQuestions: shuffleQuestions !== undefined ? shuffleQuestions : true,
-      shuffleOptions: shuffleOptions !== undefined ? shuffleOptions : true,
-      questions: questions || [],
+      shuffleQuestions: shuffleQuestions !== undefined ? shuffleQuestions : false,
+      shuffleOptions: shuffleOptions !== undefined ? shuffleOptions : false,
+      paperType,
+      fileUrl,
+      fileName,
+      fileSize,
+      totalQuestions: finalQuestions.length,
+      submissionMode,
+      answerKeyString,
+      questions: finalQuestions,
       status: 'APPROVED'
     });
 
@@ -584,8 +643,19 @@ exports.getSanitizedQuestions = async (req, res) => {
           code: session.code,
           title: session.title,
           durationMinutes: session.durationMinutes + examStudent.extraTimeMinutes,
-          roomCode: session.room.code,
-          roomName: session.room.name
+          roomCode: session.room?.code || 'P302',
+          roomName: session.room?.name || 'Phòng thi'
+        },
+        examPaper: {
+          id: examPaper._id,
+          code: examPaper.code,
+          title: examPaper.title,
+          paperType: examPaper.paperType || 'STRUCTURED_QUIZ',
+          fileUrl: examPaper.fileUrl || null,
+          fileName: examPaper.fileName || null,
+          fileSize: examPaper.fileSize || 0,
+          totalQuestions: examPaper.totalQuestions || (examPaper.questions ? examPaper.questions.length : 0),
+          submissionMode: examPaper.submissionMode || 'OMR_BUBBLE_SHEET'
         },
         savedAnswers: existingSubmission ? Object.fromEntries(existingSubmission.answers || []) : {},
         questions: questionsPayload

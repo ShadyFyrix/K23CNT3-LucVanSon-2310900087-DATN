@@ -79,6 +79,23 @@ const ExamPaperSchema = new mongoose.Schema({
     type: Boolean, 
     default: true 
   },
+  // Cấu hình đề thi dạng File đính kèm (PDF / Word / Image)
+  paperType: { 
+    type: String, 
+    enum: ['STRUCTURED_QUIZ', 'FILE_ATTACHED'], 
+    default: 'STRUCTURED_QUIZ' 
+  },
+  fileUrl: { type: String, default: null },
+  fileName: { type: String, default: null },
+  fileSize: { type: Number, default: 0 },
+  totalQuestions: { type: Number, default: 0 },
+  submissionMode: { 
+    type: String, 
+    enum: ['OMR_BUBBLE_SHEET', 'ESSAY_TEXT', 'FILE_UPLOAD', 'HYBRID'], 
+    default: 'OMR_BUBBLE_SHEET' 
+  },
+  answerKeyString: { type: String, default: '' }, // Ví dụ: "1:A, 2:B, 3:C, 4:D..."
+
   questions: [QuestionSchema],
   status: { 
     type: String, 
