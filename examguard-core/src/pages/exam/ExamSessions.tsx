@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
+import { CandidateManagerModal } from './CandidateManagerModal';
 
 interface ExamSessionItem {
   _id: string;
@@ -32,6 +33,7 @@ interface ExamSessionItem {
   status: string;
   gradingStatus: string;
   proctor1?: { fullName: string };
+  studentCount?: number;
 }
 
 export default function ExamSessions() {
@@ -40,8 +42,8 @@ export default function ExamSessions() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [selectedSessionForCandidates, setSelectedSessionForCandidates] = useState<ExamSessionItem | null>(null);
 
   const fetchSessions = async () => {
     try {
@@ -244,8 +246,17 @@ export default function ExamSessions() {
                   </div>
                 </div>
 
-                {/* 3 Nút nghiệp vụ */}
+                {/* 4 Nút nghiệp vụ */}
                 <div className="space-y-2 pt-4 border-t border-slate-800/80 mt-4 text-xs font-semibold">
+                  {/* Nút Quản lý Thí sinh & SBD */}
+                  <button
+                    onClick={() => setSelectedSessionForCandidates(s)}
+                    className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400/60 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm"
+                  >
+                    <Users className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Quản Lý Thí Sinh & Số Báo Danh</span>
+                  </button>
+
                   <button
                     onClick={() => navigate('/take-exam')}
                     className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20"
@@ -277,6 +288,16 @@ export default function ExamSessions() {
           </div>
         )}
       </div>
+
+      {/* Modal Quản lý Thí sinh & Số Báo Danh (SBD) */}
+      {selectedSessionForCandidates && (
+        <CandidateManagerModal
+          isOpen={!!selectedSessionForCandidates}
+          onClose={() => setSelectedSessionForCandidates(null)}
+          session={selectedSessionForCandidates}
+          onRefreshParent={fetchSessions}
+        />
+      )}
     </div>
   );
 }

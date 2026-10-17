@@ -1,6 +1,8 @@
 const faceAiService = require('../services/faceAi.service');
 const User = require('../models/user.model');
 const Role = require('../models/role.model');
+const Student = require('../models/student.model');
+const Teacher = require('../models/teacher.model');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -221,6 +223,55 @@ exports.enrollMultiAngle = async (req, res) => {
         { $set: updateFields },
         { returnDocument: 'after' }
       );
+    }
+
+    // Đồng bộ sang Student (nếu employeeId hoặc targetUser là sinh viên)
+    try {
+      const studentFilters = [];
+      if (String(employeeId).match(/^[0-9a-fA-F]{24}$/)) {
+        studentFilters.push({ _id: employeeId }, { userId: employeeId });
+      }
+      studentFilters.push({ studentCode: String(employeeId) }, { email: String(employeeId).toLowerCase() });
+      if (targetUser) {
+        studentFilters.push({ userId: targetUser._id }, { email: targetUser.email.toLowerCase() });
+      }
+
+      const vectors = (aiResponse && aiResponse.embeddings) ? aiResponse.embeddings : {};
+      const straightVec = Array.isArray(vectors.straight) && vectors.straight.length > 0 ? vectors.straight : null;
+
+      const targetStudent = await Student.findOne({ $or: studentFilters });
+      if (targetStudent) {
+        await Student.findByIdAndUpdate(targetStudent._id, {
+          $set: {
+            isFaceKyc: true,
+            ...(straightVec ? { faceEmbedding: straightVec } : {}),
+            faceUpdatedAt: new Date()
+          }
+        });
+      }
+
+      // Đồng bộ sang Teacher (nếu employeeId hoặc targetUser là giảng viên)
+      const teacherFilters = [];
+      if (String(employeeId).match(/^[0-9a-fA-F]{24}$/)) {
+        teacherFilters.push({ _id: employeeId }, { userId: employeeId });
+      }
+      teacherFilters.push({ teacherCode: String(employeeId) }, { email: String(employeeId).toLowerCase() });
+      if (targetUser) {
+        teacherFilters.push({ userId: targetUser._id }, { email: targetUser.email.toLowerCase() });
+      }
+
+      const targetTeacher = await Teacher.findOne({ $or: teacherFilters });
+      if (targetTeacher) {
+        await Teacher.findByIdAndUpdate(targetTeacher._id, {
+          $set: {
+            isFaceKyc: true,
+            ...(straightVec ? { faceEmbedding: straightVec } : {}),
+            faceUpdatedAt: new Date()
+          }
+        });
+      }
+    } catch (syncErr) {
+      console.warn('⚠️ Student/Teacher sync warning:', syncErr.message);
     }
 
     return res.json({

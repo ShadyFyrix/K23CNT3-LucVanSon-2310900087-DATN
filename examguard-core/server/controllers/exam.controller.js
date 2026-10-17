@@ -248,7 +248,7 @@ exports.getExamSessionDetail = async (req, res) => {
     }
 
     const students = await ExamStudent.find({ session: session._id })
-      .populate('student', 'name studentCode email phone faceImage')
+      .populate('student', 'fullName name studentCode email phone faceImage isFaceKyc avatar')
       .sort({ seatRow: 1, seatCol: 1 });
 
     return res.json({ 
@@ -325,6 +325,178 @@ exports.assignStudentsToSession = async (req, res) => {
       count: assigned.length,
       data: assigned
     });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Cập nhật Số Báo Danh (SBD) hoặc chỗ ngồi của thí sinh trong ca thi
+exports.updateExamStudent = async (req, res) => {
+  try {
+    const { sessionId, examStudentId } = req.params;
+    const { candidateCode, seatRow, seatCol, status } = req.body;
+
+    const examStudent = await ExamStudent.findOne({ _id: examStudentId, session: sessionId });
+    if (!examStudent) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thí sinh trong ca thi!' });
+    }
+
+    if (candidateCode && candidateCode.trim() !== examStudent.candidateCode) {
+      // Kiểm tra trùng SBD trong cùng ca thi
+      const existed = await ExamStudent.findOne({
+        session: sessionId,
+        candidateCode: candidateCode.trim(),
+        _id: { $ne: examStudentId }
+      });
+      if (existed) {
+        return res.status(400).json({ success: false, message: `Số báo danh "${candidateCode.trim()}" đã được sử dụng bởi thí sinh khác trong ca thi này!` });
+      }
+      examStudent.candidateCode = candidateCode.trim();
+    }
+
+    if (seatRow !== undefined) examStudent.seatRow = Number(seatRow);
+    if (seatCol !== undefined) examStudent.seatCol = Number(seatCol);
+    if (status) examStudent.status = status;
+
+    await examStudent.save();
+
+    const populated = await ExamStudent.findById(examStudent._id).populate('student', 'fullName name studentCode email phone faceImage isFaceKyc avatar');
+
+    return res.json({
+      success: true,
+      message: `Đã cập nhật Số Báo Danh (${examStudent.candidateCode}) thành công!`,
+      data: populated
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Giảng viên sinh Số Báo Danh (SBD) hàng loạt theo quy tắc tùy chọn
+exports.bulkGenerateCandidateCodes = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { prefix, startNum = 1, padding = 3, sortBy = 'seat' } = req.body;
+
+    const session = await ExamSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+    }
+
+    const defaultPrefix = prefix || `${session.code}-`;
+
+    const examStudents = await ExamStudent.find({ session: sessionId })
+      .populate('student', 'fullName name studentCode');
+
+    // Sắp xếp theo lựa chọn của Giảng viên
+    if (sortBy === 'name') {
+      examStudents.sort((a, b) => {
+        const nameA = (a.student?.fullName || a.student?.name || '').toLowerCase();
+        const nameB = (b.student?.fullName || b.student?.name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'vi');
+      });
+    } else if (sortBy === 'studentCode') {
+      examStudents.sort((a, b) => {
+        const codeA = (a.student?.studentCode || '').toLowerCase();
+        const codeB = (b.student?.studentCode || '').toLowerCase();
+        return codeA.localeCompare(codeB);
+      });
+    } else {
+      // Mặc định: theo hàng và cột bàn thi (seatRow, seatCol)
+      examStudents.sort((a, b) => {
+        if (a.seatRow !== b.seatRow) return a.seatRow - b.seatRow;
+        return a.seatCol - b.seatCol;
+      });
+    }
+
+    const updatedList = [];
+    for (let i = 0; i < examStudents.length; i++) {
+      const st = examStudents[i];
+      const seq = startNum + i;
+      const newSbd = `${defaultPrefix}${String(seq).padStart(Number(padding), '0')}`;
+      st.candidateCode = newSbd;
+      await st.save();
+      updatedList.push({
+        _id: st._id,
+        candidateCode: newSbd,
+        studentName: st.student?.fullName || st.student?.name,
+        seat: `R${st.seatRow}-C${st.seatCol}`
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã sinh thành công ${updatedList.length} Số Báo Danh theo quy tắc tiền tố "${defaultPrefix}"!`,
+      data: updatedList
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Thêm sinh viên đơn lẻ vào ca thi
+exports.addStudentToSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { studentId, candidateCode, seatRow, seatCol } = req.body;
+
+    const session = await ExamSession.findById(sessionId).populate('room');
+    if (!session) return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+
+    const existed = await ExamStudent.findOne({ session: sessionId, student: studentId });
+    if (existed) {
+      return res.status(400).json({ success: false, message: 'Sinh viên này đã có trong danh sách ca thi!' });
+    }
+
+    // Tự tìm bàn trống nếu chưa có seatRow/seatCol
+    let row = seatRow ? Number(seatRow) : 1;
+    let col = seatCol ? Number(seatCol) : 1;
+    if (!seatRow || !seatCol) {
+      const allAssigned = await ExamStudent.find({ session: sessionId });
+      const occupied = new Set(allAssigned.map(s => `${s.seatRow}-${s.seatCol}`));
+      let found = false;
+      for (let r = 1; r <= (session.room?.rows || 5); r++) {
+        for (let c = 1; c <= (session.room?.cols || 8); c++) {
+          if (!occupied.has(`${r}-${c}`)) {
+            row = r; col = c; found = true; break;
+          }
+        }
+        if (found) break;
+      }
+    }
+
+    const sbd = candidateCode?.trim() || `${session.code}-${String(await ExamStudent.countDocuments({ session: sessionId }) + 1).padStart(3, '0')}`;
+
+    const newExamStudent = await ExamStudent.create({
+      session: sessionId,
+      student: studentId,
+      candidateCode: sbd,
+      blindCode: generateCode('PHACH', 6),
+      seatRow: row,
+      seatCol: col,
+      seatPin: generatePin(),
+      status: 'ASSIGNED',
+      trustScore: 100
+    });
+
+    const populated = await ExamStudent.findById(newExamStudent._id).populate('student', 'fullName name studentCode email phone faceImage isFaceKyc avatar');
+
+    return res.json({
+      success: true,
+      message: `Đã thêm thí sinh ${populated.student?.fullName || 'thí sinh'} (SBD: ${sbd}) vào ca thi!`,
+      data: populated
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Xóa sinh viên khỏi ca thi
+exports.removeStudentFromSession = async (req, res) => {
+  try {
+    const { sessionId, examStudentId } = req.params;
+    await ExamStudent.findOneAndDelete({ _id: examStudentId, session: sessionId });
+    return res.json({ success: true, message: 'Đã xóa thí sinh khỏi danh sách ca thi!' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

@@ -348,11 +348,57 @@ BƯỚC 5: Import Sinh viên + Xếp chỗ
 
 ---
 
+### WF-01.1: Giảng viên Lập & Quản lý Danh sách Thí sinh & Số Báo Danh (SBD) cho Ca thi
+
+**Actor:** Giảng viên phụ trách môn / Cán bộ Khảo thí  
+**Precondition:** Ca thi đã được khởi tạo trong hệ thống (`ca_thi` tồn tại)  
+**Postcondition:** Mọi thí sinh trong ca thi đều có Số Báo Danh (SBD) duy nhất, vị trí bàn thi hợp lệ và trạng thái định danh Face KYC sẵn sàng
+
+```
+BƯỚC 1: Truy cập Ca thi & Mở Trung tâm Quản lý Thí sinh & SBD
+  - Giảng viên chọn ca thi tại /exam-sessions, nhấn nút "Quản Lý Thí Sinh & Số Báo Danh".
+  - Hệ thống tải danh sách thí sinh đã ghi danh kèm thông tin SBD, Họ tên, MSSV, Bàn thi (Hàng-Cột), và Trạng thái Face KYC.
+
+BƯỚC 2: Thêm / Bổ sung Thí sinh từ Danh sách Lớp
+  - Giảng viên nhấn "Thêm Thí Sinh", tìm kiếm theo Tên hoặc MSSV.
+  - Hệ thống tự động gợi ý vị trí bàn trống tiếp theo (Seat Row - Seat Col) và đề xuất SBD kế tiếp.
+
+BƯỚC 3: Sinh Số Báo Danh (SBD) Hàng Loạt theo Quy tắc Chuẩn
+  - Giảng viên cấu hình quy tắc sinh SBD:
+    • Tiền tố SBD (Prefix): Ví dụ "SBD-", "CA01-", "23IT-"
+    • Số bắt đầu: Mặc định từ 1
+    • Độ dài đệm số 0 (Padding): 2 chữ số (01, 02...), 3 chữ số (001, 002...), hoặc 4 chữ số
+    • Tiêu chí sắp xếp danh sách trước khi đánh số:
+        + Theo Họ tên A → Z (Chuẩn Bộ Giáo dục & Đào tạo)
+        + Theo Mã số sinh viên (MSSV tăng dần)
+        + Theo Vị trí bàn thi (Hàng trước, Cột sau)
+  - Hệ thống thực thi Bulk Update và kiểm tra tính toàn vẹn (Unique Constraint) trong ca thi.
+
+BƯỚC 4: Hiệu chỉnh Thủ công Từng Thí sinh (Inline SBD Editor)
+  - Giảng viên có thể nhấp trực tiếp vào ô SBD của bất kỳ thí sinh nào để chỉnh sửa riêng biệt (dành cho thí sinh thi ghép, thí sinh tự do hoặc chuyển ca).
+  - Tự do phân bổ lại vị trí bàn thi (Hàng R - Cột C) nếu cần thiết kế khoảng cách giãn cách.
+
+BƯỚC 5: Xử lý Thí sinh Chưa Định danh Khuôn mặt (On-the-spot Face Registration)
+  - Bảng danh sách trực quan hiển thị badge: "Đã KYC ArcFace" (xanh) hoặc "Chưa KYC" (vàng).
+  - Với thí sinh chưa KYC, giảng viên/cán bộ coi thi có thể nhấp ngay nút "Đăng Ký Face ID" bên cạnh tên thí sinh để bật webcam chụp quét 5 góc khuôn mặt, đồng bộ Vector 512-D tức thì vào hồ sơ gốc mà không cần chuyển màn hình.
+
+BƯỚC 6: Xuất & In Danh sách Phòng thi Chính thức
+  - Giảng viên nhấn "In Danh Sách Ca Thi" để xuất bảng điểm danh chuẩn gồm: STT, SBD, MSSV, Họ tên, Vị trí bàn, Trạng thái KYC, Cột ký tên thí sinh và Chữ ký của cán bộ coi thi.
+```
+
+---
+
 ### WF-02: Đăng ký Căn cước Khuôn mặt Gốc (Biometric Ground-Truth Enrollment) cho Sinh viên & Giảng viên
 
-**Actor:** Sinh viên & Giảng viên (Thực hiện bắt buộc trước khi tham gia kỳ thi / coi thi)  
+**Actor:** Sinh viên, Giảng viên & Cán bộ Quản trị  
+**Điểm truy cập tích hợp (Access Touchpoints):**
+1. **Studio Chuyên biệt KYC:** `/face-kyc` (Bảng điều hành định danh Face KYC toàn trường, thống kê tỷ lệ hoàn thành, bộ lọc trạng thái và chụp trực tiếp).
+2. **Danh mục Sinh viên:** `/students` (Nút "Đăng ký Face ID" và badge trạng thái trực tiếp trên từng hàng sinh viên).
+3. **Danh mục Giảng viên & Cán bộ Coi thi:** `/teachers` (Đăng ký khuôn mặt giảng viên đưa vào Staff Whitelist để miễn trừ cảnh báo khi đi kiểm tra bàn thi).
+4. **Phòng thi & Ca thi:** Modal "Quản lý Thí sinh & SBD" tại `/exam-sessions` (Hỗ trợ giảng viên bổ sung Face ID cho thí sinh trước giờ phát đề).
+
 **Precondition:** Người dùng đã có tài khoản, trạng thái `face_status = 'NOT_ENROLLED'` hoặc `'REJECTED'`  
-**Postcondition:** `face_status = 'APPROVED'`, lưu ảnh gốc KYC chuẩn HD, lưu Vector ArcFace 512-D làm Ground Truth  
+**Postcondition:** `face_status = 'APPROVED'`, `isFaceKyc = true`, lưu ảnh gốc KYC chuẩn HD, lưu Vector ArcFace 512-D làm Ground Truth  
 **Tần suất:** 1 lần duy nhất khi nhập học/nhận việc (hoặc cập nhật lại khi có thẩm định của Hội đồng Khảo thí)
 
 ```

@@ -21,6 +21,7 @@ import Classes from './pages/Classes';
 import Courses from './pages/Courses';
 import Campuses from './pages/Campuses';
 import Users from './pages/Users';
+import FaceKyc from './pages/FaceKyc';
 import Permissions from './pages/Permissions';
 import Settings from './pages/Settings';
 import Newsfeed from './pages/Newsfeed';
@@ -97,6 +98,7 @@ export default function App() {
 
                     {/* Hệ thống & Phân quyền */}
                     <Route path="/users" element={<Users />} />
+                    <Route path="/face-kyc" element={<FaceKyc />} />
                     <Route path="/permissions" element={<Permissions />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/newsfeed" element={<Newsfeed />} />

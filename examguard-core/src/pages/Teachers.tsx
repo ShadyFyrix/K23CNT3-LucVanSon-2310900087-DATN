@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserSquare2, Star, Calendar, Clock, Search, Plus,
-  MoreHorizontal, Mail, Phone, Trash2, Edit2, Loader2, Award, Briefcase, Globe, ShieldCheck
+  MoreHorizontal, Mail, Phone, Trash2, Edit2, Loader2, Award, Briefcase, Globe, ShieldCheck, ScanFace, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { TeacherForm } from '../components/forms/TeacherForm';
 import { UserForm } from '../components/forms/UserForm';
+import { FaceRegistrationModal } from '../components/FaceRegistrationModal';
 import { apiClient } from '../api/apiClient';
 import { toast } from 'react-hot-toast';
 
@@ -15,6 +16,8 @@ export default function Teachers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
+  const [selectedTeacherForFace, setSelectedTeacherForFace] = useState<any>(null);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
   const [selectedForUser, setSelectedForUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -172,6 +175,35 @@ export default function Teachers() {
                     </span>
                   </div>
 
+                  <div className="flex items-center justify-between pt-2">
+                    {teacher.isFaceKyc || teacher.userId?.isFaceRegistered || (Array.isArray(teacher.faceEmbedding) && teacher.faceEmbedding.length > 0) ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" /> Đã KYC Coi thi
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                        <AlertCircle className="w-3 h-3 text-amber-500" /> Chưa KYC
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setSelectedTeacherForFace({
+                          _id: teacher._id,
+                          fullName: teacher.fullName,
+                          email: teacher.email,
+                          department: teacher.department?.name || 'Giảng viên',
+                          code: teacher.teacherCode
+                        });
+                        setIsFaceModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer"
+                    >
+                      <ScanFace className="w-3 h-3" />
+                      <span>{teacher.isFaceKyc || teacher.userId?.isFaceRegistered ? 'Đổi Face' : 'Đăng ký Face'}</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => {
                       setSelectedForUser({ fullName: teacher.fullName, email: teacher.email, department: 'training', role: roles.find(r => r.name.toLowerCase() === 'teacher')?._id });
@@ -209,6 +241,22 @@ export default function Teachers() {
           onCancel={() => setIsUserModalOpen(false)}
         />
       </Modal>
+
+      {/* Modal Đăng ký Face ID Giảng viên */}
+      {isFaceModalOpen && selectedTeacherForFace && (
+        <FaceRegistrationModal
+          isOpen={isFaceModalOpen}
+          onClose={() => {
+            setIsFaceModalOpen(false);
+            setSelectedTeacherForFace(null);
+          }}
+          user={selectedTeacherForFace}
+          onSuccess={() => {
+            fetchTeachers();
+            toast.success(`Đã cập nhật Face ID cho giảng viên ${selectedTeacherForFace.fullName}!`);
+          }}
+        />
+      )}
     </div>
   );
 }

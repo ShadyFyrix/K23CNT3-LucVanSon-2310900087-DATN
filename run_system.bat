@@ -20,14 +20,14 @@ echo [2/3] Khoi chay Python Face AI Microservice (Port 8000)...
 cd /d "%ROOT_DIR%examguard-ai"
 start "ExamGuard - Python Face AI Microservice (Port 8000)" cmd /k "title Face AI Microservice (Port 8000) && color 0D && echo Dang khoi dong Python FastAPI Face AI... && python main.py"
 ping 127.0.0.1 -n 3 >nul 2>&1
-echo   -> Da gui lenh khoi chay Face AI Microservice (Port 8000).
+echo   [OK] Da gui lenh khoi chay Face AI Microservice (Port 8000).
 echo.
 
 echo [3/3] Khoi chay ExamGuard Core Server (Port 3011)...
 cd /d "%ROOT_DIR%examguard-core"
 start "ExamGuard - Core Server and Frontend (Port 3011)" cmd /k "title ExamGuard Core Web (Port 3011) && color 0A && echo Dang khoi dong ExamGuard Core... && node server/server.js"
 ping 127.0.0.1 -n 4 >nul 2>&1
-echo   -> Da gui lenh khoi chay ExamGuard Core Server (Port 3011).
+echo   [OK] Da gui lenh khoi chay ExamGuard Core Server (Port 3011).
 echo.
 
 cd /d "%ROOT_DIR%"

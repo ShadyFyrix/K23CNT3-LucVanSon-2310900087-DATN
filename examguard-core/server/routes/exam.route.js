@@ -16,6 +16,10 @@ router.post('/sessions', examController.createExamSession);
 router.get('/sessions', examController.getExamSessions);
 router.get('/sessions/:id', examController.getExamSessionDetail);
 router.post('/sessions/:sessionId/assign-students', examController.assignStudentsToSession);
+router.put('/sessions/:sessionId/students/:examStudentId', examController.updateExamStudent);
+router.post('/sessions/:sessionId/generate-candidate-codes', examController.bulkGenerateCandidateCodes);
+router.post('/sessions/:sessionId/add-student', examController.addStudentToSession);
+router.delete('/sessions/:sessionId/students/:examStudentId', examController.removeStudentFromSession);
 
 // Thí sinh làm bài thi (Candidate Workspace)
 router.get('/questions/:sessionStudentId', examController.getSanitizedQuestions);

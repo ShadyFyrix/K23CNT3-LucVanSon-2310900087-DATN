@@ -19,6 +19,7 @@ import {
 import { Modal } from '../components/Modal';
 import { StudentForm } from '../components/forms/StudentForm';
 import { UserForm } from '../components/forms/UserForm';
+import { FaceRegistrationModal } from '../components/FaceRegistrationModal';
 import { apiClient } from '../api/apiClient';
 import { toast } from 'react-hot-toast';
 import { exportStudentsToExcel, exportStudentsToCSV } from '../utils/studentExport';
@@ -43,6 +44,10 @@ export default function Students() {
   const [selectedForUser, setSelectedForUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+  // Trạng thái Face KYC Modal
+  const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
+  const [selectedStudentForFace, setSelectedStudentForFace] = useState<any>(null);
 
   // Trạng thái xuất danh sách sinh viên
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -346,13 +351,39 @@ export default function Students() {
                         {STATUS_MAP[student.status]?.label || student.status}
                       </span>
                       {isKyc ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Đã KYC Face AI
-                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedStudentForFace({
+                              _id: student._id,
+                              fullName: student.fullName,
+                              email: student.email,
+                              department: student.class?.name || 'Sinh viên',
+                              studentCode: student.studentCode
+                            });
+                            setIsFaceModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-200 transition-all cursor-pointer"
+                          title="Bấm để xem hoặc cập nhật lại khuôn mặt"
+                        >
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Đã KYC 5 góc
+                        </button>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
-                          <AlertCircle className="w-3 h-3 text-slate-400" /> Chưa KYC
-                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedStudentForFace({
+                              _id: student._id,
+                              fullName: student.fullName,
+                              email: student.email,
+                              department: student.class?.name || 'Sinh viên',
+                              studentCode: student.studentCode
+                            });
+                            setIsFaceModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                          title="Bấm để quét webcam 5 góc khuôn mặt chuẩn KYC"
+                        >
+                          <ScanFace className="w-3 h-3 text-indigo-600" /> Đăng ký Face ID
+                        </button>
                       )}
                     </div>
 
@@ -453,13 +484,39 @@ export default function Students() {
                       </td>
                       <td className="px-6 py-3.5">
                         {isKyc ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                          <button
+                            onClick={() => {
+                              setSelectedStudentForFace({
+                                _id: student._id,
+                                fullName: student.fullName,
+                                email: student.email,
+                                department: student.class?.name || 'Sinh viên',
+                                studentCode: student.studentCode
+                              });
+                              setIsFaceModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-all cursor-pointer"
+                            title="Bấm để xem hoặc cập nhật lại khuôn mặt"
+                          >
                             <ScanFace className="w-3.5 h-3.5 text-emerald-600" /> Đã KYC 5 góc
-                          </span>
+                          </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                            <AlertCircle className="w-3.5 h-3.5 text-slate-400" /> Chưa KYC
-                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedStudentForFace({
+                                _id: student._id,
+                                fullName: student.fullName,
+                                email: student.email,
+                                department: student.class?.name || 'Sinh viên',
+                                studentCode: student.studentCode
+                              });
+                              setIsFaceModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                            title="Bật webcam quét 5 góc khuôn mặt chuẩn KYC"
+                          >
+                            <ScanFace className="w-3.5 h-3.5 text-indigo-600" /> Đăng ký Face ID
+                          </button>
                         )}
                       </td>
                       <td className="px-6 py-3.5">
@@ -471,6 +528,22 @@ export default function Students() {
                         <div className="flex gap-1 justify-end items-center">
                           <button
                             onClick={() => {
+                              setSelectedStudentForFace({
+                                _id: student._id,
+                                fullName: student.fullName,
+                                email: student.email,
+                                department: student.class?.name || 'Sinh viên',
+                                studentCode: student.studentCode
+                              });
+                              setIsFaceModalOpen(true);
+                            }}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                            title="Quét & Đăng ký Face ID (KYC)"
+                          >
+                            <ScanFace className="w-4 h-4 text-indigo-600" />
+                          </button>
+                          <button
+                            onClick={() => {
                               setSelectedForUser({
                                 fullName: student.fullName,
                                 email: student.email,
@@ -480,7 +553,7 @@ export default function Students() {
                               });
                               setIsUserModalOpen(true);
                             }}
-                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                             title="Kích hoạt tài khoản thi"
                           >
                             <ShieldCheck className="w-4 h-4" />
@@ -615,6 +688,22 @@ export default function Students() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal Đăng Ký Khuôn Mặt KYC */}
+      {isFaceModalOpen && selectedStudentForFace && (
+        <FaceRegistrationModal
+          isOpen={isFaceModalOpen}
+          onClose={() => {
+            setIsFaceModalOpen(false);
+            setSelectedStudentForFace(null);
+          }}
+          user={selectedStudentForFace}
+          onSuccess={() => {
+            fetchStudents();
+            toast.success(`Đã cập nhật khuôn mặt Face ID cho sinh viên ${selectedStudentForFace.fullName}!`);
+          }}
+        />
+      )}
     </div>
   );
 }
