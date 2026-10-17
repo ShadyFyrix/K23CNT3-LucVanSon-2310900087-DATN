@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
+import { io, Socket } from 'socket.io-client';
 import { apiClient } from '../../api/apiClient';
 
 interface Question {
@@ -106,6 +107,12 @@ export default function TakeExam() {
     { time: new Date().toLocaleTimeString('vi-VN'), text: 'Khởi động buồng thi Quiz bảo mật ExamGuard AI', type: 'info' },
     { time: new Date().toLocaleTimeString('vi-VN'), text: 'Đã kích hoạt camera & AI giám sát tư thế realtime', type: 'success' }
   ]);
+
+  // Socket.IO & Proctor Warning & Suspended States
+  const socketRef = useRef<Socket | null>(null);
+  const [directWarning, setDirectWarning] = useState<{ message: string; timestamp: Date } | null>(null);
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [suspendReason, setSuspendReason] = useState('');
 
   // Bộ phát âm thanh tổng hợp (Web Audio API - không phụ thuộc file ngoài)
   const playQuizSound = (type: 'select' | 'flag' | 'warning' | 'finish') => {
@@ -205,41 +212,107 @@ export default function TakeExam() {
     };
   }, []);
 
-  // 3. Giám sát chống gian lận: Chuyển tab trình duyệt (Anti-tab switch)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setTrustScore(prev => Math.max(0, prev - 10));
+  // Hàm phát hiện vi phạm trình duyệt và gửi lên server
+  const triggerAntiCheatEvent = async (eventType: string, details: any = {}) => {
+    if (!examData?.examStudent?.id) return;
+    try {
+      const res = await apiClient.post('/api/proctor/anti-cheat-event', {
+        sessionStudentId: examData.examStudent.id,
+        eventType,
+        details
+      });
+      if (res.data?.success && !res.data.debounced) {
+        if (res.data.trustScore !== undefined) {
+          setTrustScore(res.data.trustScore);
+        }
         playQuizSound('warning');
-        toast.error('CẢNH BÁO: Phát hiện bạn vừa rời khỏi màn hình Quiz! Bị trừ 10 điểm uy tín.', {
-          duration: 6000,
-          icon: '⚠️'
+        toast.error(`CẢNH BÁO AN NINH: ${res.data.message} (-${res.data.penalty}đ)`, {
+          duration: 5000,
+          icon: '🚨'
         });
         setAiLogs(prev => [
           {
             time: new Date().toLocaleTimeString('vi-VN'),
-            text: 'Cảnh báo: Rời tab Quiz (TAB_SWITCH) - Trừ 10đ uy tín',
+            text: `${eventType}: ${res.data.message} (-${res.data.penalty}đ)`,
             type: 'warn'
           },
           ...prev.slice(0, 10)
         ]);
+      }
+    } catch (_) {}
+  };
 
-        if (examData?.examStudent?.id) {
-          apiClient.post('/api/proctor/send-warning', {
-            sessionStudentId: examData.examStudent.id,
-            message: 'Phát hiện chuyển tab/thu nhỏ trình duyệt khi đang làm bài Quiz'
-          }).catch(() => {});
-        }
+  // 3. Giám sát chống gian lận đa tầng: Tab switch, Chuột phải, Copy/Paste, DevTools F12
+  useEffect(() => {
+    if (!examData) return;
+
+    // A. Chuyển tab / thu nhỏ trình duyệt
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        triggerAntiCheatEvent('TAB_SWITCH', { action: 'hidden' });
+      }
+    };
+
+    // B. Chặn chuột phải (Context Menu)
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      triggerAntiCheatEvent('RIGHT_CLICK', { x: e.clientX, y: e.clientY });
+    };
+
+    // C. Chặn Copy, Paste, Cut
+    const handleCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      triggerAntiCheatEvent('COPY_PASTE', { type: e.type });
+    };
+
+    // D. Chặn DevTools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, PrintScreen)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
+        (e.ctrlKey && ['u', 'U'].includes(e.key))
+      ) {
+        e.preventDefault();
+        triggerAntiCheatEvent('DEVTOOLS_OPEN', { key: e.key });
+      } else if (e.key === 'PrintScreen') {
+        triggerAntiCheatEvent('FULLSCREEN_EXIT', { key: 'PrintScreen' });
+        toast.error('CẢNH BÁO: Nghiêm cấm chụp màn hình bài thi!', { icon: '🚫' });
+      }
+    };
+
+    // E. Thoát Fullscreen
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+        triggerAntiCheatEvent('FULLSCREEN_EXIT', { time: new Date() });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [examData]);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('copy', handleCopyPaste);
+    document.addEventListener('paste', handleCopyPaste);
+    document.addEventListener('cut', handleCopyPaste);
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
-  // 4. Gửi frame camera định kỳ lên server để phân tích AI
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('copy', handleCopyPaste);
+      document.removeEventListener('paste', handleCopyPaste);
+      document.removeEventListener('cut', handleCopyPaste);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [examData, isFullscreen]);
+
+  // 4. Gửi frame camera định kỳ lên server để phân tích AI (Adaptive Interval theo điểm uy tín)
   useEffect(() => {
     if (!cameraActive || !examData) return;
+
+    // Tần suất thích ứng: uy tín < 70 -> 10s, < 90 -> 15s, >= 90 -> 20s
+    const checkIntervalMs = trustScore >= 90 ? 20000 : trustScore >= 70 ? 15000 : 10000;
 
     const interval = setInterval(() => {
       if (!videoRef.current || !canvasRef.current) return;
@@ -271,12 +344,18 @@ export default function TakeExam() {
             if (res.data.detectedEvent && res.data.detectedEvent !== 'NORMAL') {
               const eventName = res.data.detectedEvent;
               const isStaff = res.data.isProctorPresence;
+              const penalty = res.data.penalty || 0;
+
+              if (penalty > 0) {
+                playQuizSound('warning');
+              }
+
               setAiLogs(prev => [
                 {
                   time: new Date().toLocaleTimeString('vi-VN'),
                   text: isStaff
-                    ? `Cán bộ ${res.data.proctorName || 'coi thi'} ghé bàn - Không trừ điểm`
-                    : `Phát hiện: ${eventName} (-${res.data.penalty}đ)`,
+                    ? `Cán bộ ${res.data.proctorName || 'coi thi'} ghé bàn - Miễn trừ phạt`
+                    : `AI phát hiện: ${eventName} (-${penalty}đ)`,
                   type: isStaff ? 'info' : 'warn'
                 },
                 ...prev.slice(0, 10)
@@ -285,10 +364,79 @@ export default function TakeExam() {
           }
         } catch (_) {}
       }, 'image/jpeg', 0.6);
-    }, 25000);
+    }, checkIntervalMs);
 
     return () => clearInterval(interval);
-  }, [cameraActive, examData]);
+  }, [cameraActive, examData, trustScore]);
+
+  // 5. Kết nối Socket.IO thời gian thực để nhận cảnh báo từ Giám thị & gửi Heartbeat
+  useEffect(() => {
+    if (!examData) return;
+
+    const socketUrl = window.location.origin;
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join_session', {
+        sessionId: examData.session.id,
+        role: 'student',
+        studentId: examData.student.id,
+        candidateCode: examData.examStudent.candidateCode
+      });
+    });
+
+    // Nhận cảnh báo trực tiếp từ Giám thị
+    const warningChannel = `student:warning:${examData.student.id}`;
+    socket.on(warningChannel, (data: any) => {
+      playQuizSound('warning');
+      setDirectWarning({
+        message: data.message || 'Yêu cầu tập trung làm bài, nhìn thẳng vào màn hình!',
+        timestamp: new Date(data.timestamp || Date.now())
+      });
+      if (data.newTrustScore !== undefined) {
+        setTrustScore(data.newTrustScore);
+      } else {
+        setTrustScore(prev => Math.max(0, prev - (data.penalty || 5)));
+      }
+    });
+
+    // Nhận thông báo cộng bù giờ
+    socket.on('student:extra_time', (data: any) => {
+      if (data.candidateCode === examData.examStudent.candidateCode) {
+        setTimeLeft(prev => prev + (data.extraMinutes || 5) * 60);
+        toast.success(`GIÁM THỊ ĐÃ CỘNG BÙ ${data.extraMinutes} PHÚT LÀM BÀI CHO BẠN!`, { duration: 6000 });
+      }
+    });
+
+    // Nhận thông báo đình chỉ thi
+    socket.on('student:suspended', (data: any) => {
+      if (data.candidateCode === examData.examStudent.candidateCode) {
+        setIsSuspended(true);
+        setSuspendReason(data.reason || 'Vi phạm quy chế thi');
+        toast.error('BẠN ĐÃ BỊ ĐÌNH CHỈ THI BỞI HỘI ĐỒNG COI THI!', { duration: 10000 });
+      }
+    });
+
+    // Gửi Heartbeat định kỳ 10s cho giám thị
+    const heartbeatInterval = setInterval(() => {
+      socket.emit('student:heartbeat', {
+        sessionId: examData.session.id,
+        studentId: examData.student.id,
+        candidateCode: examData.examStudent.candidateCode,
+        currentQuestion: currentIdx + 1,
+        trustScore
+      });
+    }, 10000);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      socket.disconnect();
+    };
+  }, [examData, currentIdx, trustScore]);
 
   // 5. Bộ đếm ngược thời gian (Countdown)
   useEffect(() => {
@@ -489,6 +637,28 @@ export default function TakeExam() {
         <button onClick={() => navigate('/')} className="mt-6 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition">
           Trở về Dashboard
         </button>
+      </div>
+    );
+  }
+
+  if (isSuspended) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6">
+        <div className="bg-slate-900 border border-rose-500/50 rounded-3xl p-8 max-w-lg w-full text-center space-y-4 shadow-2xl ring-1 ring-rose-500/30">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+            <AlertTriangle className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-rose-400">BÀI THI ĐÃ BỊ ĐÌNH CHỈ</h2>
+          <p className="text-slate-300 text-sm">
+            Tài khoản bài thi của bạn đã bị Giám thị khóa do vi phạm quy chế thi nghiêm trọng.
+          </p>
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 font-mono">
+            Lý do: <b className="text-rose-300">{suspendReason || 'Vi phạm an ninh phòng thi'}</b>
+          </div>
+          <p className="text-xs text-slate-500">
+            Mọi thao tác làm bài đã bị đóng băng. Vui lòng rời khỏi phòng thi hoặc làm việc trực tiếp với Cán bộ coi thi.
+          </p>
+        </div>
       </div>
     );
   }
@@ -995,6 +1165,31 @@ export default function TakeExam() {
                 Đồng ý nộp bài
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL CẢNH BÁO TRỰC TIẾP TỪ GIÁM THỊ (SOCKET.IO) ── */}
+      {directWarning && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
+              <ShieldAlert className="w-8 h-8 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-bold text-white uppercase tracking-wide">
+              CẢNH BÁO TỪ CÁN BỘ COI THI
+            </h3>
+            <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/30 text-amber-200 text-sm font-semibold">
+              "{directWarning.message}"
+            </div>
+            <p className="text-xs text-slate-400">
+              Bạn bị trừ <b className="text-amber-400">5 điểm uy tín</b>. Vui lòng tập trung nhìn thẳng màn hình, không thực hiện hành vi khả nghi.
+            </p>
+            <button
+              onClick={() => setDirectWarning(null)}
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-amber-500/20"
+            >
+              TÔI ĐÃ HIỂU VÀ QUAY LẠI LÀM BÀI
+            </button>
           </div>
         </div>
       )}

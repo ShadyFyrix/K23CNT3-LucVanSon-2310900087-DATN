@@ -24,6 +24,7 @@
 14. [Mục lục Cập nhật Changelog (v1.3)](#14-mục-lục-cập-nhật-v13)
 15. [Luồng Quản lý Phân cấp Tổ chức: Khoa — Khóa học — Lớp — Sinh viên & Giảng viên](#15-luồng-quản-lý-phân-cấp-tổ-chức-khoa--khóa-học--lớp--sinh-viên--giảng-viên)
 16. [API Contracts & Dữ liệu: Tự động Chấm điểm, Rà soát, Phê duyệt & Công bố Đáp án](#16-api-contracts--dữ-liệu-tự-động-chấm-điểm-rà-soát-phê-duyệt--công-bố-đáp-án)
+17. [Nâng cấp Hệ thống Giám sát Phòng thi: Socket.IO Realtime, Face AI 3D Pose & Chống Gian lận Trình duyệt](#17-nâng-cấp-hệ-thống-giám-sát-phòng-thi-socketio-face-ai-3d-pose--anti-cheat)
 
 ---
 
@@ -2468,6 +2469,46 @@ Response 200:
 
 ---
 
-*Blueprint version 1.3 — Cập nhật: 2026-10-15*  
-*Bổ sung: Ma trận Phân quyền RBAC+CBAC & Zero-Trust, Luồng Quản lý Phân cấp Tổ chức (Khoa → Khóa học → Lớp → SV & GV), Xác minh mặt Giám thị/Thanh tra trên camera SV (Log không trừ điểm), Tự động chấm Trắc nghiệm, Rà soát 1 lần, Duyệt & Công bố điểm kèm Đáp án chi tiết.*  
+## 17. NÂNG CẤP HỆ THỐNG GIÁM SÁT PHÒNG THI: SOCKET.IO, FACE AI 3D POSE & ANTI-CHEAT (v2.0)
+
+### 17.1. Kiến trúc Core Face AI 3D & Phân loại Hành vi Nghi vấn
+- **Mô hình**: YuNet ONNX (Face Detection) + ArcFace w600k (Embedding) + PnP 3D Landmarks.
+- **Tư thế mới & Ngưỡng phát hiện**:
+  - `PHONE_LOOK_DOWN`: Pitch ≤ -22° (Cúi đầu nhìn điện thoại dưới hộc bàn) → Mức độ: `HIGH`, Trừ: 20đ.
+  - `SUSPICIOUS_SIDE_LEFT` / `SUSPICIOUS_SIDE_RIGHT`: |Yaw| ≥ 30° (Liếc bài thí sinh bên cạnh) → Mức độ: `MEDIUM`, Trừ: 10đ.
+  - `TURN_LEFT` / `TURN_RIGHT` / `LOOK_UP` / `LOOK_DOWN`: Mức độ: `LOW`, Trừ: 5đ.
+  - `MULTIPLE_FACES`: Phát hiện > 1 mặt → So khớp ArcFace với danh sách Giám thị/Thanh tra. Nếu trùng khớp → `PROCTOR_INSPECTION` (0đ - Miễn trừ phạt). Nếu không khớp → `HIGH` (-15đ).
+  - `NO_FACE`: Thí sinh rời khỏi khung hình hoặc che webcam → Mức độ: `MEDIUM`, Trừ: 10đ.
+
+### 17.2. Giao thức Socket.IO Giám thị Thời gian Thực (Realtime Proctoring Protocol)
+- **Namespaces & Rooms**: `session_{sessionId}`
+- **Luồng Sự kiện**:
+  1. `join_session` (`{ sessionId, role, studentId, candidateCode }`): Thí sinh và Giám thị gia nhập room phòng thi.
+  2. `proctor:violation`: Server bắn thông báo vi phạm ngay lập tức tới Giám thị kèm severity, penalty, snapshot evidence.
+  3. `proctor:student_update`: Đồng bộ điểm uy tín và trạng thái thí sinh tức thì lên sơ đồ bàn thi (Desk Matrix).
+  4. `proctor:override_update`: Giám thị kích hoạt chế độ kiểm tra tại bàn (Override 2 phút) → Chuyển màu bàn sang tím trên toàn bộ UI giám thị.
+  5. `student:warning:{studentId}`: Giám thị gửi cảnh báo trực tiếp lên màn hình thí sinh → Hiển thị modal bắt buộc xác nhận và trừ 5đ.
+  6. `student:extra_time`: Giám thị cộng bù giờ trực tiếp cho thí sinh gặp sự cố mạng.
+  7. `student:suspended`: Giám thị đình chỉ và khóa màn hình bài thi ngay tức thì.
+  8. `student:heartbeat`: Thí sinh gửi định kỳ câu hỏi đang làm (VD: Câu 5/30) và keepalive.
+
+### 17.3. Bộ công cụ Chống Gian lận Trình duyệt (Browser Anti-Cheat Suite)
+- **Cơ chế**:
+  - `TAB_SWITCH`: Bắt sự kiện `visibilitychange` khi thí sinh chuyển tab hoặc thu nhỏ trình duyệt (-10đ).
+  - `RIGHT_CLICK`: Chặn `contextmenu` ngăn tra cứu menu chuột phải (-5đ).
+  - `COPY_PASTE`: Chặn `copy`, `paste`, `cut` nội dung bài thi (-10đ).
+  - `DEVTOOLS_OPEN`: Chặn các phím tắt F12, Ctrl+Shift+I/J/C, Ctrl+U ngăn mở Developer Tools (-30đ, Mức độ: `CRITICAL`).
+  - `FULLSCREEN_EXIT`: Giám sát thoát chế độ toàn màn hình (-10đ).
+- **Debounce / Deduplication vi phạm**:
+  - Vi phạm cùng loại trên cùng một thí sinh trong vòng 15–30 giây sẽ không trừ điểm lặp lại (Debounced).
+
+### 17.4. Chu kỳ Camera Thích ứng (Adaptive Camera Inspection)
+- Điểm uy tín ≥ 90đ: Gửi frame kiểm tra mỗi **20 giây**.
+- Điểm uy tín 70–89đ: Tăng tần suất kiểm tra lên mỗi **15 giây**.
+- Điểm uy tín < 70đ (Nghi vấn cao): Tăng tần suất kiểm tra lên mỗi **10 giây**.
+
+---
+
+*Blueprint version 2.0 — Cập nhật: 2026-10-17*  
+*Bổ sung: Socket.IO Realtime Proctoring Protocol, Face AI 3D Pose Suspicious Behavior (PHONE_LOOK_DOWN, SUSPICIOUS_SIDE), Multi-layer Browser Anti-Cheat Suite, Debounce Vi phạm 30s, Adaptive Camera Loop & Giám sát LiveProctor/TakeExam v2.0.*  
 *Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*

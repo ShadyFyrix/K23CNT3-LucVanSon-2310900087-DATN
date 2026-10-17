@@ -25,9 +25,22 @@ const ExamViolationSchema = new mongoose.Schema({
       'SUSPICIOUS_OBJECT',  // Tài liệu / vật dụng khả nghi (-10đ)
       'PROCTOR_INSPECTION', // Cán bộ coi thi đi ngang kiểm tra bàn (0đ - Không trừ điểm)
       'SEB_INTEGRITY_BREACH',// Vi phạm phần mềm khóa màn hình (-30đ)
-      'MANUAL_WARNING'      // Cảnh báo thủ công từ giám thị (-5đ)
+      'MANUAL_WARNING',     // Cảnh báo thủ công từ giám thị (-5đ)
+      'TAB_SWITCH',         // Rời khỏi tab làm bài (-10đ)
+      'COPY_PASTE',         // Sao chép / dán nội dung (-10đ)
+      'RIGHT_CLICK',        // Click chuột phải (-5đ)
+      'DEVTOOLS_OPEN',      // Mở DevTools F12 (-30đ)
+      'FULLSCREEN_EXIT',    // Thoát chế độ toàn màn hình (-10đ)
+      'HEAD_POSE_PHONE',    // Cúi mặt nhìn điện thoại (-20đ)
+      'SUSPICIOUS_SIDE',    // Liếc nhìn sang bài bạn (-10đ)
+      'IMPERSONATION_DETECTED' // Thi hộ (-50đ)
     ],
     required: true 
+  },
+  severity: {
+    type: String,
+    enum: ['NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+    default: 'LOW'
   },
   penalty: { 
     type: Number, 

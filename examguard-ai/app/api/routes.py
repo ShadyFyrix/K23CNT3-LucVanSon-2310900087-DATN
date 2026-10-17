@@ -1,4 +1,5 @@
 import io
+import time
 import base64
 import numpy as np
 from typing import Optional, List, Dict, Any
@@ -10,7 +11,12 @@ from app.schemas.models import (
     FaceVerifyResponse,
     LivenessCheck,
     EmployeeFaceProfile,
-    FaceActionDetectionResult
+    FaceActionDetectionResult,
+    ProctorBatchAnalyzeRequest,
+    ProctorBatchAnalyzeResponse,
+    ProctorBatchItemResult,
+    AntiCheatEventRequest,
+    AntiCheatEventResponse
 )
 
 from app.core.liveness_checker import LivenessChecker
@@ -295,4 +301,163 @@ async def delete_face(employee_id: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy nhân viên ID '{employee_id}'.")
     return {"success": True, "message": f"Đã xoá thành công dữ liệu khuôn mặt cho {employee_id}"}
+
+
+# ====================================================================
+# EXAM PROCTORING SUITE — CORE FACE AI & REALTIME MONITORING
+# ====================================================================
+
+@router.post("/proctor/inspect-frame", summary="Phân tích 1 frame giám sát thi (Pose, số mặt, gian lận)")
+async def inspect_proctor_frame(
+    image: UploadFile = File(..., description="Ảnh frame từ camera thí sinh"),
+    student_id: Optional[str] = Form(None, description="Mã thí sinh dự kiến để xác thực danh tính")
+):
+    """
+    Phân tích frame camera phòng thi:
+    - Kiểm tra số mặt (0: rời vị trí, >1: có người lạ)
+    - Kiểm tra tư thế cúi nhìn điện thoại (PHONE_LOOK_DOWN), liếc ngang (SUSPICIOUS_SIDE), quay mặt (LOOK_AWAY)
+    - Trả về danh sách vi phạm, mức độ nghiêm trọng và gợi ý điểm trừ
+    """
+    contents = await image.read()
+    img_bgr = decode_image_file(contents)
+    if img_bgr is None:
+        raise HTTPException(status_code=400, detail="Không thể đọc định dạng ảnh.")
+
+    return face_service.analyze_proctor_frame(img_bgr, expected_student_id=student_id)
+
+
+@router.post("/proctor/analyze-batch", response_model=ProctorBatchAnalyzeResponse, summary="Phân tích hàng loạt frames từ nhiều thí sinh (Batch)")
+async def analyze_proctor_batch(request: ProctorBatchAnalyzeRequest):
+    """
+    Phân tích batch nhiều frame từ các bàn thi khác nhau trong một lượt gọi API:
+    - Giảm chi phí kết nối mạng HTTP overhead
+    - Xử lý tuần tự/song song các frame
+    """
+    start_time = time.time()
+    results = []
+
+    for item in request.frames:
+        img_bgr = decode_base64_image(item.image_base64)
+        if img_bgr is None:
+            results.append(ProctorBatchItemResult(
+                frame_id=item.frame_id,
+                student_id=item.student_id,
+                result=FaceActionDetectionResult(face_detected=False, num_faces=0),
+                violations=["INVALID_FRAME"],
+                severity="NONE",
+                suggested_penalty=0
+            ))
+            continue
+
+        analysis = face_service.analyze_proctor_frame(img_bgr, expected_student_id=item.expected_student_id)
+        raw_result = analysis.get("result", {})
+
+        action_model = FaceActionDetectionResult(
+            face_detected=raw_result.get("face_detected", False),
+            num_faces=raw_result.get("num_faces", 0),
+            bbox=raw_result.get("bbox"),
+            landmarks=raw_result.get("landmarks"),
+            pose=raw_result.get("pose"),
+            quality=raw_result.get("quality"),
+            liveness_score=raw_result.get("liveness_score", 1.0),
+            identity=raw_result.get("identity"),
+            all_poses=raw_result.get("all_poses")
+        )
+
+        results.append(ProctorBatchItemResult(
+            frame_id=item.frame_id,
+            student_id=item.student_id,
+            result=action_model,
+            violations=analysis.get("violations", []),
+            severity=analysis.get("severity", "NONE"),
+            suggested_penalty=analysis.get("suggested_penalty", 0)
+        ))
+
+    execution_time_ms = round((time.time() - start_time) * 1000, 2)
+
+    return ProctorBatchAnalyzeResponse(
+        success=True,
+        results=results,
+        total_processed=len(results),
+        execution_time_ms=execution_time_ms
+    )
+
+
+@router.post("/proctor/anti-cheat-event", response_model=AntiCheatEventResponse, summary="Đánh giá sự kiện chống gian lận trình duyệt")
+async def evaluate_anti_cheat_event(event: AntiCheatEventRequest):
+    """
+    Đánh giá mức độ nghiêm trọng và điểm phạt cho các sự kiện chống gian lận:
+    - TAB_SWITCH: Chuyển tab / đổi cửa sổ
+    - COPY_PASTE: Copy/paste nội dung câu hỏi/đáp án
+    - RIGHT_CLICK: Chuột phải tra cứu
+    - DEVTOOLS_OPEN: Mở F12 / công cụ kiểm duyệt
+    - FULLSCREEN_EXIT: Thoát chế độ toàn màn hình
+    """
+    event_type = event.event_type.upper()
+    severity_map = {
+        "DEVTOOLS_OPEN": ("CRITICAL", 30, "Thí sinh cố tình mở Developer Tools để can thiệp bài thi!"),
+        "TAB_SWITCH": ("MEDIUM", 10, "Thí sinh chuyển tab hoặc rời cửa sổ bài thi."),
+        "COPY_PASTE": ("MEDIUM", 10, "Thí sinh thực hiện thao tác sao chép / dán nội dung."),
+        "FULLSCREEN_EXIT": ("MEDIUM", 10, "Thí sinh thoát khỏi chế độ thi toàn màn hình."),
+        "RIGHT_CLICK": ("LOW", 5, "Thí sinh click chuột phải trong giao diện thi.")
+    }
+
+    severity, penalty, msg = severity_map.get(
+        event_type,
+        ("LOW", 5, f"Ghi nhận hành vi bất thường: {event_type}")
+    )
+
+    return AntiCheatEventResponse(
+        success=True,
+        event_type=event_type,
+        severity=severity,
+        suggested_penalty=penalty,
+        message=msg
+    )
+
+
+@router.websocket("/ws/proctor-stream")
+async def websocket_proctor_stream(websocket: WebSocket):
+    """
+    WebSocket endpoint phục vụ giám sát nhiều thí sinh thời gian thực trong phòng thi:
+    - Nhận { student_id, session_id, frame }
+    - Phân tích và phát hiện tức thì gian lận (0 mặt, nhiều mặt, cúi nhìn điện thoại, quay đầu)
+    - Trả về cảnh báo ngay lập tức để Giám thị xử lý
+    """
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            frame_base64 = data.get("frame")
+            student_id = data.get("student_id")
+            session_id = data.get("session_id")
+
+            if not frame_base64:
+                await websocket.send_json({"error": "Missing frame data"})
+                continue
+
+            img_bgr = decode_base64_image(frame_base64)
+            if img_bgr is None:
+                await websocket.send_json({
+                    "student_id": student_id,
+                    "session_id": session_id,
+                    "face_detected": False,
+                    "violations": ["INVALID_FRAME"],
+                    "severity": "NONE"
+                })
+                continue
+
+            analysis = face_service.analyze_proctor_frame(img_bgr, expected_student_id=student_id)
+            analysis["student_id"] = student_id
+            analysis["session_id"] = session_id
+            analysis["timestamp"] = time.time()
+
+            await websocket.send_json(analysis)
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({"error": str(e)})
+        except Exception:
+            pass
 

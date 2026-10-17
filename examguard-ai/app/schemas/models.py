@@ -95,9 +95,16 @@ class EmployeeFaceProfile(BaseModel):
     registered_angles: List[str] = ["straight"]
 
 class HeadPoseInfo(BaseModel):
-    pose: str = Field(..., description="STRAIGHT, TURN_LEFT, TURN_RIGHT, LOOK_UP, LOOK_DOWN")
+    pose: str = Field(..., description="STRAIGHT, TURN_LEFT, TURN_RIGHT, LOOK_UP, LOOK_DOWN, PHONE_LOOK_DOWN, SUSPICIOUS_SIDE_LEFT, SUSPICIOUS_SIDE_RIGHT")
     yaw_ratio: float
     pitch_ratio: float
+    yaw_deg: Optional[float] = None
+    pitch_deg: Optional[float] = None
+    roll_deg: Optional[float] = None
+    vert_ratio: Optional[float] = None
+    severity: str = "NONE"
+    confidence: float = 1.0
+    penalty_suggestion: int = 0
     blink_detected: bool = False
     eye_open_score: float = 1.0
 
@@ -109,12 +116,51 @@ class FaceIdentityInfo(BaseModel):
 
 class FaceActionDetectionResult(BaseModel):
     face_detected: bool
+    num_faces: int = 1
     bbox: Optional[BoundingBox] = None
     landmarks: Optional[FaceLandmarks] = None
     pose: Optional[HeadPoseInfo] = None
     quality: Optional[QualityCheck] = None
     liveness_score: float = 1.0
     identity: Optional[FaceIdentityInfo] = None
+    all_poses: Optional[List[Dict[str, Any]]] = None
+
+class ProctorBatchItem(BaseModel):
+    frame_id: str
+    image_base64: str
+    student_id: Optional[str] = None
+    expected_student_id: Optional[str] = None
+
+class ProctorBatchAnalyzeRequest(BaseModel):
+    frames: List[ProctorBatchItem]
+
+class ProctorBatchItemResult(BaseModel):
+    frame_id: str
+    student_id: Optional[str] = None
+    result: FaceActionDetectionResult
+    violations: List[str] = []
+    severity: str = "NONE"
+    suggested_penalty: int = 0
+
+class ProctorBatchAnalyzeResponse(BaseModel):
+    success: bool = True
+    results: List[ProctorBatchItemResult]
+    total_processed: int
+    execution_time_ms: float
+
+class AntiCheatEventRequest(BaseModel):
+    session_id: str
+    student_id: str
+    event_type: str = Field(..., description="TAB_SWITCH, COPY_PASTE, RIGHT_CLICK, DEVTOOLS_OPEN, FULLSCREEN_EXIT")
+    details: Optional[Dict[str, Any]] = None
+    timestamp: Optional[str] = None
+
+class AntiCheatEventResponse(BaseModel):
+    success: bool
+    event_type: str
+    severity: str
+    suggested_penalty: int
+    message: str
 
 
 

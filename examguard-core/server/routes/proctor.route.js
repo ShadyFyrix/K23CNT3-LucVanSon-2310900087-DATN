@@ -25,4 +25,13 @@ router.post('/dismiss-violation', proctorController.dismissViolation);
 // Đình chỉ thi thí sinh gian lận
 router.post('/suspend', proctorController.suspendCandidate);
 
+// Ghi nhận vi phạm chống gian lận trình duyệt (Tab switch, DevTools, Copy paste, v.v.)
+router.post('/anti-cheat-event', proctorController.logAntiCheatEvent);
+
+// Thống kê thời gian thực ca thi
+router.get('/statistics/:sessionId', proctorController.getLiveStatistics);
+
+// Dòng thời gian sự kiện & vi phạm
+router.get('/timeline/:sessionId', proctorController.getTimeline);
+
 module.exports = router;

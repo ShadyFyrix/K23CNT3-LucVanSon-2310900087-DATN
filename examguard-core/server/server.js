@@ -186,6 +186,9 @@ app.use((err, req, res, next) => {
 // START UNIFIED SERVER (PORT 3011)
 // ==============================
 const server = http.createServer(app);
+const { initSocket } = require("./services/socket.service");
+const io = initSocket(server);
+app.set("io", io);
 
 async function startServer() {
   const isDev = process.env.NODE_ENV !== 'production' && process.env.SERVE_STATIC !== 'true';

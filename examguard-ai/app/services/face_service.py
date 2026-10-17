@@ -485,9 +485,24 @@ class FaceService:
             "yaw_ratio": round(pose_info.get("yaw_deg", 0.0) / 45.0, 3),
             "pitch_ratio": round(pose_info.get("pitch_deg", 0.0) / 45.0, 3),
             "vert_ratio": pose_info.get("vert_ratio", 1.4),
+            "severity": pose_info.get("severity", "NONE"),
+            "confidence": pose_info.get("confidence", 1.0),
+            "penalty_suggestion": pose_info.get("penalty_suggestion", 0),
             "blink_detected": eye_info["blink_detected"],
             "eye_open_score": eye_info["eye_open_score"]
         }
+
+        # Analyze poses for secondary faces if any
+        all_poses = [combined_pose]
+        if len(faces) > 1:
+            for extra_face in faces[1:4]: # limit to top 3 extra faces to save CPU
+                extra_pose = LivenessChecker.estimate_head_pose(extra_face.landmarks, extra_face.bbox)
+                all_poses.append({
+                    "pose": extra_pose.get("pose", "UNKNOWN"),
+                    "yaw_deg": extra_pose.get("yaw_deg", 0.0),
+                    "pitch_deg": extra_pose.get("pitch_deg", 0.0),
+                    "severity": extra_pose.get("severity", "NONE")
+                })
 
         # Fast Real-time Identification against registered database
         # (Only executed when identify=True, throttled to max once per 1.2s to prevent CPU spikes)
@@ -530,12 +545,92 @@ class FaceService:
 
         return {
             "face_detected": True,
+            "num_faces": len(faces),
             "bbox": face.bbox.dict() if hasattr(face.bbox, 'dict') else face.bbox.model_dump(),
             "landmarks": face.landmarks.dict() if hasattr(face.landmarks, 'dict') else face.landmarks.model_dump() if face.landmarks else None,
             "pose": combined_pose,
+            "all_poses": all_poses,
             "quality": face.quality.dict() if hasattr(face.quality, 'dict') else face.quality.model_dump(),
             "liveness_score": liveness.score,
             "identity": identity
+        }
+
+    def analyze_proctor_frame(self, image_bgr: np.ndarray, expected_student_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Specialized exam proctoring frame analyzer:
+        1. Detects face count (0 -> NO_FACE, >1 -> MULTIPLE_FACES)
+        2. Detects head poses & suspicious behaviors (PHONE_LOOK_DOWN, SUSPICIOUS_SIDE, LOOK_AWAY)
+        3. Assigns severity and penalty scores for automatic grading deduction
+        """
+        if image_bgr is None:
+            return {
+                "face_detected": False,
+                "num_faces": 0,
+                "violations": ["NO_FACE"],
+                "severity": "MEDIUM",
+                "suggested_penalty": 10,
+                "message": "Không tìm thấy khuôn mặt trong khung hình."
+            }
+
+        action_res = self.detect_face_action(image_bgr, identify=bool(expected_student_id))
+        if not action_res.get("face_detected"):
+            return {
+                "face_detected": False,
+                "num_faces": 0,
+                "violations": ["NO_FACE"],
+                "severity": "MEDIUM",
+                "suggested_penalty": 10,
+                "result": action_res,
+                "message": "Thí sinh đã rời khỏi khung hình hoặc bị che khuất."
+            }
+
+        num_faces = action_res.get("num_faces", 1)
+        violations = []
+        severity = "NONE"
+        suggested_penalty = 0
+
+        # Multi-face violation check
+        if num_faces > 1:
+            violations.append("MULTIPLE_FACES")
+            severity = "HIGH"
+            suggested_penalty += 15
+
+        pose_info = action_res.get("pose", {})
+        pose_type = pose_info.get("pose", "STRAIGHT")
+        pose_severity = pose_info.get("severity", "NONE")
+        pose_penalty = pose_info.get("penalty_suggestion", 0)
+
+        # Suspicious pose check
+        if pose_type == "PHONE_LOOK_DOWN":
+            violations.append("PHONE_DETECTED")
+            severity = "HIGH" if severity != "CRITICAL" else severity
+            suggested_penalty += max(15, pose_penalty)
+        elif pose_type in ("SUSPICIOUS_SIDE_LEFT", "SUSPICIOUS_SIDE_RIGHT"):
+            violations.append("LOOK_AWAY")
+            severity = "MEDIUM" if severity not in ("HIGH", "CRITICAL") else severity
+            suggested_penalty += max(10, pose_penalty)
+        elif pose_type in ("TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"):
+            violations.append("LOOK_AWAY")
+            if severity == "NONE":
+                severity = "LOW"
+            suggested_penalty += max(5, pose_penalty)
+
+        # Identity check if expected_student_id is specified
+        if expected_student_id and action_res.get("identity", {}).get("matched"):
+            matched_id = action_res["identity"].get("employee_id")
+            if matched_id and matched_id != expected_student_id:
+                violations.append("IMPERSONATION_DETECTED")
+                severity = "CRITICAL"
+                suggested_penalty = 50
+
+        return {
+            "face_detected": True,
+            "num_faces": num_faces,
+            "violations": violations,
+            "severity": severity,
+            "suggested_penalty": suggested_penalty,
+            "result": action_res,
+            "message": "Bình thường" if not violations else f"Phát hiện vi phạm: {', '.join(violations)}"
         }
 
 

@@ -226,6 +226,83 @@ async function clearAllFaces() {
   return await res.json();
 }
 
+/**
+ * Phân tích chuyên sâu frame phòng thi (Face count, Pose, Gian lận, Phone detection)
+ */
+async function inspectProctorFrame(imageBuffer, studentId = null, filename = 'frame.jpg') {
+  const path = '/v1/proctor/inspect-frame';
+  const formData = new FormData();
+  formData.append('image', new Blob([imageBuffer], { type: 'image/jpeg' }), filename);
+  if (studentId) {
+    formData.append('student_id', studentId);
+  }
+
+  const res = await fetch(`${FACE_AI_URL}${path}`, {
+    method: 'POST',
+    headers: { ...getHmacHeaders('POST', path) },
+    body: formData,
+    signal: AbortSignal.timeout(6000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Face AI inspect-frame failed: ${res.status} ${errText}`);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Phân tích hàng loạt frames trong phòng thi (Batch)
+ */
+async function analyzeBatch(frames = []) {
+  const path = '/v1/proctor/analyze-batch';
+  const res = await fetch(`${FACE_AI_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHmacHeaders('POST', path)
+    },
+    body: JSON.stringify({ frames }),
+    signal: AbortSignal.timeout(12000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Face AI analyze-batch failed: ${res.status} ${errText}`);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Đánh giá vi phạm trình duyệt (Anti-Cheat Event)
+ */
+async function evaluateAntiCheat({ sessionId, studentId, eventType, details = {} }) {
+  const path = '/v1/proctor/anti-cheat-event';
+  const res = await fetch(`${FACE_AI_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHmacHeaders('POST', path)
+    },
+    body: JSON.stringify({
+      session_id: sessionId,
+      student_id: studentId,
+      event_type: eventType,
+      details
+    }),
+    signal: AbortSignal.timeout(4000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Face AI anti-cheat-event failed: ${res.status} ${errText}`);
+  }
+
+  return await res.json();
+}
+
 module.exports = {
   getHmacHeaders,
   checkHealth,
@@ -236,4 +313,7 @@ module.exports = {
   deleteFace,
   listFaces,
   clearAllFaces,
+  inspectProctorFrame,
+  analyzeBatch,
+  evaluateAntiCheat,
 };
