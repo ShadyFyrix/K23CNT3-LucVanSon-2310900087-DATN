@@ -597,6 +597,61 @@ export default function TakeExam() {
     };
   }, [showQrModal]);
 
+  // Chụp bài làm giấy qua Webcam máy tính (Chuẩn phòng thi - KHÔNG DÙNG ĐIỆN THOẠI)
+  const [showWebcamCaptureModal, setShowWebcamCaptureModal] = useState(false);
+  const [webcamSnapshot, setWebcamSnapshot] = useState<string | null>(null);
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
+
+  const handleSnapFromWebcam = () => {
+    if (!videoRef.current) {
+      toast.error('Webcam chưa sẵn sàng!');
+      return;
+    }
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Chụp khung hình từ webcam máy tính
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const snapshotUrl = canvas.toDataURL('image/jpeg', 0.95);
+    setWebcamSnapshot(snapshotUrl);
+    toast.success('Đã chụp ảnh bài thi từ Webcam!');
+  };
+
+  const handleStartCountdownCapture = () => {
+    setCaptureCountdown(3);
+    let count = 3;
+    const interval = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(interval);
+        setCaptureCountdown(null);
+        handleSnapFromWebcam();
+      } else {
+        setCaptureCountdown(count);
+      }
+    }, 1000);
+  };
+
+  const handleConfirmWebcamSnapshot = (qId: string) => {
+    if (!webcamSnapshot) return;
+    handleFileUpload(qId, {
+      fileUrl: webcamSnapshot,
+      fileName: `bai_lam_giay_cau_${currentIdx + 1}.jpg`
+    });
+    setWebcamSnapshot(null);
+    setShowWebcamCaptureModal(false);
+  };
+
+  const handleInsertSymbol = (qId: string, sym: string) => {
+    const prevVal = answers[qId];
+    const prevText = typeof prevVal === 'object' ? (prevVal?.text || '') : (typeof prevVal === 'string' ? prevVal : '');
+    handleTextChange(qId, prevText + sym);
+  };
+
   // Xử lý nhập Tự luận hoặc Code
   const handleTextChange = (qId: string, val: string) => {
     setAnswers(prev => {
@@ -1491,6 +1546,45 @@ export default function TakeExam() {
                   {currentQ.content}
                 </div>
 
+                {/* Hình ảnh minh họa đi kèm câu hỏi (Ví dụ: Sơ đồ mạch logic, Đồ thị, Bảng chân trị) */}
+                {currentQ.image && (
+                  <div className="my-4 p-3 bg-slate-950/90 rounded-2xl border border-slate-800 shadow-xl max-w-xl mx-auto">
+                    <div className="flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
+                      <span className="flex items-center space-x-1.5 font-medium text-cyan-400">
+                        <ImageIcon className="w-4 h-4" />
+                        <span>Sơ đồ / Hình vẽ minh họa Câu {currentIdx + 1}:</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500">Click ảnh để phóng to</span>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border border-slate-800 bg-white/5 flex items-center justify-center p-2">
+                      <img
+                        src={currentQ.image}
+                        alt={`Sơ đồ câu ${currentIdx + 1}`}
+                        className="max-h-72 w-full object-contain cursor-zoom-in hover:scale-105 transition-transform duration-200"
+                        onClick={() => window.open(currentQ.image, '_blank')}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Gợi ý mở File đề thi gốc để xem sơ đồ nếu là đề thi đính kèm tệp */}
+                {examData.examPaper?.fileUrl && !currentQ.image && (
+                  <div className="mt-3 p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 text-xs text-cyan-300">
+                      <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Câu hỏi có thể chứa sơ đồ mạch logic hoặc bảng biểu trong <b>File đề thi gốc</b>.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWorkspaceMode('SPLIT_FILE')}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 transition shadow shrink-0"
+                    >
+                      <Columns className="w-3.5 h-3.5" />
+                      <span>Mở File đề song song (Split View)</span>
+                    </button>
+                  </div>
+                )}
+
                 {currentQ.selectionMode === 'MULTIPLE' && (
                   <div className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mt-3">
                     <CheckSquare className="w-4 h-4 text-amber-400" />
@@ -1583,16 +1677,47 @@ export default function TakeExam() {
                       {/* Text editor area if TEXT_EDITOR or HYBRID */}
                       {(method === 'TEXT_EDITOR' || method === 'HYBRID_TEXT_FILE') && (
                         <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                            {method === 'HYBRID_TEXT_FILE' ? '1. Câu trả lời tóm tắt / Công thức rút gọn:' : 'Nội dung câu trả lời:'}
-                          </label>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-medium text-slate-300">
+                              {method === 'HYBRID_TEXT_FILE' ? '1. Câu trả lời tóm tắt / Biểu thức logic rút gọn:' : 'Nội dung câu trả lời:'}
+                            </label>
+                            <span className="text-[11px] text-slate-400">Hỗ trợ bộ gõ ký hiệu toán & logic</span>
+                          </div>
+
+                          {/* Quick Logic Symbols Toolbar for Discrete Math & Circuit Gates */}
+                          <div className="flex flex-wrap items-center gap-1.5 py-1.5 px-2.5 bg-slate-900/90 border border-slate-800 rounded-xl mb-2 text-xs">
+                            <span className="text-[10px] text-cyan-400 font-mono font-bold mr-1">Ký hiệu logic:</span>
+                            {[
+                              { label: "x̄ (NOT)", val: "̄" },
+                              { label: "¬ (NOT)", val: "¬" },
+                              { label: "∧ (AND)", val: " ∧ " },
+                              { label: "∨ (OR)", val: " ∨ " },
+                              { label: "⊕ (XOR)", val: " ⊕ " },
+                              { label: "⊼ (NAND)", val: " ⊼ " },
+                              { label: "⊽ (NOR)", val: " ⊽ " },
+                              { label: "→", val: " → " },
+                              { label: "↔", val: " ↔ " },
+                              { label: "F(x,y,z)", val: "F(x,y,z) = " }
+                            ].map((sym, sIdx) => (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => handleInsertSymbol(qId, sym.val)}
+                                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-200 text-xs font-mono transition border border-slate-700/80 hover:font-bold"
+                                title={`Chèn ký hiệu ${sym.label}`}
+                              >
+                                {sym.label}
+                              </button>
+                            ))}
+                          </div>
+
                           <textarea
                             rows={method === 'HYBRID_TEXT_FILE' ? 4 : 6}
                             value={textVal}
                             onChange={e => handleTextChange(qId, e.target.value)}
                             placeholder={method === 'HYBRID_TEXT_FILE' 
-                              ? "Nhập biểu thức kết quả, bảng chân trị rút gọn hoặc tóm tắt các bước chính..."
-                              : "Nhập câu trả lời tự luận của bạn tại đây... (Hỗ trợ ký hiệu toán học / Markdown)"}
+                              ? "Nhập biểu thức kết quả, bảng chân trị rút gọn hoặc tóm tắt các bước chính (ví dụ: F = (x·y)' + (y'·z'))..."
+                              : "Nhập câu trả lời tự luận của bạn tại đây... (Sử dụng thanh ký hiệu logic bên trên hoặc gõ trực tiếp)"}
                             className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500 resize-none font-sans"
                           ></textarea>
                           <div className="flex justify-between items-center text-[11px] text-slate-500 mt-1 px-1">
@@ -1617,7 +1742,7 @@ export default function TakeExam() {
                                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                                   <span>ĐÃ NỘP BÀI LÀM GIẤY THÀNH CÔNG</span>
                                   <span className="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                                    EXIF Verified
+                                    Đã xác thực
                                   </span>
                                 </div>
                                 <button
@@ -1648,29 +1773,33 @@ export default function TakeExam() {
                             /* Upload trigger card */
                             <div className="bg-slate-950/90 border-2 border-dashed border-slate-800 hover:border-cyan-500/50 rounded-2xl p-5 text-center transition">
                               <div className="max-w-md mx-auto space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
                                   <Camera className="w-6 h-6" />
                                 </div>
                                 <div>
                                   <h4 className="text-sm font-semibold text-slate-200">Chụp bài làm giấy thi của bạn</h4>
                                   <p className="text-xs text-slate-400 mt-1">
-                                    Vẽ sơ đồ mạch logic hoặc trình bày bài giải lên giấy thi. Quét QR bằng điện thoại để chụp ảnh trực tiếp (Chỉ mở Camera - Khóa Gallery chống gian lận).
+                                    Vẽ sơ đồ mạch logic hoặc trình bày bài giải lên giấy thi được phát. Giơ trang giấy trước Webcam máy tính để chụp trực tiếp (Chuẩn quy chế phòng thi cấm dùng điện thoại).
                                   </p>
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+                                  {/* Primary Button: PC Webcam Capture (No phone required!) */}
                                   <button
                                     type="button"
-                                    onClick={() => setShowQrModal(true)}
-                                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-600/20 transition"
+                                    onClick={() => {
+                                      setWebcamSnapshot(null);
+                                      setShowWebcamCaptureModal(true);
+                                    }}
+                                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 transition"
                                   >
-                                    <QrCode className="w-4 h-4" />
-                                    <span>Quét QR Mobile (Live Camera)</span>
+                                    <Camera className="w-4 h-4 text-white" />
+                                    <span>Chụp bằng Webcam máy tính (Không cần điện thoại)</span>
                                   </button>
 
-                                  <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center justify-center space-x-2 border border-slate-700 cursor-pointer transition">
-                                    <UploadCloud className="w-4 h-4 text-slate-400" />
-                                    <span>Tải ảnh từ máy tính (.jpg, .png)</span>
+                                  <label className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center justify-center space-x-1.5 border border-slate-700 cursor-pointer transition">
+                                    <UploadCloud className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Tải ảnh từ máy (.jpg, .png)</span>
                                     <input
                                       type="file"
                                       accept="image/*"
@@ -1691,11 +1820,21 @@ export default function TakeExam() {
                                       }}
                                     />
                                   </label>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowQrModal(true)}
+                                    className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center space-x-1 border border-slate-800 transition"
+                                    title="Chỉ dùng khi thi tại nhà hoặc được giám thị cho phép"
+                                  >
+                                    <QrCode className="w-3.5 h-3.5" />
+                                    <span>QR Mobile (Thi từ xa)</span>
+                                  </button>
                                 </div>
 
-                                <div className="flex items-center justify-center space-x-1.5 text-[10px] text-slate-500 pt-1">
+                                <div className="flex items-center justify-center space-x-1.5 text-[10px] text-emerald-400/90 pt-1">
                                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>Bảo mật: EXIF Timestamp Matching • AI Gaze Tracking • Plagiarism Shield</span>
+                                  <span>Tuân thủ quy chế thi: Không cần mở điện thoại • Chụp an toàn qua Webcam buồng thi</span>
                                 </div>
                               </div>
                             </div>
@@ -2037,6 +2176,127 @@ export default function TakeExam() {
           </div>
         </div>
       )}
+      {/* ── MODAL CHỤP BÀI LÀM GIẤY QUA WEBCAM MÁY TÍNH (CHUẨN QUY CHẾ - KHÔNG DÙNG ĐIỆN THOẠI) ── */}
+      {showWebcamCaptureModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
+                <Camera className="w-5 h-5 text-emerald-400" />
+                <span>CHỤP BÀI LÀM GIẤY QUA WEBCAM MÁY TÍNH</span>
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal">
+                  Chuẩn phòng thi
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWebcamCaptureModal(false);
+                  setWebcamSnapshot(null);
+                  setCaptureCountdown(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-center space-y-1">
+              <p className="text-xs text-slate-300">
+                Giơ trang giấy thi chứa sơ đồ mạch / bài giải trước Webcam máy tính. Căn chỉnh trang giấy vào giữa khung hình.
+              </p>
+            </div>
+
+            {/* Viewfinder or Snapshot Preview */}
+            <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700 bg-black aspect-video flex items-center justify-center">
+              {webcamSnapshot ? (
+                /* Snapshot preview */
+                <img
+                  src={webcamSnapshot}
+                  alt="Ảnh bài làm chụp từ webcam"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                /* Live viewfinder mirror */
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <video
+                    ref={el => {
+                      if (el && videoRef.current && videoRef.current.srcObject) {
+                        el.srcObject = videoRef.current.srcObject;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover transform -scale-x-100"
+                  />
+                  {/* Document overlay guide */}
+                  <div className="absolute inset-6 border-2 border-dashed border-emerald-400/80 rounded-xl pointer-events-none flex flex-col justify-between p-3">
+                    <span className="text-[10px] bg-slate-950/80 text-emerald-300 px-2 py-0.5 rounded self-start">
+                      [Vùng trang giấy A4]
+                    </span>
+                    <span className="text-[10px] bg-slate-950/80 text-slate-300 px-2 py-0.5 rounded self-center">
+                      Cầm thẳng và giữ yên trang giấy
+                    </span>
+                  </div>
+
+                  {/* Countdown overlay */}
+                  {captureCountdown !== null && (
+                    <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center">
+                      <span className="text-6xl font-black text-emerald-400 animate-ping">
+                        {captureCountdown}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            {webcamSnapshot ? (
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWebcamSnapshot(null)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center space-x-1.5 transition"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Chụp lại tấm khác</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmWebcamSnapshot(qId)}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-500/20 transition"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Xác nhận nộp bài làm này</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSnapFromWebcam}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-xl flex items-center justify-center space-x-1.5 transition"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Chụp ngay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartCountdownCapture}
+                  disabled={captureCountdown !== null}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Đếm ngược 3s rồi chụp (Khuyên dùng)</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL QUÉT QR BÀI LÀM GIẤY QUA MOBILE (LIVE CAMERA SAFE MODE) ── */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">

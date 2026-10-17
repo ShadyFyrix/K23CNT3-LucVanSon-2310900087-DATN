@@ -146,6 +146,7 @@ exports.createExamPaper = async (req, res) => {
           stt: q.stt || (idx + 1),
           type: q.type || 'MULTIPLE_CHOICE',
           content: q.content || `Câu ${idx + 1}`,
+          image: q.image || null,
           options: isEssay ? [] : (q.options || ['A', 'B', 'C', 'D']),
           correctAnswer: corrAns,
           correctAnswers: corrList,

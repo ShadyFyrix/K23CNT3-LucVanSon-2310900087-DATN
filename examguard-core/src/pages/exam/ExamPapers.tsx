@@ -48,6 +48,7 @@ interface ConfiguredQuestion {
   correctAnswers: number[]; // [0] for A, [0, 2] for A and C
   prompt?: string;
   content?: string;
+  image?: string;
   submissionMethod?: 'AUTO' | 'MCQ_SELECT' | 'TEXT_EDITOR' | 'FILE_UPLOAD' | 'HYBRID_TEXT_FILE';
   minWords?: number;
   explanation?: string;
@@ -533,6 +534,7 @@ export default function ExamPapers() {
           type: q.type,
           content: q.content || q.prompt || (isMcq ? `Câu ${q.stt}` : `Câu ${q.stt} (Tự luận)`),
           prompt: q.prompt || q.content || '',
+          image: q.image || null,
           options: (q.options && q.options.length >= 2) ? q.options : (isMcq ? ['A', 'B', 'C', 'D'] : []),
           correctAnswer: corr,
           correctAnswers: q.correctAnswers,
