@@ -34,7 +34,14 @@ import {
   ZoomIn,
   ZoomOut,
   Monitor,
-  Maximize2
+  Maximize2,
+  Scissors,
+  ImageIcon,
+  Crop,
+  UploadCloud,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardPaste
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -118,6 +125,193 @@ export default function ExamPapers() {
   const [previewTab, setPreviewTab] = useState<'FILE' | 'FORMATTED' | 'CANDIDATE'>('FORMATTED');
   const [previewZoom, setPreviewZoom] = useState<number>(100);
   const [filterQuestionType, setFilterQuestionType] = useState<'ALL' | 'MCQ' | 'ESSAY' | 'MULTI_CORRECT'>('ALL');
+
+  // Công cụ cắt ảnh từ tài liệu đề thi (Document Snipping / Crop Tool)
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropTargetQIndex, setCropTargetQIndex] = useState<number>(0);
+  const [cropPageNum, setCropPageNum] = useState<number>(1);
+  const [cropTotalPages, setCropTotalPages] = useState<number>(1);
+  const [cropSelection, setCropSelection] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [startPos, setStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [pdfRendering, setPdfRendering] = useState(false);
+
+  // Thay đổi ảnh minh họa của câu hỏi
+  const handleQuestionImageChange = (qIndex: number, imageUrl: string) => {
+    setConfiguredQuestions(prev => {
+      const updated = [...prev];
+      updated[qIndex] = { ...updated[qIndex], image: imageUrl };
+      return updated;
+    });
+    if (imageUrl) {
+      toast.success(`Đã gắn ảnh vào Câu ${qIndex + 1}!`);
+    } else {
+      toast('Đã gỡ ảnh câu hỏi.');
+    }
+  };
+
+  // Render trang tài liệu (PDF hoặc Ảnh) lên Canvas cắt ảnh
+  const renderDocToCanvas = async (pageNum: number) => {
+    if (!fileUrl || !cropCanvasRef.current) return;
+    const canvas = cropCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setPdfRendering(true);
+    setCropSelection(null);
+    setCroppedPreviewUrl(null);
+
+    const isPdf = (fileName || '').toLowerCase().endsWith('.pdf') || (fileUrl || '').toLowerCase().includes('.pdf');
+
+    if (isPdf) {
+      try {
+        const pdfjsLib = (window as any).pdfjsLib;
+        if (pdfjsLib) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          const loadingTask = pdfjsLib.getDocument(fileUrl);
+          const pdf = await loadingTask.promise;
+          setCropTotalPages(pdf.numPages || 1);
+          const targetPage = Math.min(Math.max(1, pageNum), pdf.numPages);
+          const page = await pdf.getPage(targetPage);
+          const viewport = page.getViewport({ scale: 1.5 });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+        }
+      } catch (err) {
+        console.error('Lỗi render PDF lên canvas:', err);
+      } finally {
+        setPdfRendering(false);
+      }
+    } else {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        canvas.width = img.naturalWidth || 800;
+        canvas.height = img.naturalHeight || 1100;
+        ctx.drawImage(img, 0, 0);
+        setPdfRendering(false);
+        setCropTotalPages(1);
+      };
+      img.onerror = () => {
+        setPdfRendering(false);
+      };
+      img.src = fileUrl;
+    }
+  };
+
+  useEffect(() => {
+    if (showCropModal && fileUrl) {
+      renderDocToCanvas(cropPageNum);
+    }
+  }, [showCropModal, cropPageNum, fileUrl]);
+
+  // Hỗ trợ dán ảnh từ Clipboard (Ctrl+V) trong Modal cắt ảnh
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!showCropModal) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target?.result as string;
+              setCroppedPreviewUrl(dataUrl);
+              toast.success('Đã dán ảnh từ Clipboard (Ctrl+V)!');
+            };
+            reader.readAsDataURL(blob);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [showCropModal]);
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!cropCanvasRef.current) return;
+    const canvas = cropCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    setStartPos({ x, y });
+    setIsSelecting(true);
+    setCropSelection(null);
+    setCroppedPreviewUrl(null);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isSelecting || !cropCanvasRef.current) return;
+    const canvas = cropCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const currentX = (e.clientX - rect.left) * scaleX;
+    const currentY = (e.clientY - rect.top) * scaleY;
+
+    const x = Math.min(startPos.x, currentX);
+    const y = Math.min(startPos.y, currentY);
+    const w = Math.abs(currentX - startPos.x);
+    const h = Math.abs(currentY - startPos.y);
+
+    setCropSelection({ x, y, w, h });
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!isSelecting || !cropCanvasRef.current || !cropSelection) {
+      setIsSelecting(false);
+      return;
+    }
+    setIsSelecting(false);
+
+    if (cropSelection.w > 15 && cropSelection.h > 15) {
+      const sourceCanvas = cropCanvasRef.current;
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = cropSelection.w;
+      cropCanvas.height = cropSelection.h;
+      const ctx = cropCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(
+          sourceCanvas,
+          cropSelection.x,
+          cropSelection.y,
+          cropSelection.w,
+          cropSelection.h,
+          0,
+          0,
+          cropSelection.w,
+          cropSelection.h
+        );
+        const dataUrl = cropCanvas.toDataURL('image/png');
+        setCroppedPreviewUrl(dataUrl);
+      }
+    }
+  };
+
+  const handleApplyCropToQuestion = () => {
+    if (!croppedPreviewUrl) {
+      toast.error('Vui lòng kéo chuột chọn vùng ảnh sơ đồ cần cắt trước!');
+      return;
+    }
+    setConfiguredQuestions(prev => {
+      const updated = [...prev];
+      if (updated[cropTargetQIndex]) {
+        updated[cropTargetQIndex] = { ...updated[cropTargetQIndex], image: croppedPreviewUrl };
+      }
+      return updated;
+    });
+    const targetQNum = configuredQuestions[cropTargetQIndex]?.stt || (cropTargetQIndex + 1);
+    toast.success(`Đã cắt và gắn ảnh sơ đồ vào Câu ${targetQNum} thành công!`);
+    setShowCropModal(false);
+  };
 
   // Lấy danh sách đề thi từ server
   const fetchPapers = async () => {
@@ -1112,6 +1306,17 @@ export default function ExamPapers() {
                                             </div>
                                           </div>
 
+                                          {/* Ảnh / Sơ đồ đính kèm câu trắc nghiệm nếu có */}
+                                          {q.image && (
+                                            <div className="p-2 bg-slate-900 rounded-lg border border-slate-700/60 max-w-md mx-auto">
+                                              <img
+                                                src={q.image}
+                                                alt={`Sơ đồ câu ${q.stt}`}
+                                                className="max-h-48 w-full object-contain rounded bg-white/5"
+                                              />
+                                            </div>
+                                          )}
+
                                           {/* Options Grid */}
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                                             {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
@@ -1199,6 +1404,18 @@ export default function ExamPapers() {
                                               {q.score}đ
                                             </span>
                                           </div>
+
+                                          {/* Ảnh / Sơ đồ đính kèm câu tự luận nếu có */}
+                                          {q.image && (
+                                            <div className="p-2 bg-slate-900 rounded-lg border border-amber-500/30 max-w-md mx-auto">
+                                              <img
+                                                src={q.image}
+                                                alt={`Sơ đồ câu ${q.stt}`}
+                                                className="max-h-52 w-full object-contain rounded bg-white/5"
+                                              />
+                                            </div>
+                                          )}
+
                                           {q.submissionMethod === 'TEXT_EDITOR' ? (
                                             <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 italic">
                                               <span>📝 Thí sinh gõ trực tiếp lời giải / công thức vào khung soạn thảo. Tiêu chuẩn: tối thiểu {q.minWords || 50} từ.</span>
@@ -1322,6 +1539,17 @@ export default function ExamPapers() {
                                 </span>
                                 <span className="text-slate-400 font-mono text-[11px]">{q.score} điểm</span>
                               </div>
+
+                              {/* Hình ảnh sơ đồ đính kèm câu hỏi */}
+                              {q.image && (
+                                <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-700/60 max-w-md mx-auto">
+                                  <img
+                                    src={q.image}
+                                    alt={`Hình minh họa câu ${q.stt}`}
+                                    className="max-h-56 w-full object-contain rounded bg-white/5"
+                                  />
+                                </div>
+                              )}
 
                               {q.type === 'MULTIPLE_CHOICE' ? (
                                 <div className="space-y-2 pt-1">
@@ -1703,6 +1931,23 @@ export default function ExamPapers() {
                       Tự luận ({configuredQuestions.filter(q => q.type === 'ESSAY').length})
                     </button>
                   </div>
+
+                  {/* Nút mở nhanh công cụ cắt sơ đồ từ file đề */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!fileUrl) {
+                        toast.error('Vui lòng tải lên tệp đề thi (PDF / Ảnh) trước khi dùng công cụ cắt ảnh!');
+                        return;
+                      }
+                      setShowCropModal(true);
+                    }}
+                    className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 font-bold flex items-center justify-center space-x-1.5 transition text-xs shadow"
+                    title="Mở công cụ cắt sơ đồ mạch logic, hình vẽ từ file đề thi"
+                  >
+                    <Scissors className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Cắt ảnh sơ đồ từ file đề thi</span>
+                  </button>
                 </div>
 
                 {/* Nhập chuỗi đáp án siêu tốc */}
@@ -1888,6 +2133,81 @@ export default function ExamPapers() {
                             </div>
                           </div>
                         )}
+
+                        {/* Hình ảnh / Sơ đồ đính kèm câu hỏi */}
+                        {q.image ? (
+                          <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                            <div className="flex items-center space-x-1.5 min-w-0">
+                              <img
+                                src={q.image}
+                                alt={`Sơ đồ C${q.stt}`}
+                                className="w-8 h-8 rounded border border-slate-700 object-cover bg-white/5 shrink-0"
+                              />
+                              <span className="text-[10px] text-emerald-400 font-semibold truncate">
+                                Sơ đồ đính kèm
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCropTargetQIndex(originalIdx);
+                                  setShowCropModal(true);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[9px] font-medium transition"
+                                title="Cắt lại hoặc thay đổi ảnh"
+                              >
+                                ✂️ Cắt lại
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuestionImageChange(originalIdx, '')}
+                                className="px-1.5 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-[9px] transition"
+                                title="Xóa ảnh"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCropTargetQIndex(originalIdx);
+                                setShowCropModal(true);
+                              }}
+                              className="flex-1 flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/50 hover:border-cyan-600/60 text-cyan-300 text-[9.5px] font-bold transition shadow-sm"
+                              title="Mở công cụ cắt sơ đồ mạch, hình vẽ trực tiếp từ tệp đề thi PDF"
+                            >
+                              <Scissors className="w-3 h-3 text-cyan-400" />
+                              <span>Cắt ảnh từ file đề</span>
+                            </button>
+                            <label
+                              className="cursor-pointer px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[9.5px] flex items-center space-x-1 border border-slate-700 transition"
+                              title="Tải ảnh sơ đồ từ máy tính"
+                            >
+                              <Upload className="w-3 h-3 text-slate-400" />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      if (typeof reader.result === 'string') {
+                                        handleQuestionImageChange(originalIdx, reader.result);
+                                      }
+                                    };
+                                    reader.readAsDataURL(f);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1926,6 +2246,226 @@ export default function ExamPapers() {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ── MODAL CẮT ẢNH TỪ TÀI LIỆU ĐỀ THI (SNIPPING & CROP TOOL) ── */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-[80] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-cyan-500/30 rounded-3xl w-[98vw] max-w-6xl max-h-[94vh] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-cyan-500/20">
+                  <Scissors className="w-5 h-5 text-slate-950" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>Công Cụ Cắt & Trích Xuất Sơ Đồ Từ Đề Thi</span>
+                    <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                      Exam Snipping Tool
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Kéo chuột trên tài liệu để khoanh vùng sơ đồ mạch, hình vẽ • Hoặc nhấn <kbd className="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 font-mono text-[10px] text-cyan-300">Ctrl + V</kbd> để dán ảnh chụp màn hình
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCropModal(false)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Control Bar */}
+            <div className="py-2.5 px-3 bg-slate-950/80 rounded-2xl border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 mt-3 shrink-0">
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="text-slate-400 font-medium">Gắn vào câu hỏi:</span>
+                <select
+                  value={cropTargetQIndex}
+                  onChange={(e) => setCropTargetQIndex(Number(e.target.value))}
+                  className="bg-slate-900 border border-cyan-500/40 text-cyan-300 font-bold rounded-xl px-3 py-1.5 text-xs focus:ring-0 focus:outline-none"
+                >
+                  {configuredQuestions.map((q, idx) => (
+                    <option key={q.stt || idx} value={idx}>
+                      Câu {q.stt || idx + 1} ({q.type === 'ESSAY' ? 'Tự luận' : 'Trắc nghiệm'}) {q.image ? '• Đã có ảnh' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Phân trang tài liệu nếu là PDF nhiều trang */}
+              {cropTotalPages > 1 && (
+                <div className="flex items-center space-x-2 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    disabled={cropPageNum <= 1 || pdfRendering}
+                    onClick={() => setCropPageNum(p => Math.max(1, p - 1))}
+                    className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-40 disabled:hover:bg-transparent"
+                    title="Trang trước"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="font-mono text-cyan-300 font-semibold">
+                    Trang {cropPageNum} / {cropTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={cropPageNum >= cropTotalPages || pdfRendering}
+                    onClick={() => setCropPageNum(p => Math.min(cropTotalPages, p + 1))}
+                    className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-40 disabled:hover:bg-transparent"
+                    title="Trang sau"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Tải ảnh trực tiếp từ máy hoặc Clipboard note */}
+              <div className="flex items-center space-x-2">
+                <label className="cursor-pointer px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center space-x-1.5 transition border border-slate-700">
+                  <UploadCloud className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Tải ảnh tệp từ máy</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === 'string') {
+                            setCroppedPreviewUrl(reader.result);
+                            toast.success('Đã tải ảnh lên! Nhấn "Gắn vào câu hỏi" để xác nhận.');
+                          }
+                        };
+                        reader.readAsDataURL(f);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Main Area: 2 Columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-3 flex-1 overflow-hidden min-h-0">
+              {/* Left Column: Canvas Document Display with Drag Crop Area */}
+              <div className="lg:col-span-8 bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col items-center justify-center overflow-auto custom-scrollbar relative min-h-[350px]">
+                {pdfRendering && (
+                  <div className="absolute inset-0 z-10 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-2">
+                    <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                    <span className="text-xs text-slate-300">Đang hiển thị trang {cropPageNum} tài liệu...</span>
+                  </div>
+                )}
+
+                <div className="relative inline-block border border-slate-700/60 rounded-xl overflow-hidden select-none bg-white shadow-2xl">
+                  <canvas
+                    ref={cropCanvasRef}
+                    onMouseDown={handleCanvasMouseDown}
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseUp={handleCanvasMouseUp}
+                    className="max-w-full cursor-crosshair block"
+                    style={{ maxHeight: '58vh' }}
+                  />
+                  {cropSelection && cropCanvasRef.current && (
+                    <div
+                      className="absolute border-2 border-cyan-400 bg-cyan-400/25 pointer-events-none rounded shadow-sm"
+                      style={{
+                        left: `${(cropSelection.x / cropCanvasRef.current.width) * 100}%`,
+                        top: `${(cropSelection.y / cropCanvasRef.current.height) * 100}%`,
+                        width: `${(cropSelection.w / cropCanvasRef.current.width) * 100}%`,
+                        height: `${(cropSelection.h / cropCanvasRef.current.height) * 100}%`
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="mt-2 text-center text-[11px] text-slate-400 flex items-center justify-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                  <span>Kéo rê chuột giữ để khoanh vùng hình vẽ cần cắt • Thả chuột để hoàn tất trích xuất</span>
+                </div>
+              </div>
+
+              {/* Right Column: Cropped Image Preview & Confirmation */}
+              <div className="lg:col-span-4 bg-slate-950/70 rounded-2xl border border-slate-800 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
+                      <Crop className="w-4 h-4 text-cyan-400" />
+                      <span>Vùng ảnh đã chọn</span>
+                    </span>
+                    {croppedPreviewUrl && (
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                        Đã sẵn sàng
+                      </span>
+                    )}
+                  </div>
+
+                  {croppedPreviewUrl ? (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="p-2 bg-slate-900 rounded-xl border border-cyan-500/40 flex items-center justify-center min-h-[160px] bg-white/5">
+                        <img
+                          src={croppedPreviewUrl}
+                          alt="Ảnh cắt preview"
+                          className="max-h-52 max-w-full object-contain rounded shadow"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Ảnh này sẽ được hiển thị ngay bên dưới đề bài của <b>Câu {configuredQuestions[cropTargetQIndex]?.stt || (cropTargetQIndex + 1)}</b> khi thí sinh làm bài.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-xl border border-dashed border-slate-800 text-center space-y-2 text-slate-500 text-xs">
+                      <Scissors className="w-8 h-8 mx-auto text-slate-600" />
+                      <p>Chưa có vùng ảnh nào được chọn.</p>
+                      <p className="text-[10px] text-slate-600">
+                        Dùng chuột quét vùng hình vẽ ở khung bên trái hoặc nhấn phím <b className="text-slate-400">Ctrl + V</b> để dán ảnh chụp màn hình.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Hướng dẫn phím tắt tiện lợi */}
+                  <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1.5">
+                    <span className="font-bold text-slate-300 flex items-center space-x-1">
+                      <ClipboardPaste className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Mẹo chụp màn hình siêu tốc (Windows):</span>
+                    </span>
+                    <ol className="list-decimal pl-4 space-y-1 text-[10px] text-slate-400">
+                      <li>Nhấn phím <kbd className="px-1 bg-slate-800 rounded border border-slate-700 text-cyan-300">Win</kbd> + <kbd className="px-1 bg-slate-800 rounded border border-slate-700 text-cyan-300">Shift</kbd> + <kbd className="px-1 bg-slate-800 rounded border border-slate-700 text-cyan-300">S</kbd> để quét bất kỳ phần nào trên màn hình.</li>
+                      <li>Nhấp vào đây và nhấn <kbd className="px-1 bg-slate-800 rounded border border-slate-700 text-cyan-300">Ctrl</kbd> + <kbd className="px-1 bg-slate-800 rounded border border-slate-700 text-cyan-300">V</kbd> để dán ngay.</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="pt-3 border-t border-slate-800 flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCropSelection(null);
+                      setCroppedPreviewUrl(null);
+                    }}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+                  >
+                    Xóa chọn
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!croppedPreviewUrl}
+                    onClick={handleApplyCropToQuestion}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 disabled:opacity-40 disabled:hover:from-cyan-500 disabled:hover:to-indigo-600 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Gắn Vào Câu {configuredQuestions[cropTargetQIndex]?.stt || (cropTargetQIndex + 1)}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

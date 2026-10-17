@@ -1334,6 +1334,17 @@ export default function TakeExam() {
                         </div>
                       </div>
 
+                      {/* Ảnh sơ đồ mạch / đồ thị đính kèm nếu có */}
+                      {q.image && (
+                        <div
+                          className="my-2 rounded-xl overflow-hidden border border-slate-800 bg-white/5 max-h-48 flex items-center justify-center p-1.5 cursor-zoom-in"
+                          onClick={() => window.open(q.image, '_blank')}
+                          title="Click để phóng to ảnh sơ đồ"
+                        >
+                          <img src={q.image} alt={`Hình vẽ câu ${idx + 1}`} className="max-h-44 object-contain rounded" />
+                        </div>
+                      )}
+
                       {/* 4 OMR Bubble buttons */}
                       {q.type === 'MULTIPLE_CHOICE' ? (
                         <div>

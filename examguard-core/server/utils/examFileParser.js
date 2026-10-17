@@ -137,8 +137,8 @@ function parseExamContent(rawText, htmlText = '') {
   }
 
   // Nếu đề thi chứa nhiều mã đề (VD: Mã đề 01 rồi đến HẾT, sau đó sang Mã đề 02)
-  const hetDelimiterMatch = questionBody.match(/(?:^|\n)\s*-+\s*HẾT\s*-+/i);
-  if (hetDelimiterMatch && hetDelimiterMatch.index > 80) {
+  const hetDelimiterMatch = questionBody.match(/(?:^|\n)\s*[_\-—–=]*\s*HẾT\s*[_\-—–=]*/i);
+  if (hetDelimiterMatch && hetDelimiterMatch.index > 50) {
     questionBody = questionBody.substring(0, hetDelimiterMatch.index);
   }
 
@@ -260,6 +260,14 @@ function parseExamContent(rawText, htmlText = '') {
         content = qRaw.substring(0, firstOptIndex).trim();
       }
     }
+
+    content = content
+      .replace(/(?:^|\n)\s*[_\-—–=]*\s*HẾT\s*[_\-—–=]*[\s\S]*$/i, '')
+      .replace(/\(?Đề\s*thi\s*KHÔNG\s*ĐƯỢC\s*sử\s*dụng\s*tài\s*liệu\)?/gi, '')
+      .replace(/Trường\s*Khoa\s*ký\s*duyệt\s*[:.\-]?[\s\S]*$/gi, '')
+      .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, '')
+      .replace(/BMKT\s*\d+[\s\S]*$/gi, '')
+      .trim();
 
     const qText = content.replace(/^(?:Câu|Question|Bài)\s*\d*(?:\s*\([^)]+\))?[:.-]?\s*/i, '').trim() || `${cur.prefix || 'Câu'} ${cur.qNum || (i + 1)}`;
     const finalScore = parsedScore !== null ? parsedScore : (type === 'ESSAY' ? 1.5 : 0.25);
