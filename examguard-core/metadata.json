@@ -1,0 +1,5 @@
+{
+  "name": "Remix: EduCRM - Hệ thống Quản lý Trung tâm Đào tạo",
+  "description": "Hệ thống CRM toàn diện cho trung tâm đào tạo bao gồm quản lý Lead, Tuyển sinh, Học viên, Giảng viên và Báo cáo.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,28 @@
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+const proctorController = require('../controllers/proctor.controller');
+
+// Realtime trạng thái phòng thi
+router.get('/live/:sessionId', proctorController.getLiveRoomState);
+
+// Kiểm tra frame webcam của thí sinh (AI phát hiện góc mặt, nhiều mặt, xác thực giám thị)
+router.post('/inspect-frame', upload.single('frame'), proctorController.inspectCameraFrame);
+
+// Giám thị gửi popup cảnh báo
+router.post('/send-warning', proctorController.sendWarning);
+
+// Giám thị tạm dừng giám sát AI bàn thi (2 phút override)
+router.post('/override', proctorController.setProctorOverride);
+
+// Cộng bù giờ cho thí sinh
+router.post('/extra-time', proctorController.addExtraTime);
+
+// Hủy bỏ vi phạm bắt nhầm (khôi phục điểm uy tín)
+router.post('/dismiss-violation', proctorController.dismissViolation);
+
+// Đình chỉ thi thí sinh gian lận
+router.post('/suspend', proctorController.suspendCandidate);
+
+module.exports = router;
