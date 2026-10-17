@@ -33,6 +33,11 @@ export const apiClient = axios.create({
 // ─── Request Interceptor ──────────────────────────────────────────
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Tránh bị duplicate /api/api khi gọi url có sẵn tiền tố /api
+    if (config.url && config.url.startsWith('/api/')) {
+      config.url = config.url.replace(/^\/api\//, '/');
+    }
+
     // Lấy access token từ Zustand RAM - KHÔNG từ localStorage
     const token = useAuthStore.getState().accessToken;
     if (token) {

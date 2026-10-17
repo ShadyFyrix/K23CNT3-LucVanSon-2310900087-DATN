@@ -58,6 +58,8 @@ interface Question {
   image?: string;
   score: number;
   options?: string[];
+  selectionMode?: 'SINGLE' | 'MULTIPLE' | 'ALTERNATIVE';
+  scoringMode?: 'ALL_OR_NOTHING' | 'PARTIAL_CREDIT';
   minWords?: number;
   templateCode?: Record<string, string>;
   testCases?: Array<{ input: string; expectedOutput: string }>;
@@ -97,6 +99,9 @@ interface ExamData {
     fileSize?: number;
     totalQuestions: number;
     submissionMode: string;
+    structureType?: 'PURE_MCQ' | 'HYBRID' | 'PURE_ESSAY';
+    mcqCount?: number;
+    essayCount?: number;
   };
   savedAnswers: Record<string, any>;
   questions: Question[];
@@ -508,22 +513,54 @@ export default function TakeExam() {
     return () => clearInterval(autoSaveInterval);
   }, [examData, answers]);
 
-  // Xử lý chọn đáp án MCQ kèm tự động chuyển câu (Auto-advance)
-  const handleSelectOption = (qId: string, optIdx: number, targetIdx?: number) => {
+  // Helper kiểm tra một lựa chọn optIdx có đang được thí sinh chọn hay không
+  const isOptionSelected = (val: any, optIdx: number): boolean => {
+    if (Array.isArray(val)) return val.includes(optIdx);
+    return val !== undefined && val !== null && Number(val) === optIdx;
+  };
+
+  // Xử lý chọn đáp án MCQ (hỗ trợ cả 1 đáp án Radio lẫn Nhiều đáp án Checkbox)
+  const handleToggleOption = (qId: string, optIdx: number, targetIdx?: number) => {
     playQuizSound('select');
     const qIndex = targetIdx !== undefined ? targetIdx : currentIdx;
-    setAnswers(prev => ({
-      ...prev,
-      [qId]: optIdx,
-      [qIndex]: optIdx
-    }));
+    const currentQ = examData?.questions[qIndex];
+    const isMulti = currentQ?.selectionMode === 'MULTIPLE';
 
-    if (workspaceMode === 'QUIZ_CARDS' && autoAdvance && examData && currentIdx < examData.questions.length - 1) {
+    setAnswers(prev => {
+      const prevVal = prev[qId] !== undefined ? prev[qId] : prev[qIndex];
+      let nextVal: any;
+
+      if (isMulti) {
+        const curArr: number[] = Array.isArray(prevVal)
+          ? [...prevVal]
+          : prevVal !== undefined && prevVal !== null && prevVal !== ''
+            ? [Number(prevVal)]
+            : [];
+        if (curArr.includes(optIdx)) {
+          nextVal = curArr.filter(x => x !== optIdx);
+        } else {
+          nextVal = [...curArr, optIdx].sort((a, b) => a - b);
+        }
+      } else {
+        nextVal = optIdx;
+      }
+
+      return {
+        ...prev,
+        [qId]: nextVal,
+        [qIndex]: nextVal
+      };
+    });
+
+    if (!isMulti && workspaceMode === 'QUIZ_CARDS' && autoAdvance && examData && currentIdx < examData.questions.length - 1) {
       setTimeout(() => {
         setCurrentIdx(prev => Math.min((examData?.questions.length || 1) - 1, prev + 1));
       }, 350);
     }
   };
+
+  // Giữ alias tương thích
+  const handleSelectOption = handleToggleOption;
 
   // Xóa lựa chọn đáp án trắc nghiệm
   const handleClearOption = (qId: string, qIndex: number) => {
@@ -603,16 +640,16 @@ export default function TakeExam() {
       if (currentQ?.type === 'MULTIPLE_CHOICE' && currentQ.options) {
         if (key === 'a' || key === '1') {
           e.preventDefault();
-          handleSelectOption(currentQ._id, 0);
+          handleToggleOption(currentQ._id, 0);
         } else if (key === 'b' || key === '2') {
           e.preventDefault();
-          handleSelectOption(currentQ._id, 1);
+          handleToggleOption(currentQ._id, 1);
         } else if (key === 'c' || key === '3') {
           e.preventDefault();
-          handleSelectOption(currentQ._id, 2);
+          handleToggleOption(currentQ._id, 2);
         } else if (key === 'd' || key === '4') {
           e.preventDefault();
-          handleSelectOption(currentQ._id, 3);
+          handleToggleOption(currentQ._id, 3);
         }
       }
 
@@ -640,9 +677,19 @@ export default function TakeExam() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  // Tính toán tiến độ & danh sách lọc câu hỏi
+  // Tính toán tiến độ & danh sách lọc câu hỏi chính xác
   const totalCount = examData?.questions?.length || 0;
-  const answeredCount = Object.keys(answers).filter(k => answers[k] !== undefined && answers[k] !== '').length;
+  const answeredCount = useMemo(() => {
+    if (!examData?.questions) return 0;
+    return examData.questions.filter((q, idx) => {
+      const val = answers[q._id] !== undefined ? answers[q._id] : answers[idx];
+      if (val === undefined || val === null) return false;
+      if (Array.isArray(val)) return val.length > 0;
+      if (typeof val === 'string') return val.trim().length > 0;
+      return true;
+    }).length;
+  }, [examData, answers]);
+
   const progressPercent = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
 
   const filteredQuestionIndices = useMemo(() => {
@@ -650,7 +697,8 @@ export default function TakeExam() {
     return examData.questions
       .map((q, idx) => ({ q, idx }))
       .filter(({ q, idx }) => {
-        const isAns = answers[q._id] !== undefined || answers[idx] !== undefined;
+        const val = answers[q._id] !== undefined ? answers[q._id] : answers[idx];
+        const isAns = val !== undefined && val !== null && (Array.isArray(val) ? val.length > 0 : typeof val === 'string' ? val.trim().length > 0 : true);
         const isFlag = !!flagged[idx];
         if (filterTab === 'ANSWERED') return isAns;
         if (filterTab === 'UNANSWERED') return !isAns;
@@ -977,13 +1025,14 @@ export default function TakeExam() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             {q.options.map((opt, optIdx) => {
                               const letter = String.fromCharCode(65 + optIdx);
-                              const isSelected = (answers[q._id] !== undefined ? answers[q._id] : answers[idx]) === optIdx;
+                              const curAnswerVal = answers[q._id] !== undefined ? answers[q._id] : answers[idx];
+                              const isSelected = isOptionSelected(curAnswerVal, optIdx);
                               return (
                                 <div
                                   key={optIdx}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleSelectOption(q._id, optIdx, idx);
+                                    handleToggleOption(q._id, optIdx, idx);
                                   }}
                                   className={`p-2.5 rounded-xl border flex items-center space-x-2 cursor-pointer transition ${
                                     isSelected
@@ -1161,27 +1210,34 @@ export default function TakeExam() {
 
                       {/* 4 OMR Bubble buttons */}
                       {q.type === 'MULTIPLE_CHOICE' ? (
-                        <div className="grid grid-cols-4 gap-2 pt-1">
-                          {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
-                            const isSelected = Number(qVal) === optIdx;
-                            return (
-                              <button
-                                key={letter}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectOption(q._id, optIdx, idx);
-                                }}
-                                className={`h-10 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
-                                  isSelected
-                                    ? 'bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/30 ring-2 ring-cyan-400 scale-[1.03]'
-                                    : 'bg-slate-800/80 border border-slate-700/70 text-slate-300 hover:border-cyan-400 hover:bg-slate-700 hover:text-white'
-                                }`}
-                              >
-                                {letter}
-                              </button>
-                            );
-                          })}
+                        <div>
+                          {q.selectionMode === 'MULTIPLE' && (
+                            <div className="text-[10px] text-amber-400 font-semibold mb-1 flex items-center space-x-1">
+                              <span>☑ Chọn nhiều đáp án (Hộp kiểm)</span>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-4 gap-2 pt-1">
+                            {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
+                              const isSelected = isOptionSelected(qVal, optIdx);
+                              return (
+                                <button
+                                  key={letter}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleOption(q._id, optIdx, idx);
+                                  }}
+                                  className={`h-10 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
+                                    isSelected
+                                      ? 'bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/30 ring-2 ring-cyan-400 scale-[1.03]'
+                                      : 'bg-slate-800/80 border border-slate-700/70 text-slate-300 hover:border-cyan-400 hover:bg-slate-700 hover:text-white'
+                                  }`}
+                                >
+                                  {letter}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : q.type === 'ESSAY' ? (
                         <div className="pt-1">
@@ -1348,17 +1404,24 @@ export default function TakeExam() {
                   {currentQ.content}
                 </div>
 
+                {currentQ.selectionMode === 'MULTIPLE' && (
+                  <div className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mt-3">
+                    <CheckSquare className="w-4 h-4 text-amber-400" />
+                    <span>Câu hỏi có nhiều đáp án đúng (Thí sinh có thể chọn nhiều phương án dạng hộp kiểm)</span>
+                  </div>
+                )}
+
                 {/* Danh sách Lựa chọn Trắc nghiệm (Interactive Option Cards) */}
                 {currentQ.type === 'MULTIPLE_CHOICE' && currentQ.options && (
                   <div className="grid grid-cols-1 gap-3.5 pt-2">
                     {currentQ.options.map((opt, optIdx) => {
-                      const isSelected = Number(currentVal) === optIdx;
+                      const isSelected = isOptionSelected(currentVal, optIdx);
                       const letter = String.fromCharCode(65 + optIdx); // A, B, C, D
 
                       return (
                         <div
                           key={optIdx}
-                          onClick={() => handleSelectOption(qId, optIdx)}
+                          onClick={() => handleToggleOption(qId, optIdx)}
                           className={`flex items-center p-4 rounded-2xl border transition-all cursor-pointer group ${
                             isSelected
                               ? 'bg-gradient-to-r from-cyan-950/60 to-slate-900 border-cyan-500 ring-2 ring-cyan-500/50 text-white shadow-xl shadow-cyan-950/50 scale-[1.01]'

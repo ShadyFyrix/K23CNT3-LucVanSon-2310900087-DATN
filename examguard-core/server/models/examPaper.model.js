@@ -15,7 +15,18 @@ const QuestionSchema = new mongoose.Schema({
   options: [{ type: String }], // Danh sách phương án ["A...", "B...", "C...", "D..."]
   correctAnswer: { 
     type: mongoose.Schema.Types.Mixed, 
-    default: null // Số index (0, 1, 2, 3) hoặc mảng [1, 2] nếu chọn nhiều đáp án
+    default: null // Số index (0, 1, 2, 3) hoặc mảng [0, 2] nếu chọn nhiều đáp án
+  },
+  correctAnswers: [{ type: Number }], // Danh sách index các đáp án đúng (VD: [0, 2] nghĩa là cả A và C đúng)
+  selectionMode: {
+    type: String,
+    enum: ['SINGLE', 'MULTIPLE', 'ALTERNATIVE'],
+    default: 'SINGLE' // SINGLE: chọn 1 đáp án; MULTIPLE: chọn đủ các đáp án đúng; ALTERNATIVE: chọn 1 trong các đáp án đúng đều được điểm
+  },
+  scoringMode: {
+    type: String,
+    enum: ['ALL_OR_NOTHING', 'PARTIAL_CREDIT'],
+    default: 'ALL_OR_NOTHING'
   },
   explanation: { 
     type: String, 
@@ -85,6 +96,13 @@ const ExamPaperSchema = new mongoose.Schema({
     enum: ['STRUCTURED_QUIZ', 'FILE_ATTACHED'], 
     default: 'STRUCTURED_QUIZ' 
   },
+  structureType: {
+    type: String,
+    enum: ['PURE_MCQ', 'HYBRID', 'PURE_ESSAY'],
+    default: 'PURE_MCQ'
+  },
+  mcqCount: { type: Number, default: 0 },
+  essayCount: { type: Number, default: 0 },
   fileUrl: { type: String, default: null },
   fileName: { type: String, default: null },
   fileSize: { type: Number, default: 0 },

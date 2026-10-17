@@ -2864,6 +2864,59 @@ Response 200:
 
 ---
 
-*Blueprint version 2.1 — Cập nhật: 2026-10-17*  
-*Bổ sung: Triết lý Kiến trúc Biometric Ground-Truth Identity First (Bắt buộc Đăng ký Khuôn mặt Gốc cho Sinh viên & Giảng viên để quản lý và khảo thí), Quy trình KYC 5 góc + Liveness Anti-Spoofing, Continuous Biometric Verification chống tráo người thi hộ, Staff Proctor Whitelist Exemption, Socket.IO Realtime Proctoring Protocol, Multi-layer Browser Anti-Cheat Suite & Adaptive Camera Inspection v2.1.*  
+## 18. KIẾN TRÚC ĐỀ THI ĐA DẠNG: ĐỀ THI HỖN HỢP (TRẮC NGHIỆM + TỰ LUẬN), ĐỀ THEO FILE & QUY CHẾ CHẤM ĐA ĐÁP ÁN (MULTI-SELECT & ALTERNATIVE KEYS)
+
+### 18.1. Kiến trúc Đề thi Hỗn hợp (Hybrid Exam Paper: MCQ + Essay / Coding)
+Trong khảo thí đại học, kỳ thi thường không chỉ thuần túy trắc nghiệm mà kết hợp giữa đánh giá kiến thức diện rộng (Trắc nghiệm) và đánh giá tư duy chiều sâu / kỹ năng giải quyết vấn đề (Tự luận / Lập trình). ExamGuard AI thiết kế kiến trúc hỗ trợ 3 cấu trúc đề thi:
+1. **100% Trắc nghiệm khách quan (`PURE_MCQ`)**:
+   - Gồm $N$ câu trắc nghiệm (ví dụ 40 hoặc 50 câu).
+   - Hệ thống tự động chấm điểm $100\%$ ngay khi nộp bài.
+2. **Đề thi Hỗn hợp (`HYBRID`)**:
+   - **Phần I — Trắc nghiệm khách quan (Objective MCQs)**: Câu $1 \dots M$. Thí sinh tô đáp án trên Phiếu OMR điện tử. Hệ thống tự động chấm điểm tức thì.
+   - **Phần II — Tự luận / Giải bài tập / Viết Code (Subjective Essay / Coding)**: Câu $M+1 \dots N$. Thí sinh làm bài trực tiếp trong hộp soạn thảo văn bản, hỗ trợ định dạng, đếm từ, trình biên tập code hoặc nộp file ảnh/PDF bài làm viết tay.
+   - **Cơ chế Chấm điểm**: Điểm tổng kết = Điểm Trắc nghiệm (Auto-Graded) + Điểm Tự luận (Giảng viên chấm thủ công / Trợ lý AI Rubric).
+3. **100% Tự luận (`PURE_ESSAY`)**:
+   - Dành cho các môn thi chuyên đề, đồ án, tiểu luận hoặc viết code thuật toán. Toàn bộ câu hỏi do Giảng viên trực tiếp chấm.
+
+```mermaid
+graph TD
+    A["Đề Thi Hỗn Hợp (Hybrid Exam Paper)"] --> B["Phần I: Trắc Nghiệm (Câu 1..M)"]
+    A --> C["Phần II: Tự Luận / Code (Câu M+1..N)"]
+    
+    B --> D["Phiếu Tô OMR Trực Tuyến"]
+    D --> E["Động Cơ Auto-Grading Chấm Tức Thì"]
+    E --> F["Điểm Trắc Nghiệm (VD: 6.0 / 10)"]
+    
+    C --> G["Hộp Soạn Thảo / Sandbox Viết Code"]
+    G --> H["Giao Diện Giảng Viên Chấm Điểm (Manual / AI Rubric)"]
+    H --> I["Điểm Tự Luận (VD: 3.5 / 10)"]
+    
+    F --> J["TỔNG ĐIỂM CHÍNH THỨC: 9.5 / 10.0"]
+    I --> J
+```
+
+---
+
+### 18.2. Quy chế Chấm Trắc nghiệm Nhiều Đáp án Đúng & Đáp án Tương Đương
+
+| Chế độ Đáp án (`selectionMode`) | Cơ chế Hiển thị UI Thí sinh | Quy tắc Chấm điểm (`scoringMode`) | Ứng dụng Thực tiễn |
+|:---|:---|:---|:---|
+| **Chọn 1 đáp án duy nhất (`SINGLE`)** | Nút tròn Radio `[A] [B] [C] [D]` | So khớp chính xác: Thí sinh chọn đúng duy nhất phương án được định nghĩa $\rightarrow$ Đạt điểm câu. | Câu hỏi trắc nghiệm truyền thống (1 đáp án đúng). |
+| **Chọn nhiều đáp án đúng (`MULTIPLE`)** | Hộp chọn Checkbox đa phương án `[A] [B] [C] [D]` (cho phép chọn nhiều nút) | 1. **Đúng toàn bộ (`ALL_OR_NOTHING`)**: Phải chọn đúng đủ toàn bộ tập hợp đáp án đúng và không chọn thừa đáp án sai mới đạt $100\%$ điểm câu.<br>2. **Điểm thành phần (`PARTIAL_CREDIT`)**: Điểm = $(\text{Số đáp án đúng chọn được} - \text{Số đáp án sai chọn nhầm}) \times \frac{\text{Điểm câu}}{\text{Tổng đáp án đúng}}$. | Câu hỏi trắc nghiệm phức hợp (ví dụ: "Những phát biểu nào sau đây đúng? -> A và C đúng"). |
+| **Chấp nhận nhiều đáp án tương đương (`ALTERNATIVE`)** | Nút chọn linh hoạt | Thí sinh chọn **bất kỳ đáp án nào** nằm trong danh mục đáp án chấp nhận $\rightarrow$ Đều được tính trọn vẹn điểm câu. | Áp dụng khi đề thi có câu hỏi mà 2 phương án đều đúng, hoặc sau phúc khảo Hội đồng khảo thí công nhận thêm đáp án đúng. |
+
+---
+
+### 18.3. Không gian Làm bài Thi Chia đôi Màn hình Đa năng (Hybrid Digital Workspace)
+- **Cột Trái (60% độ rộng)**: File đề thi (PDF / DOCX / Ảnh scan) với thanh công cụ phóng to/thu nhỏ (Zoom 50%–250%), nút mở tab mới và lớp Watermark mã hóa chống chụp trộm đề thi.
+- **Cột Phải (40% độ rộng)**: **Phiếu Trả Lời Trực Tuyến Đa Năng (Hybrid Answer Sheet)**:
+  - Các dòng câu hỏi Trắc nghiệm: Hiển thị các nút tô OMR (hỗ trợ cả chọn đơn Radio lẫn chọn nhiều Checkbox).
+  - Các dòng câu hỏi Tự luận: Tự động mở rộng thành **Hộp Bài Làm Tự Luận (Essay Editor)** với bộ đếm ký tự, đếm từ tối thiểu (`minWords`) và chỉ dẫn làm bài.
+  - Tự động lưu tiến độ đám mây (Cloud Auto-save) mỗi 15 giây.
+
+---
+
+*Blueprint version 2.2 — Cập nhật: 2026-10-17*  
+*Bổ sung: Kiến trúc Đề thi Hỗn hợp (Hybrid Exam: Trắc nghiệm + Tự luận/Coding), Quy chế Chấm Trắc nghiệm Nhiều Đáp án Đúng (Multi-Select Checkbox), Quy tắc Đáp án Tương đương (Alternative Valid Keys), Không gian Thi Chia đôi Màn hình Đa năng & Đồng bộ Auto-Grading kết hợp Manual Grading v2.2.*  
 *Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*
+

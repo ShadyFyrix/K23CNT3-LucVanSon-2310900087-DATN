@@ -62,13 +62,16 @@ exports.createExamPaper = async (req, res) => {
       shuffleOptions, 
       questions,
       paperType = 'STRUCTURED_QUIZ',
+      structureType = 'PURE_MCQ',
+      mcqCount = 0,
+      essayCount = 0,
       fileUrl = null,
       fileName = null,
       fileSize = 0,
       totalQuestions = 0,
       submissionMode = 'OMR_BUBBLE_SHEET',
       answerKeyString = '',
-      answerKey = [] // mảng đáp án index [0, 1, 2, 3...]
+      answerKey = [] // mảng đáp án index [0, 1, 2, 3...] hoặc mảng các đáp án [[0], [1, 2], ...]
     } = req.body;
 
     // Kiểm tra mã trùng
@@ -79,27 +82,74 @@ exports.createExamPaper = async (req, res) => {
 
     const courseDoc = await Course.findById(subject);
 
-    let finalQuestions = questions || [];
-    // Nếu là đề thi dạng file đính kèm mà chưa có câu hỏi chi tiết, tự động sinh các câu hỏi OMR
-    if (paperType === 'FILE_ATTACHED' && finalQuestions.length === 0 && Number(totalQuestions) > 0) {
+    let finalQuestions = [];
+
+    if (Array.isArray(questions) && questions.length > 0) {
+      // Đã có danh sách câu hỏi chi tiết từ client (hỗ trợ cả trắc nghiệm đơn, nhiều đáp án đúng, và tự luận)
+      finalQuestions = questions.map((q, idx) => {
+        const isEssay = q.type === 'ESSAY' || q.type === 'CODING_PROBLEM';
+        const corrAns = isEssay ? null : (q.correctAnswer !== undefined ? q.correctAnswer : 0);
+        const corrList = Array.isArray(corrAns) 
+          ? corrAns.map(Number) 
+          : (corrAns !== null && corrAns !== undefined ? [Number(corrAns)] : []);
+
+        return {
+          stt: q.stt || (idx + 1),
+          type: q.type || 'MULTIPLE_CHOICE',
+          content: q.content || `Câu ${idx + 1}`,
+          options: isEssay ? [] : (q.options || ['A', 'B', 'C', 'D']),
+          correctAnswer: corrAns,
+          correctAnswers: corrList,
+          selectionMode: q.selectionMode || (corrList.length > 1 ? 'MULTIPLE' : 'SINGLE'),
+          scoringMode: q.scoringMode || 'ALL_OR_NOTHING',
+          score: Number(q.score) > 0 ? Number(q.score) : 0.5,
+          minWords: q.minWords || 0,
+          explanation: q.explanation || (isEssay ? 'Câu hỏi tự luận' : `Đáp án câu số ${idx + 1}`)
+        };
+      });
+    } else if (paperType === 'FILE_ATTACHED' && Number(totalQuestions) > 0) {
+      // Sinh câu hỏi tự động cho đề thi đính kèm file
       const qCount = Number(totalQuestions);
       const scorePerQ = Math.round((Number(totalScore) / qCount) * 100) / 100;
       for (let i = 1; i <= qCount; i++) {
         let corrAns = 0;
         if (Array.isArray(answerKey) && answerKey[i - 1] !== undefined) {
-          corrAns = Number(answerKey[i - 1]);
+          corrAns = answerKey[i - 1]; // có thể là số hoặc mảng [0, 2]
         }
+        const isMulti = Array.isArray(corrAns) && corrAns.length > 1;
         finalQuestions.push({
           stt: i,
           type: 'MULTIPLE_CHOICE',
           content: `Câu ${i}`,
           options: ['A', 'B', 'C', 'D'],
           correctAnswer: corrAns,
+          correctAnswers: Array.isArray(corrAns) ? corrAns.map(Number) : [Number(corrAns)],
+          selectionMode: isMulti ? 'MULTIPLE' : 'SINGLE',
+          scoringMode: 'ALL_OR_NOTHING',
           score: scorePerQ,
           explanation: `Đáp án câu số ${i} theo file đề thi.`
         });
       }
     }
+
+    // Tự động suy luận submissionMode nếu là đề hỗn hợp
+    const hasMCQ = finalQuestions.some(q => q.type === 'MULTIPLE_CHOICE');
+    const hasEssay = finalQuestions.some(q => q.type === 'ESSAY' || q.type === 'CODING_PROBLEM');
+    let effectiveSubmissionMode = submissionMode;
+    let effectiveStructureType = structureType;
+
+    if (hasMCQ && hasEssay) {
+      effectiveSubmissionMode = 'HYBRID';
+      effectiveStructureType = 'HYBRID';
+    } else if (!hasMCQ && hasEssay) {
+      effectiveSubmissionMode = 'ESSAY_TEXT';
+      effectiveStructureType = 'PURE_ESSAY';
+    } else {
+      effectiveStructureType = 'PURE_MCQ';
+    }
+
+    const calculatedMcqCount = finalQuestions.filter(q => q.type === 'MULTIPLE_CHOICE').length;
+    const calculatedEssayCount = finalQuestions.filter(q => q.type === 'ESSAY' || q.type === 'CODING_PROBLEM').length;
 
     const newPaper = await ExamPaper.create({
       code: code.trim().toUpperCase(),
@@ -112,11 +162,14 @@ exports.createExamPaper = async (req, res) => {
       shuffleQuestions: shuffleQuestions !== undefined ? shuffleQuestions : false,
       shuffleOptions: shuffleOptions !== undefined ? shuffleOptions : false,
       paperType,
+      structureType: effectiveStructureType,
+      mcqCount: calculatedMcqCount,
+      essayCount: calculatedEssayCount,
       fileUrl,
       fileName,
       fileSize,
       totalQuestions: finalQuestions.length,
-      submissionMode,
+      submissionMode: effectiveSubmissionMode,
       answerKeyString,
       questions: finalQuestions,
       status: 'APPROVED'
@@ -597,6 +650,7 @@ exports.getSanitizedQuestions = async (req, res) => {
         image: q.image,
         score: q.score,
         options: q.options || [],
+        selectionMode: q.selectionMode || 'SINGLE',
         minWords: q.minWords,
         languages: q.languages,
         templateCode: q.templateCode,
@@ -651,6 +705,9 @@ exports.getSanitizedQuestions = async (req, res) => {
           code: examPaper.code,
           title: examPaper.title,
           paperType: examPaper.paperType || 'STRUCTURED_QUIZ',
+          structureType: examPaper.structureType || 'PURE_MCQ',
+          mcqCount: examPaper.mcqCount || 0,
+          essayCount: examPaper.essayCount || 0,
           fileUrl: examPaper.fileUrl || null,
           fileName: examPaper.fileName || null,
           fileSize: examPaper.fileSize || 0,
