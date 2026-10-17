@@ -31,12 +31,12 @@ exports.getLiveRoomState = async (req, res) => {
     }
 
     const students = await ExamStudent.find({ session: sessionId })
-      .populate('student', 'name studentCode email phone faceImage')
+      .populate('student', 'fullName name studentCode email phone faceImage')
       .sort({ seatRow: 1, seatCol: 1 });
 
     const recentViolations = await ExamViolation.find({ session: sessionId })
       .populate('examStudent', 'candidateCode seatRow seatCol')
-      .populate('student', 'name studentCode')
+      .populate('student', 'fullName name studentCode')
       .sort({ createdAt: -1 })
       .limit(30);
 
@@ -243,7 +243,7 @@ exports.inspectCameraFrame = async (req, res) => {
         examStudentId: examStudent._id,
         studentId: examStudent.student._id,
         candidateCode: examStudent.candidateCode,
-        studentName: examStudent.student?.name,
+        studentName: examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh',
         seatRow: examStudent.seatRow,
         seatCol: examStudent.seatCol,
         type: detectedEvent,
@@ -562,7 +562,7 @@ exports.logAntiCheatEvent = async (req, res) => {
       examStudentId: examStudent._id,
       studentId: examStudent.student._id,
       candidateCode: examStudent.candidateCode,
-      studentName: examStudent.student?.name,
+      studentName: examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh',
       seatRow: examStudent.seatRow,
       seatCol: examStudent.seatCol,
       type: eventType,

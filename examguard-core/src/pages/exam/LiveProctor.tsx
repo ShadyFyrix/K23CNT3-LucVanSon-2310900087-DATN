@@ -47,7 +47,8 @@ interface StudentSeat {
   currentQuestion?: number;
   student: {
     _id: string;
-    name: string;
+    fullName?: string;
+    name?: string;
     studentCode: string;
     email?: string;
   };
@@ -71,7 +72,8 @@ interface ViolationLog {
     seatCol: number;
   };
   student?: {
-    name: string;
+    fullName?: string;
+    name?: string;
     studentCode: string;
   };
 }
@@ -615,7 +617,7 @@ export default function LiveProctor() {
 
                             {st ? (
                               <div className="pt-1.5 space-y-1">
-                                <p className="font-bold text-xs truncate text-white">{st.student?.name || 'Thí sinh'}</p>
+                                <p className="font-bold text-xs truncate text-white">{st.student?.fullName || st.student?.name || 'Thí sinh'}</p>
                                 <p className="text-[10px] text-slate-400 font-mono truncate">{st.candidateCode}</p>
 
                                 <div className="flex items-center justify-between pt-1">
@@ -763,7 +765,7 @@ export default function LiveProctor() {
                 <h3 className="text-base font-bold text-white">
                   ĐIỀU KHIỂN BÀN: DÃY {selectedSeat.seatRow} — CỘT {selectedSeat.seatCol}
                 </h3>
-                <p className="text-xs text-slate-400">Thí sinh: <b className="text-slate-200">{selectedSeat.student?.name}</b> ({selectedSeat.candidateCode})</p>
+                <p className="text-xs text-slate-400">Thí sinh: <b className="text-slate-200">{selectedSeat.student?.fullName || selectedSeat.student?.name}</b> ({selectedSeat.candidateCode})</p>
               </div>
 
               <span className={`px-2 py-0.5 rounded text-xs font-bold ${
