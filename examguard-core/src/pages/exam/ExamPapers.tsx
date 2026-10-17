@@ -47,6 +47,7 @@ interface ConfiguredQuestion {
   selectionMode: 'SINGLE' | 'MULTIPLE' | 'ALTERNATIVE';
   correctAnswers: number[]; // [0] for A, [0, 2] for A and C
   prompt?: string;
+  content?: string;
   minWords?: number;
   explanation?: string;
 }
@@ -485,8 +486,9 @@ export default function ExamPapers() {
         return {
           stt: q.stt,
           type: q.type,
-          content: isMcq ? `Câu ${q.stt}` : `Câu ${q.stt} (Tự luận)`,
-          options: isMcq ? ['A', 'B', 'C', 'D'] : [],
+          content: q.content || q.prompt || (isMcq ? `Câu ${q.stt}` : `Câu ${q.stt} (Tự luận)`),
+          prompt: q.prompt || q.content || '',
+          options: (q.options && q.options.length >= 2) ? q.options : (isMcq ? ['A', 'B', 'C', 'D'] : []),
           correctAnswer: corr,
           correctAnswers: q.correctAnswers,
           selectionMode: q.selectionMode,
@@ -1046,7 +1048,7 @@ export default function ExamPapers() {
                                                 Câu {q.stt}:
                                               </span>
                                               <span>
-                                                {q.prompt || `Chọn phương án đúng cho câu hỏi số ${q.stt}:`}
+                                                {q.prompt || q.content || `Chọn phương án đúng cho câu hỏi số ${q.stt}:`}
                                               </span>
                                             </div>
                                             <div className="flex items-center space-x-1.5 shrink-0">
@@ -1065,6 +1067,8 @@ export default function ExamPapers() {
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                                             {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
                                               const isCorrect = q.correctAnswers?.includes(optIdx);
+                                              const rawOpt = q.options && q.options[optIdx] ? q.options[optIdx] : '';
+                                              const cleanText = rawOpt.replace(/^[A-E][.:)]\s*/i, '').trim() || `Phương án ${letter}`;
                                               return (
                                                 <div
                                                   key={letter}
@@ -1085,9 +1089,7 @@ export default function ExamPapers() {
                                                   </span>
                                                   <div className="flex-1 min-w-0">
                                                     <span className="break-words">
-                                                      {q.options && q.options[optIdx] && q.options[optIdx] !== letter
-                                                        ? q.options[optIdx]
-                                                        : `Phương án ${letter}`}
+                                                      {cleanText}
                                                     </span>
                                                     {isCorrect && (
                                                       <span className="ml-2 text-[10px] text-emerald-400 font-semibold inline-flex items-center space-x-0.5">
@@ -1141,7 +1143,7 @@ export default function ExamPapers() {
                                                 Câu {q.stt} (Tự luận):
                                               </span>
                                               <span>
-                                                {q.prompt || `Yêu cầu tự luận cho câu số ${q.stt}: Trình bày chi tiết lý thuyết hoặc thuật toán theo yêu cầu đề bài.`}
+                                                {q.prompt || q.content || `Yêu cầu tự luận cho câu số ${q.stt}: Trình bày chi tiết lý thuyết hoặc thuật toán theo yêu cầu đề bài.`}
                                               </span>
                                             </div>
                                             <span className="text-[10px] font-mono text-amber-300 font-bold bg-amber-950/90 px-2 py-0.5 rounded border border-amber-500/40 shrink-0">
@@ -1247,32 +1249,32 @@ export default function ExamPapers() {
                             <div key={q.stt} className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
                               <div className="flex items-center justify-between text-xs font-bold text-white">
                                 <span>
-                                  <span className="text-cyan-400 font-mono">Câu {q.stt}:</span> {q.prompt || (q.type === 'ESSAY' ? 'Câu hỏi tự luận' : 'Chọn đáp án đúng')}
+                                  <span className="text-cyan-400 font-mono">Câu {q.stt}:</span> {q.prompt || q.content || (q.type === 'ESSAY' ? 'Câu hỏi tự luận' : 'Chọn đáp án đúng')}
                                 </span>
                                 <span className="text-slate-400 font-mono text-[11px]">{q.score} điểm</span>
                               </div>
 
                               {q.type === 'MULTIPLE_CHOICE' ? (
                                 <div className="space-y-2 pt-1">
-                                  {['A', 'B', 'C', 'D'].map((letter, optIdx) => (
-                                    <label
-                                      key={letter}
-                                      className="flex items-center space-x-3 p-2.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800/80 cursor-pointer text-xs text-slate-200 transition"
-                                    >
-                                      <input
-                                        type={q.selectionMode === 'MULTIPLE' ? 'checkbox' : 'radio'}
-                                        name={`mock_q_${q.stt}`}
-                                        disabled
-                                        className="rounded border-slate-700 text-cyan-500 focus:ring-0"
-                                      />
-                                      <span className="font-bold text-cyan-400">{letter}.</span>
-                                      <span>
-                                        {q.options && q.options[optIdx] && q.options[optIdx] !== letter
-                                          ? q.options[optIdx]
-                                          : `Phương án ${letter}`}
-                                      </span>
-                                    </label>
-                                  ))}
+                                  {['A', 'B', 'C', 'D'].map((letter, optIdx) => {
+                                    const rawOpt = q.options && q.options[optIdx] ? q.options[optIdx] : '';
+                                    const cleanText = rawOpt.replace(/^[A-E][.:)]\s*/i, '').trim() || `Phương án ${letter}`;
+                                    return (
+                                      <label
+                                        key={letter}
+                                        className="flex items-center space-x-3 p-2.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800/80 cursor-pointer text-xs text-slate-200 transition"
+                                      >
+                                        <input
+                                          type={q.selectionMode === 'MULTIPLE' ? 'checkbox' : 'radio'}
+                                          name={`mock_q_${q.stt}`}
+                                          disabled
+                                          className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                                        />
+                                        <span className="font-bold text-cyan-400">{letter}.</span>
+                                        <span>{cleanText}</span>
+                                      </label>
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 <textarea
@@ -1708,6 +1710,13 @@ export default function ExamPapers() {
                             <span className="text-[10px] text-slate-500">đ</span>
                           </div>
                         </div>
+
+                        {/* Đoạn trích nội dung câu hỏi (Question text preview) */}
+                        {(q.prompt || q.content) && (
+                          <p className="text-[10.5px] text-slate-300 font-medium line-clamp-2 leading-tight pb-1.5 border-b border-slate-800/60 mb-1.5" title={q.prompt || q.content}>
+                            {q.prompt || q.content}
+                          </p>
+                        )}
 
                         {/* Body câu */}
                         {isEssay ? (

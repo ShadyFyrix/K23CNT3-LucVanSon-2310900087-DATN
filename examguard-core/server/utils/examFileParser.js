@@ -82,7 +82,8 @@ function parseExamContent(rawText, htmlText = '') {
 
   if (answerBlockMatch) {
     const keyBlock = answerBlockMatch[0];
-    const pairRegex = /(\d+)\s*[:.\-\/|]?\s*([A-E,]+|TL|TU_LUAN|ESSAY)/gi;
+    // Regex bắt chính xác từng cặp câu hỏi - đáp án, tránh bị nuốt chữ 'C' của từ 'Câu'
+    const pairRegex = /(?:^|\s|Câu\s*|\b)(\d+)\s*[:.\-\/|]?\s*([A-E](?:\s*,\s*[A-E])*|TL|TU_LUAN|ESSAY)(?=[^A-Za-z0-9]|$|Câu|\d)/gi;
     let match;
     while ((match = pairRegex.exec(keyBlock)) !== null) {
       const qNum = parseInt(match[1]);
@@ -90,7 +91,7 @@ function parseExamContent(rawText, htmlText = '') {
       if (val === 'TL' || val === 'TU_LUAN' || val === 'ESSAY') {
         answerKeyMap.set(qNum, { answers: [], isEssay: true });
       } else {
-        const letters = val.replace(/,/g, '');
+        const letters = val.replace(/[^A-E]/gi, '').toUpperCase();
         const indices = [];
         for (const ch of letters) {
           const code = ch.charCodeAt(0) - 65;
@@ -218,10 +219,12 @@ function parseExamContent(rawText, htmlText = '') {
       }
     }
 
+    const qText = content.replace(/^(?:Câu|Question|\d+)\s*\d*[:.-]?\s*/i, '').trim() || `Câu ${cur.qNum || (i + 1)}`;
     questions.push({
       stt: cur.qNum || (i + 1),
       type,
-      content: content.replace(/^(?:Câu|Question|\d+)\s*\d*[:.-]?\s*/i, '').trim() || `Câu ${cur.qNum || (i + 1)}`,
+      content: qText,
+      prompt: qText,
       options,
       correctAnswers: correctAnswers.sort((a, b) => a - b),
       selectionMode,
@@ -233,10 +236,12 @@ function parseExamContent(rawText, htmlText = '') {
   // 6. Nếu số câu tìm được ít hơn bảng đáp án, bổ sung các câu từ bảng đáp án
   if (questions.length === 0 && answerKeyMap.size > 0) {
     answerKeyMap.forEach((val, qNum) => {
+      const itemText = val.isEssay ? `Câu ${qNum} (Tự luận)` : `Câu ${qNum}`;
       questions.push({
         stt: qNum,
         type: val.isEssay ? 'ESSAY' : 'MULTIPLE_CHOICE',
-        content: val.isEssay ? `Câu ${qNum} (Tự luận)` : `Câu ${qNum}`,
+        content: itemText,
+        prompt: itemText,
         options: val.isEssay ? [] : ['A', 'B', 'C', 'D'],
         correctAnswers: val.answers,
         selectionMode: val.answers.length > 1 ? 'MULTIPLE' : 'SINGLE',
