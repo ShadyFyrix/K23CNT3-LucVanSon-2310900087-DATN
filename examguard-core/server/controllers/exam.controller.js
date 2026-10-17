@@ -6,6 +6,8 @@ const ExamStudent = require('../models/examStudent.model');
 const ExamSubmission = require('../models/examSubmission.model');
 const Student = require('../models/student.model');
 const Course = require('../models/course.model');
+const User = require('../models/user.model');
+const { parseExamFile } = require('../utils/examFileParser');
 
 // Helper sinh mã ngẫu nhiên
 function generateCode(prefix = 'PHACH', len = 6) {
@@ -27,21 +29,35 @@ function generatePin() {
  * ==========================================
  */
 
-// Tải lên file đề thi (PDF, DOCX, Ảnh)
+// Tải lên file đề thi (PDF, DOCX, Ảnh) kèm phân tích câu hỏi & ma trận đáp án tự động
 exports.uploadPaperFile = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Chưa có file đề thi nào được tải lên!' });
     }
     const fileUrl = `/uploads/exam-papers/${req.file.filename}`;
+
+    // Tự động phân tích câu hỏi & đáp án đúng từ file
+    let parsedData = null;
+    try {
+      parsedData = await parseExamFile(req.file.path, req.file.originalname);
+    } catch (parseErr) {
+      console.warn('Lỗi phân tích file đề thi tự động:', parseErr.message);
+    }
+
+    const hasParsedQuestions = parsedData && parsedData.canParseText && parsedData.detectedQuestionsCount > 0;
+
     return res.json({
       success: true,
-      message: 'Tải lên file đề thi thành công!',
+      message: hasParsedQuestions
+        ? `Đã nhận diện tự động ${parsedData.detectedQuestionsCount} câu hỏi (${parsedData.mcqCount} trắc nghiệm, ${parsedData.essayCount} tự luận)!`
+        : 'Tải lên file đề thi thành công!',
       data: {
         fileUrl,
         fileName: req.file.originalname,
         fileSize: req.file.size,
-        mimeType: req.file.mimetype
+        mimeType: req.file.mimetype,
+        parsed: parsedData
       }
     });
   } catch (err) {
@@ -80,7 +96,40 @@ exports.createExamPaper = async (req, res) => {
       return res.status(400).json({ success: false, message: `Mã đề thi "${code}" đã tồn tại trên hệ thống!` });
     }
 
-    const courseDoc = await Course.findById(subject);
+    // 1. Giải quyết Course / Subject an toàn tuyệt đối (tránh CastError khi truyền string name)
+    let courseDoc = null;
+    if (subject && mongoose.Types.ObjectId.isValid(subject)) {
+      courseDoc = await Course.findById(subject);
+    }
+    if (!courseDoc && subject) {
+      const escapedSubject = String(subject).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      courseDoc = await Course.findOne({
+        $or: [
+          { name: subject },
+          { courseCode: subject },
+          { name: { $regex: new RegExp(escapedSubject, 'i') } }
+        ]
+      });
+    }
+    if (!courseDoc) {
+      courseDoc = await Course.findOne();
+    }
+    if (!courseDoc) {
+      courseDoc = await Course.create({
+        courseCode: 'INT101',
+        name: 'Kỹ thuật lập trình C',
+        credits: 3
+      });
+    }
+
+    // 2. Giải quyết createdBy an toàn
+    let createdByUserId = req.user ? req.user._id : null;
+    if (!createdByUserId || !mongoose.Types.ObjectId.isValid(createdByUserId)) {
+      const adminUser = await User.findOne({ email: 'admin@examguard.edu.vn' }) || await User.findOne();
+      if (adminUser) {
+        createdByUserId = adminUser._id;
+      }
+    }
 
     let finalQuestions = [];
 
@@ -154,9 +203,9 @@ exports.createExamPaper = async (req, res) => {
     const newPaper = await ExamPaper.create({
       code: code.trim().toUpperCase(),
       title: title.trim(),
-      subject,
+      subject: courseDoc._id,
       subjectName: courseDoc ? courseDoc.name : '',
-      createdBy: req.user ? req.user._id : null,
+      createdBy: createdByUserId,
       durationMinutes: durationMinutes || 60,
       totalScore: totalScore || 10.0,
       shuffleQuestions: shuffleQuestions !== undefined ? shuffleQuestions : false,

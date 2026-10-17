@@ -2916,7 +2916,23 @@ graph TD
 
 ---
 
-*Blueprint version 2.2 — Cập nhật: 2026-10-17*  
-*Bổ sung: Kiến trúc Đề thi Hỗn hợp (Hybrid Exam: Trắc nghiệm + Tự luận/Coding), Quy chế Chấm Trắc nghiệm Nhiều Đáp án Đúng (Multi-Select Checkbox), Quy tắc Đáp án Tương đương (Alternative Valid Keys), Không gian Thi Chia đôi Màn hình Đa năng & Đồng bộ Auto-Grading kết hợp Manual Grading v2.2.*  
+### 18.4. Trình Phân Tích Đề Thi & Bóc Tách Tự Động Câu Hỏi & Ma Trận Đáp Án (AI & Document Parser Engine)
+
+Khi Giảng viên tải lên tệp đề thi (Microsoft Word `.docx`, `.doc`, Acrobat `.pdf`, hoặc văn bản thuần):
+1. **Trích xuất Văn bản Đa tầng (Multi-layer Document Extraction):**
+   - Định dạng Word (`.docx`): Sử dụng công nghệ trích xuất AST và HTML để giữ nguyên các thuộc tính định dạng đặc biệt (`<strong>` in đậm, `<u>` gạch chân, danh sách bullet).
+   - Định dạng PDF: Trích xuất các luồng văn bản (Text Streams), loại bỏ phần header/footer trang thi để lấy nội dung đề bài liên tục.
+2. **Thuật toán Nhận diện Đáp án Đúng & Bóc tách Tự động (Answer Key Detection):**
+   - **Mô hình 1: Đáp án đánh dấu trực tiếp trong câu hỏi:** Nhận diện ký hiệu dấu sao (`*A.`, `A*.`, `*B)`), ký hiệu hộp kiểm (`[x] C.`), hoặc thẻ đáp án (`Đáp án: B`, `Key: A,C`).
+   - **Mô hình 2: Bảng đáp án tổng hợp ở cuối tài liệu:** Quét và bóc tách khối `BẢNG ĐÁP ÁN / HƯỚNG DẪN CHẤM / ANSWER KEY` với các cặp `Câu : Đáp án` (hỗ trợ cả đáp án đơn `1.A`, đáp án nhiều lựa chọn `4:A,C` và câu tự luận `5:TL`).
+   - **Mô hình 3: Phân định phần Trắc nghiệm & Tự luận:** Tự động phát hiện ranh giới chuyển tiếp `PHẦN II: TỰ LUẬN` để phân bổ chính xác loại câu hỏi (`MULTIPLE_CHOICE` vs `ESSAY`).
+3. **Đồng bộ hóa 1-Click vào Giao diện Soạn Đề:**
+   - Tự động điền số lượng câu hỏi, cơ cấu điểm và ma trận nút bấm OMR tương ứng.
+   - Giảng viên chỉ cần tải tệp lên, hệ thống sẽ tự động cấu hình toàn bộ đáp án chuẩn mà không cần thao tác gõ tay thủ công.
+
+---
+
+*Blueprint version 2.3 — Cập nhật: 2026-10-17*  
+*Bổ sung: Kiến trúc Đề thi Hỗn hợp (Hybrid Exam: Trắc nghiệm + Tự luận/Coding), Quy chế Chấm Trắc nghiệm Nhiều Đáp án Đúng (Multi-Select Checkbox), Quy tắc Đáp án Tương đương (Alternative Valid Keys), Trình Phân Tích Đề Thi & Tự Động Bóc Tách Đáp Án Chuẩn (AI Document Parser v2.3).*  
 *Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*
 

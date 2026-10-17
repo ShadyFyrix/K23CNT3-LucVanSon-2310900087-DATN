@@ -75,6 +75,10 @@ export default function ExamPapers() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaperItem | null>(null);
 
+  // Danh sách môn học & môn được chọn
+  const [courses, setCourses] = useState<Array<{ _id: string; name: string; courseCode: string }>>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+
   // Form State tạo đề
   const [createMode, setCreateMode] = useState<'FILE_ATTACHED' | 'STRUCTURED'>('FILE_ATTACHED');
   const [newTitle, setNewTitle] = useState('');
@@ -87,11 +91,17 @@ export default function ExamPapers() {
   const [mcqCountInput, setMcqCountInput] = useState<number>(40);
   const [essayCountInput, setEssayCountInput] = useState<number>(0);
 
-  // File upload state
+  // File upload state & AI Parser info
   const [fileUrl, setFileUrl] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [fileSize, setFileSize] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [parsedExamInfo, setParsedExamInfo] = useState<{
+    detectedQuestionsCount: number;
+    mcqCount: number;
+    essayCount: number;
+    hasAnswers: boolean;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Danh sách các câu hỏi đã cấu hình cho đề thi
@@ -116,8 +126,23 @@ export default function ExamPapers() {
     }
   };
 
+  // Lấy danh sách môn học từ server
+  const fetchCourses = async () => {
+    try {
+      const res = await apiClient.get('/courses');
+      if (res.data) {
+        const list = Array.isArray(res.data.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        setCourses(list);
+        if (list.length > 0) {
+          setSelectedCourseId(prev => prev || list[0]._id);
+        }
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     fetchPapers();
+    fetchCourses();
   }, []);
 
   // Tự động khởi tạo cấu trúc câu hỏi khi thay đổi số lượng MCQ hoặc Essay
@@ -187,6 +212,10 @@ export default function ExamPapers() {
     setFileSize(0);
     setRawQuickKeyInput('');
     setPreviewTab('MATRIX');
+    setParsedExamInfo(null);
+    if (courses.length > 0 && !selectedCourseId) {
+      setSelectedCourseId(courses[0]._id);
+    }
     generateQuestionsList(40, 0, 10.0);
     setShowCreateModal(true);
   };
@@ -209,7 +238,7 @@ export default function ExamPapers() {
     }
   };
 
-  // Upload file đề thi lên Server (Đã sửa lỗi url đúng /exam/upload-paper-file)
+  // Upload file đề thi lên Server và tự động trích xuất câu hỏi & đáp án
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -224,10 +253,40 @@ export default function ExamPapers() {
       });
 
       if (res.data && res.data.success) {
-        setFileUrl(res.data.data.fileUrl);
-        setFileName(res.data.data.fileName);
-        setFileSize(res.data.data.fileSize);
-        toast.success(`Đã tải lên tệp đề thi thành công: ${res.data.data.fileName}`);
+        const d = res.data.data;
+        setFileUrl(d.fileUrl);
+        setFileName(d.fileName);
+        setFileSize(d.fileSize);
+
+        const parsed = d.parsed;
+        if (parsed && parsed.canParseText && parsed.detectedQuestionsCount > 0) {
+          setParsedExamInfo({
+            detectedQuestionsCount: parsed.detectedQuestionsCount,
+            mcqCount: parsed.mcqCount,
+            essayCount: parsed.essayCount,
+            hasAnswers: parsed.hasAnswers
+          });
+          setConfiguredQuestions(parsed.questions);
+          setMcqCountInput(parsed.mcqCount);
+          setEssayCountInput(parsed.essayCount);
+          setRawQuickKeyInput(parsed.quickAnswerString || '');
+
+          if (parsed.essayCount > 0 && parsed.mcqCount > 0) {
+            setStructureType('HYBRID');
+          } else if (parsed.essayCount > 0 && parsed.mcqCount === 0) {
+            setStructureType('PURE_ESSAY');
+          } else {
+            setStructureType('PURE_MCQ');
+          }
+
+          toast.success(
+            `✨ AI đã bóc tách đề thi: Nhận diện ${parsed.detectedQuestionsCount} câu hỏi (${parsed.mcqCount} trắc nghiệm, ${parsed.essayCount} tự luận) & tự động cấu hình ma trận đáp án!`,
+            { duration: 6000 }
+          );
+        } else {
+          setParsedExamInfo(null);
+          toast.success(`Đã tải lên tệp đề thi: ${d.fileName}`);
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Lỗi khi tải file lên máy chủ');
@@ -448,7 +507,7 @@ export default function ExamPapers() {
       const payload = {
         code: newCode.trim().toUpperCase(),
         title: newTitle.trim(),
-        subject: papers[0]?.subjectName || '660000000000000000000001',
+        subject: selectedCourseId || (courses[0] ? courses[0]._id : undefined),
         durationMinutes: newDuration,
         totalScore: Number(newTotalScore) || 10.0,
         paperType: createMode,
@@ -835,6 +894,34 @@ export default function ExamPapers() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 font-bold focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
+
+                <div className="sm:col-span-3">
+                  <label className="text-slate-400 block mb-1 font-medium">Học phần / Môn học:</label>
+                  <select
+                    value={selectedCourseId}
+                    onChange={e => setSelectedCourseId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 font-medium focus:border-cyan-500 focus:outline-none"
+                  >
+                    {courses.map(c => (
+                      <option key={c._id} value={c._id}>
+                        {c.courseCode ? `[${c.courseCode}] ` : ''}{c.name}
+                      </option>
+                    ))}
+                    {courses.length === 0 && (
+                      <option value="">Kỹ thuật lập trình C (Mặc định)</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1 font-medium">Thang điểm tổng:</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={newTotalScore}
+                    onChange={e => setNewTotalScore(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-emerald-400 font-bold focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* KHỐI 2: KHU VỰC TẢI LÊN FILE ĐỀ THI (KHI CHỌN MODE FILE_ATTACHED) */}
@@ -875,7 +962,7 @@ export default function ExamPapers() {
                     {isUploading ? (
                       <div className="space-y-2 py-2">
                         <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
-                        <p className="text-slate-300 font-medium">Đang tải tệp đề thi lên máy chủ ExamGuard...</p>
+                        <p className="text-slate-300 font-medium">Đang tải và dùng AI bóc tách câu hỏi & đáp án từ tệp...</p>
                       </div>
                     ) : fileUrl ? (
                       <div className="flex items-center justify-between px-2">
@@ -902,13 +989,35 @@ export default function ExamPapers() {
                     ) : (
                       <div className="space-y-1.5 py-3">
                         <Upload className="w-8 h-8 text-cyan-400 mx-auto" />
-                        <p className="font-bold text-white text-sm">Kéo thả hoặc Nhấp để chọn tệp đề thi</p>
+                        <p className="font-bold text-white text-sm">Kéo thả hoặc Nhấp để chọn tệp đề thi (Word / PDF / Ảnh)</p>
                         <p className="text-[11px] text-slate-400">
-                          Hỗ trợ định dạng PDF (.pdf), Word (.docx), hoặc tệp ảnh scan (.png, .jpg) tối đa 25MB
+                          Hệ thống tự động đọc đề bài, bóc tách câu hỏi trắc nghiệm / tự luận và tự điền đáp án đúng
                         </p>
                       </div>
                     )}
                   </div>
+
+                  {/* AI PARSER SMART BADGE */}
+                  {parsedExamInfo && (
+                    <div className="p-3 bg-gradient-to-r from-cyan-950/60 via-slate-900 to-indigo-950/60 border border-cyan-500/40 rounded-xl flex items-center justify-between shadow-lg">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-4 h-4 animate-pulse" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-white text-xs flex items-center space-x-1.5">
+                            <span>ExamGuard AI đã đọc & bóc tách tệp đề thi thành công!</span>
+                          </p>
+                          <p className="text-[11px] text-cyan-300">
+                            Phát hiện: <b className="text-white">{parsedExamInfo.detectedQuestionsCount} câu</b> ({parsedExamInfo.mcqCount} Trắc nghiệm, {parsedExamInfo.essayCount} Tự luận) • Đã tự động cấu hình Ma trận đáp án & Hộp kiểm đa lựa chọn bên dưới.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-cyan-500 text-slate-950 shrink-0">
+                        ✓ Tự động điền
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
