@@ -367,13 +367,139 @@ exports.createExamSession = async (req, res) => {
   }
 };
 
-// Lấy danh sách ca thi
+// Helper tự động thu bài và chấm trắc nghiệm cho tất cả thí sinh còn lại trong ca thi
+async function autoSubmitRemainingStudents(sessionId) {
+  try {
+    const session = await ExamSession.findById(sessionId);
+    if (!session) return;
+    const examPaper = await ExamPaper.findById(session.examPaper);
+    if (!examPaper || !examPaper.questions) return;
+
+    const pendingStudents = await ExamStudent.find({
+      session: sessionId,
+      status: { $in: ['IN_EXAM', 'ASSIGNED', 'CHECKED_IN'] }
+    });
+
+    for (const examStudent of pendingStudents) {
+      let existingSub = await ExamSubmission.findOne({ examStudent: examStudent._id });
+      let submittedAnswers = {};
+      if (existingSub && existingSub.answers) {
+        if (existingSub.answers instanceof Map) {
+          existingSub.answers.forEach((v, k) => { submittedAnswers[k] = v; });
+        } else {
+          submittedAnswers = existingSub.answers;
+        }
+      }
+
+      let autoGradeTotal = 0;
+      let totalCorrect = 0;
+      let totalWrong = 0;
+      let totalSkipped = 0;
+      const questionResults = [];
+
+      for (let i = 0; i < examPaper.questions.length; i++) {
+        const q = examPaper.questions[i];
+        const qKey = q._id.toString();
+        const studentChoice = submittedAnswers[qKey] !== undefined 
+          ? submittedAnswers[qKey] 
+          : submittedAnswers[i];
+
+        if (q.type === 'MULTIPLE_CHOICE') {
+          let isCorrect = false;
+          if (studentChoice !== undefined && studentChoice !== null && studentChoice !== '') {
+            if (q.correctAnswer === 'ALL_CORRECT') {
+              isCorrect = true;
+            } else if (Array.isArray(q.correctAnswer)) {
+              if (Array.isArray(studentChoice)) {
+                isCorrect = JSON.stringify([...q.correctAnswer].sort()) === JSON.stringify([...studentChoice].sort());
+              } else {
+                isCorrect = q.correctAnswer.map(Number).includes(Number(studentChoice));
+              }
+            } else {
+              isCorrect = Number(studentChoice) === Number(q.correctAnswer);
+            }
+          }
+
+          const scoreEarned = isCorrect ? (q.score || 1) : 0;
+          if (studentChoice === undefined || studentChoice === null || studentChoice === '') {
+            totalSkipped++;
+          } else if (isCorrect) {
+            totalCorrect++;
+          } else {
+            totalWrong++;
+          }
+
+          autoGradeTotal += scoreEarned;
+
+          questionResults.push({
+            stt: q.stt || (i + 1),
+            questionId: q._id.toString(),
+            type: q.type,
+            studentAnswer: studentChoice,
+            correctAnswer: q.correctAnswer,
+            isCorrect,
+            scoreEarned,
+            maxScore: q.score || 1,
+            explanation: q.explanation || ''
+          });
+        } else {
+          questionResults.push({
+            stt: q.stt || (i + 1),
+            questionId: q._id.toString(),
+            type: q.type,
+            studentAnswer: studentChoice || '',
+            correctAnswer: null,
+            isCorrect: null,
+            scoreEarned: 0,
+            maxScore: q.score || 1,
+            explanation: q.gradingGuide || ''
+          });
+        }
+      }
+
+      autoGradeTotal = Math.round(autoGradeTotal * 100) / 100;
+
+      if (!existingSub) {
+        existingSub = new ExamSubmission({
+          examStudent: examStudent._id,
+          session: session._id,
+          student: examStudent.student,
+          answers: submittedAnswers,
+          autoGradeTotal,
+          totalCorrect,
+          totalWrong,
+          totalSkipped,
+          questionResults,
+          submittedAt: new Date()
+        });
+      } else {
+        existingSub.autoGradeTotal = autoGradeTotal;
+        existingSub.totalCorrect = totalCorrect;
+        existingSub.totalWrong = totalWrong;
+        existingSub.totalSkipped = totalSkipped;
+        existingSub.questionResults = questionResults;
+        existingSub.submittedAt = new Date();
+      }
+      await existingSub.save();
+
+      examStudent.status = 'SUBMITTED';
+      examStudent.submittedAt = new Date();
+      examStudent.autoGradeScore = autoGradeTotal;
+      examStudent.adjustedScore = autoGradeTotal;
+      await examStudent.save();
+    }
+  } catch (err) {
+    console.error('Lỗi autoSubmitRemainingStudents:', err.message);
+  }
+}
+
+// Lấy danh sách ca thi kèm tự động đánh giá vòng đời ca thi (Lifecycle Evaluation)
 exports.getExamSessions = async (req, res) => {
   try {
     const { status, gradingStatus, search } = req.query;
     const filter = {};
-    if (status) filter.status = status;
-    if (gradingStatus) filter.gradingStatus = gradingStatus;
+    if (status && status !== 'ALL') filter.status = status;
+    if (gradingStatus && gradingStatus !== 'ALL') filter.gradingStatus = gradingStatus;
     if (search) {
       filter.$or = [
         { code: { $regex: search, $options: 'i' } },
@@ -390,7 +516,89 @@ exports.getExamSessions = async (req, res) => {
       .populate('inspector', 'fullName email')
       .sort({ startTime: -1 });
 
-    return res.json({ success: true, count: sessions.length, data: sessions });
+    const now = new Date();
+    // Tự động kiểm tra thời gian ca thi: nếu quá endTime -> COMPLETED & auto-submit
+    for (const session of sessions) {
+      const startTime = session.startTime ? new Date(session.startTime) : new Date();
+      const durationMs = (session.durationMinutes || 60) * 60 * 1000;
+      const endTime = session.endTime ? new Date(session.endTime) : new Date(startTime.getTime() + durationMs);
+
+      if (session.status !== 'COMPLETED' && session.status !== 'CANCELLED') {
+        if (now.getTime() > endTime.getTime()) {
+          session.status = 'COMPLETED';
+          if (session.gradingStatus === 'NOT_GRADED') {
+            session.gradingStatus = 'AUTO_GRADED';
+          }
+          await ExamSession.findByIdAndUpdate(session._id, {
+            status: 'COMPLETED',
+            gradingStatus: session.gradingStatus
+          });
+          await autoSubmitRemainingStudents(session._id);
+        } else if (now.getTime() >= startTime.getTime() && now.getTime() <= endTime.getTime() && session.status === 'SCHEDULED') {
+          session.status = 'IN_PROGRESS';
+          await ExamSession.findByIdAndUpdate(session._id, { status: 'IN_PROGRESS' });
+        }
+      }
+    }
+
+    // Đếm số thí sinh của từng ca thi
+    const enriched = await Promise.all(sessions.map(async (s) => {
+      const count = await ExamStudent.countDocuments({ session: s._id });
+      const plain = s.toObject();
+      plain.studentCount = count;
+      return plain;
+    }));
+
+    return res.json({ success: true, count: enriched.length, data: enriched });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Kết thúc ca thi & Đóng buồng thi thủ công (Manual End Session & Close Room)
+exports.endExamSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await ExamSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+    }
+
+    const now = new Date();
+    session.status = 'COMPLETED';
+    session.endTime = now;
+    if (session.gradingStatus === 'NOT_GRADED') {
+      session.gradingStatus = 'AUTO_GRADED';
+    }
+    await session.save();
+
+    // Thu bài và chấm trắc nghiệm tự động cho tất cả thí sinh còn lại
+    await autoSubmitRemainingStudents(sessionId);
+
+    // Phát sự kiện Socket.IO đóng buồng thi
+    try {
+      const io = req.app.get('io') || global.io;
+      if (io) {
+        io.to(`session:${sessionId}`).emit('session:ended', {
+          sessionId,
+          status: 'COMPLETED',
+          endedAt: now.toISOString(),
+          message: 'Cán bộ coi thi đã KẾT THÚC ca thi và đóng buồng làm bài. Toàn bộ bài thi đã được thu và tự động chấm điểm!'
+        });
+        io.emit('session:status_changed', {
+          sessionId,
+          status: 'COMPLETED'
+        });
+      }
+    } catch (sockErr) {
+      console.warn('Lỗi emit socket session:ended:', sockErr.message);
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã kết thúc ca thi ${session.code} thành công! Toàn bộ bài thi đã được thu nhận và chấm tự động.`,
+      data: session
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -707,6 +915,61 @@ exports.getSanitizedQuestions = async (req, res) => {
     const durationMinutes = (session.durationMinutes || 60) + (examStudent.extraTimeMinutes || 0);
     const durationMs = durationMinutes * 60 * 1000;
     const endTime = session.endTime ? new Date(session.endTime) : new Date(startTime.getTime() + durationMs);
+
+    // 0. KIỂM TRA CA THI ĐÃ KẾT THÚC / ĐÓNG BUỒNG THI (session.status === 'COMPLETED' hoặc now > endTime)
+    const isSessionEnded = session.status === 'COMPLETED' || (now.getTime() > endTime.getTime());
+    if (isSessionEnded) {
+      if (examStudent.status !== 'SUBMITTED') {
+        examStudent.status = 'SUBMITTED';
+        examStudent.submittedAt = now;
+        await examStudent.save();
+        await autoSubmitRemainingStudents(session._id);
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          isSessionEnded: true,
+          endedAt: (session.endTime || endTime).toISOString(),
+          serverTime: now.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          message: 'Ca thi đã kết thúc và đóng buồng làm bài. Toàn bộ bài thi đã được niêm phong để chuyển sang hội đồng rà soát & chấm điểm.',
+          examStudent: {
+            id: examStudent._id,
+            candidateCode: examStudent.candidateCode,
+            seatRow: examStudent.seatRow,
+            seatCol: examStudent.seatCol,
+            seatPin: examStudent.seatPin,
+            trustScore: examStudent.trustScore !== undefined ? examStudent.trustScore : 100,
+            status: 'SUBMITTED',
+            submittedAt: examStudent.submittedAt || now
+          },
+          student: {
+            id: examStudent.student._id,
+            name: examStudent.student.fullName || examStudent.student.name || 'Lục Văn Sơn',
+            studentCode: examStudent.student.studentCode,
+            email: examStudent.student.email,
+            className: examStudent.student.class?.name || examStudent.student.class?.code || 'K23CNT3'
+          },
+          session: {
+            id: session._id,
+            code: session.code,
+            title: session.title,
+            subjectName: session.subject?.name || session.title,
+            roomCode: session.room?.code || 'P302',
+            roomName: session.room?.name || 'Phòng P302',
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            durationMinutes,
+            status: 'COMPLETED',
+            gradingStatus: session.gradingStatus
+          },
+          savedAnswers: {},
+          questions: [] // ZERO-KNOWLEDGE: Giữ bí mật đề thi tuyệt đối khi ca thi đã kết thúc
+        }
+      });
+    }
 
     // 1. KIỂM TRA ĐẾM NGƯỢC GIỜ VÀO THI (Chưa đến giờ bắt đầu: now < startTime)
     if (now.getTime() < startTime.getTime()) {

@@ -25,6 +25,7 @@ const courseRoutes = require('./course.route');
 const studentRoutes = require('./student.route');
 const teacherRoutes = require('./teacher.route');
 const roomRoutes = require('./room.route');
+const campusRoutes = require('./campus.route');
 
 router.use('/departments', departmentRoutes);
 router.use('/academic-batches', academicBatchRoutes);
@@ -33,6 +34,8 @@ router.use('/courses', courseRoutes);
 router.use('/students', studentRoutes);
 router.use('/teachers', teacherRoutes);
 router.use('/rooms', roomRoutes);
+router.use('/campuses', campusRoutes);
+router.use('/campus', campusRoutes);
 
 // 3. Khảo thí: Ca thi, Ngân hàng đề thi, Làm bài thi & Nộp bài
 const examRoutes = require('./exam.route');

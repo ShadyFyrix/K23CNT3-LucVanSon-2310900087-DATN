@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
 const ExamSession = require('../models/examSession.model');
+const ExamRoom = require('../models/examRoom.model');
 const ExamStudent = require('../models/examStudent.model');
 const ExamViolation = require('../models/examViolation.model');
+const Course = require('../models/course.model');
+const Student = require('../models/student.model');
+const Teacher = require('../models/teacher.model');
+const User = require('../models/user.model');
 const faceAiService = require('../services/faceAi.service');
 const socketService = require('../services/socket.service');
-const User = require('../models/user.model');
 
 /**
  * =========================================================================
@@ -19,22 +23,35 @@ exports.getLiveRoomState = async (req, res) => {
   try {
     const { sessionId } = req.params;
 
-    const session = await ExamSession.findById(sessionId)
-      .populate('room')
-      .populate('subject', 'name courseCode')
-      .populate('proctor1', 'fullName email')
-      .populate('proctor2', 'fullName email')
-      .populate('inspector', 'fullName email');
-
+    let session = null;
+    if (sessionId && mongoose.Types.ObjectId.isValid(sessionId)) {
+      session = await ExamSession.findById(sessionId)
+        .populate('room')
+        .populate('subject', 'name courseCode')
+        .populate('proctor1', 'fullName email')
+        .populate('proctor2', 'fullName email')
+        .populate('inspector', 'fullName email');
+    }
     if (!session) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+      session = await ExamSession.findOne()
+        .sort({ createdAt: -1 })
+        .populate('room')
+        .populate('subject', 'name courseCode')
+        .populate('proctor1', 'fullName email')
+        .populate('proctor2', 'fullName email')
+        .populate('inspector', 'fullName email');
     }
 
-    const students = await ExamStudent.find({ session: sessionId })
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Chưa có ca thi nào trên hệ thống!' });
+    }
+
+    const realSessionId = session._id;
+    const students = await ExamStudent.find({ session: realSessionId })
       .populate('student', 'fullName name studentCode email phone faceImage')
       .sort({ seatRow: 1, seatCol: 1 });
 
-    const recentViolations = await ExamViolation.find({ session: sessionId })
+    const recentViolations = await ExamViolation.find({ session: realSessionId })
       .populate('examStudent', 'candidateCode seatRow seatCol')
       .populate('student', 'fullName name studentCode')
       .sort({ createdAt: -1 })
@@ -669,10 +686,34 @@ exports.getLiveStatistics = async (req, res) => {
   try {
     const { sessionId } = req.params;
 
-    const students = await ExamStudent.find({ session: sessionId });
+    let targetSessionId = null;
+    if (sessionId && mongoose.Types.ObjectId.isValid(sessionId)) {
+      targetSessionId = sessionId;
+    } else {
+      const latest = await ExamSession.findOne().sort({ createdAt: -1 });
+      if (latest) targetSessionId = latest._id;
+    }
+
+    if (!targetSessionId) {
+      return res.json({
+        success: true,
+        data: {
+          totalStudents: 0,
+          activeStudents: 0,
+          completedStudents: 0,
+          suspendedStudents: 0,
+          flaggedStudents: 0,
+          avgTrustScore: 100,
+          severityCounts: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
+          typeCounts: {}
+        }
+      });
+    }
+
+    const students = await ExamStudent.find({ session: targetSessionId });
     const totalStudents = students.length;
-    const activeStudents = students.filter(s => s.status === 'IN_PROGRESS').length;
-    const completedStudents = students.filter(s => s.status === 'COMPLETED').length;
+    const activeStudents = students.filter(s => s.status === 'IN_EXAM' || s.status === 'IN_PROGRESS').length;
+    const completedStudents = students.filter(s => s.status === 'SUBMITTED' || s.status === 'COMPLETED').length;
     const suspendedStudents = students.filter(s => s.status === 'SUSPENDED').length;
     const flaggedStudents = students.filter(s => s.trustScore < 70).length;
 
@@ -680,7 +721,7 @@ exports.getLiveStatistics = async (req, res) => {
       ? Math.round(students.reduce((acc, s) => acc + (s.trustScore !== undefined ? s.trustScore : 100), 0) / totalStudents)
       : 100;
 
-    const violations = await ExamViolation.find({ session: sessionId, isDismissed: false });
+    const violations = await ExamViolation.find({ session: targetSessionId, isDismissed: false });
 
     const severityCounts = {
       CRITICAL: 0,

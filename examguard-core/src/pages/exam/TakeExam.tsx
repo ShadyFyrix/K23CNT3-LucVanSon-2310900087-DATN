@@ -51,7 +51,8 @@ import {
   Trash2,
   Lock,
   Unlock,
-  Hourglass
+  Hourglass,
+  ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -76,6 +77,9 @@ interface Question {
 }
 
 interface ExamData {
+  isSessionEnded?: boolean;
+  endedAt?: string;
+  message?: string;
   isPreExamWaiting?: boolean;
   countdownSeconds?: number;
   isLateBlocked?: boolean;
@@ -233,8 +237,9 @@ export default function TakeExam() {
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [isLateBlocked, setIsLateBlocked] = useState(false);
   const [lateMinutes, setLateMinutes] = useState(0);
+  const [isSessionEnded, setIsSessionEnded] = useState(false);
 
-  // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn
+  // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn / Ca thi kết thúc
   const fetchExam = async () => {
     try {
       setLoading(true);
@@ -244,11 +249,20 @@ export default function TakeExam() {
         const data: ExamData = res.data.data;
         setExamData(data);
 
+        // Trường hợp 0: Ca thi đã kết thúc -> Khóa phòng thi & Hiển thị màn hình kết thúc
+        if (data.isSessionEnded) {
+          setIsSessionEnded(true);
+          setIsPreExamWaiting(false);
+          setIsLateBlocked(false);
+          return;
+        }
+
         // Trường hợp 1: Chưa đến giờ thi -> Kích hoạt Phòng chờ & Đếm ngược
         if (data.isPreExamWaiting) {
           setIsPreExamWaiting(true);
           setCountdownSeconds(data.countdownSeconds || 0);
           setIsLateBlocked(false);
+          setIsSessionEnded(false);
           return;
         }
 
@@ -257,12 +271,14 @@ export default function TakeExam() {
           setIsLateBlocked(true);
           setLateMinutes(data.lateMinutes || 15);
           setIsPreExamWaiting(false);
+          setIsSessionEnded(false);
           return;
         }
 
         // Trường hợp 3: Vào phòng thi và làm bài bình thường
         setIsPreExamWaiting(false);
         setIsLateBlocked(false);
+        setIsSessionEnded(false);
         setAnswers(data.savedAnswers || {});
         setTrustScore(data.examStudent?.trustScore !== undefined ? data.examStudent.trustScore : 100);
 
@@ -582,6 +598,14 @@ export default function TakeExam() {
         setSuspendReason(data.reason || 'Vi phạm quy chế thi');
         toast.error('BẠN ĐÃ BỊ ĐÌNH CHỈ THI BỞI HỘI ĐỒNG COI THI!', { duration: 10000 });
       }
+    });
+
+    // Nhận thông báo Kết thúc ca thi & Đóng buồng thi từ Giám thị
+    socket.on('session:ended', (data: any) => {
+      playQuizSound('finish');
+      toast.success(data.message || 'CÁN BỘ COI THI ĐÃ KẾT THÚC CA THI VÀ ĐÓNG BUỒNG THI!', { icon: '🏁', duration: 10000 });
+      setIsSessionEnded(true);
+      fetchExam();
     });
 
     // Gửi Heartbeat định kỳ 10s cho giám thị (chỉ khi đang thi)
@@ -1315,6 +1339,123 @@ export default function TakeExam() {
         {/* Footer */}
         <div className="text-center text-xs text-slate-600 relative z-10 pt-4">
           ExamGuard AI • Phòng Chờ Thi Trực Tuyến & Chống Gian Lận Đa Tầng v2.0
+        </div>
+      </div>
+    );
+  }
+
+  // Màn hình Ca thi đã kết thúc & Đóng buồng thi
+  if (isSessionEnded) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-8 font-sans relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 max-w-4xl mx-auto w-full relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+              <ShieldCheck className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>EXAMGUARD AI</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  CA THI ĐÃ KẾT THÚC
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400">{examData?.session?.title || 'Phòng thi Trực tuyến'}</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xs font-mono text-slate-400 block">{examData?.session?.roomName || 'Phòng thi'}</span>
+            <span className="text-[11px] font-mono text-cyan-400 font-semibold">{examData?.session?.code}</span>
+          </div>
+        </div>
+
+        {/* Center Content Card */}
+        <div className="max-w-xl w-full mx-auto my-auto relative z-10 py-6">
+          <div className="bg-slate-900/90 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl space-y-6 text-center ring-1 ring-indigo-500/20">
+            {/* Status Icon */}
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 border border-indigo-500/40 flex items-center justify-center text-cyan-400 shadow-xl shadow-indigo-950/50">
+              <CheckCircle2 className="w-10 h-10 text-cyan-400" />
+            </div>
+
+            {/* Title & Badge */}
+            <div className="space-y-2">
+              <h2 className="text-xl md:text-2xl font-black text-white tracking-wide">
+                BUỒNG THI ĐÃ ĐÓNG
+              </h2>
+              <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                ✓ BÀI LÀM ĐÃ ĐƯỢC THU NHẬN AN TOÀN
+              </div>
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed max-w-md mx-auto pt-1">
+                Ca thi đã chính thức kết thúc lúc <b className="text-cyan-400 font-mono">{examData?.session?.endTime ? new Date(examData.session.endTime).toLocaleTimeString('vi-VN') : 'vừa qua'}</b>. Toàn bộ câu trả lời của bạn đã được niêm phong để chuyển sang hội đồng rà soát & chấm điểm.
+              </p>
+            </div>
+
+            {/* Student & Session Info Grid */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-left grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-[11px] text-slate-500 block">Thí sinh:</span>
+                <span className="font-bold text-slate-200">{examData?.student?.name}</span>
+                <span className="block text-[10px] text-slate-400 font-mono">MSSV: {examData?.student?.studentCode}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Số báo danh / Lớp:</span>
+                <span className="font-bold text-cyan-400 font-mono">{examData?.examStudent?.candidateCode}</span>
+                <span className="block text-[10px] text-slate-400">{examData?.student?.className || 'Lớp K23'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Điểm uy tín kết thúc:</span>
+                <span className={`font-mono font-bold ${
+                  (examData?.examStudent?.trustScore || 100) >= 80 ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                  {examData?.examStudent?.trustScore !== undefined ? examData.examStudent.trustScore : 100}/100đ
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Trạng thái bài thi:</span>
+                <span className="font-bold text-emerald-400 flex items-center space-x-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>ĐÃ NỘP BÀI (CHỜ CÔNG BỐ)</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Notice */}
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 text-xs text-indigo-300 text-left space-y-1">
+              <span className="font-bold block text-white">Quy trình công bố kết quả:</span>
+              <p className="text-[11px] text-slate-300">
+                Theo quy chế khảo thí, điểm thi và đáp án chi tiết sẽ được hiển thị ngay sau khi Cán bộ chấm thi hoàn tất quy trình rà soát và công bố chính thức.
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={() => navigate(`/exam-result/${examData?.examStudent?.id || 'fallback_student'}`)}
+                className="py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/20 transition active:scale-95 flex items-center justify-center space-x-1.5"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Xem Trạng Thái Điểm</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/exam-sessions')}
+                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>Danh Sách Ca Thi</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-slate-600 relative z-10 pt-4">
+          ExamGuard AI • Hệ thống Quản lý Thi Trực Tuyến & Chống Gian Lận Đa Tầng v2.0
         </div>
       </div>
     );

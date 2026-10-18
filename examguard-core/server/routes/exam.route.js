@@ -56,6 +56,7 @@ router.put('/sessions/:sessionId/students/:examStudentId', examController.update
 router.post('/sessions/:sessionId/generate-candidate-codes', examController.bulkGenerateCandidateCodes);
 router.post('/sessions/:sessionId/add-student', examController.addStudentToSession);
 router.delete('/sessions/:sessionId/students/:examStudentId', examController.removeStudentFromSession);
+router.post('/sessions/:sessionId/end-session', examController.endExamSession);
 
 // Thí sinh làm bài thi (Candidate Workspace)
 router.get('/questions/:sessionStudentId', examController.getSanitizedQuestions);

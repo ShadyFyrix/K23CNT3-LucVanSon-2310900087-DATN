@@ -14,7 +14,9 @@ import {
   Layers,
   ArrowRight,
   Loader2,
-  FileText
+  FileText,
+  Lock,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -44,6 +46,7 @@ export default function ExamSessions() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [selectedSessionForCandidates, setSelectedSessionForCandidates] = useState<ExamSessionItem | null>(null);
+  const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
 
   const fetchSessions = async () => {
     try {
@@ -64,9 +67,60 @@ export default function ExamSessions() {
     fetchSessions();
   }, []);
 
+  // Format dải thời gian thi (Start -> End • Ngày)
+  const formatTimeRange = (startStr?: string, endStr?: string) => {
+    if (!startStr) return 'Chưa xếp lịch';
+    const start = new Date(startStr);
+    const end = endStr ? new Date(endStr) : new Date(start.getTime() + 60 * 60000);
+    const dateFormatted = start.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const startTime = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const endTime = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return `${startTime} - ${endTime} • ${dateFormatted}`;
+  };
+
+  // Xác định trạng thái vòng đời ca thi chính xác
+  const getSessionStatus = (s: ExamSessionItem) => {
+    const now = Date.now();
+    const start = s.startTime ? new Date(s.startTime).getTime() : now;
+    const end = s.endTime ? new Date(s.endTime).getTime() : (start + (s.durationMinutes || 60) * 60000);
+
+    if (s.gradingStatus === 'PUBLISHED') {
+      return { key: 'PUBLISHED', label: 'ĐÃ CÔNG BỐ ĐIỂM', isEnded: true, isOngoing: false, isUpcoming: false, badgeClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' };
+    }
+    if (s.status === 'COMPLETED' || now > end) {
+      return { key: 'COMPLETED', label: 'ĐÃ KẾT THÚC', isEnded: true, isOngoing: false, isUpcoming: false, badgeClass: 'bg-slate-800 text-slate-300 border border-slate-700' };
+    }
+    if (now >= start && now <= end) {
+      const remainingMinutes = Math.max(0, Math.round((end - now) / 60000));
+      return { key: 'IN_PROGRESS', label: `ĐANG THI (Còn ${remainingMinutes}p)`, isEnded: false, isOngoing: true, isUpcoming: false, badgeClass: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 animate-pulse' };
+    }
+    const waitMinutes = Math.max(0, Math.round((start - now) / 60000));
+    return { key: 'SCHEDULED', label: waitMinutes < 60 ? `SẮP THI (Sau ${waitMinutes}p)` : 'LÊN LỊCH', isEnded: false, isOngoing: false, isUpcoming: true, badgeClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30' };
+  };
+
+  // Giảng viên / Giám thị kết thúc ca thi thủ công & Thu bài tự động
+  const handleEndSession = async (session: ExamSessionItem) => {
+    if (!window.confirm(`XÁC NHẬN KẾT THÚC CA THI "${session.code}"?\n\n- Toàn bộ bài thi của sinh viên chưa nộp sẽ được tự động thu nhận.\n- Hệ thống tự động chấm điểm trắc nghiệm và khóa buồng thi.\n- Chuyển ca thi sang trạng thái "Đã kết thúc" để sẵn sàng rà soát điểm.`)) {
+      return;
+    }
+    try {
+      setClosingSessionId(session._id);
+      const res = await apiClient.post(`/api/exam/sessions/${session._id}/end-session`);
+      if (res.data && res.data.success) {
+        toast.success(res.data.message || 'Đã kết thúc ca thi thành công!', { icon: '🏁' });
+        await fetchSessions();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi kết thúc ca thi');
+    } finally {
+      setClosingSessionId(null);
+    }
+  };
+
   const filtered = sessions.filter(s => {
     const matchSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase()) || s.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === 'ALL' || s.status === statusFilter || s.gradingStatus === statusFilter;
+    const lifeStatus = getSessionStatus(s);
+    const matchStatus = statusFilter === 'ALL' || s.status === statusFilter || s.gradingStatus === statusFilter || lifeStatus.key === statusFilter;
     const matchType = typeFilter === 'ALL' || s.examType === typeFilter;
     return matchSearch && matchStatus && matchType;
   });
@@ -160,15 +214,21 @@ export default function ExamSessions() {
 
             {/* Bộ lọc trạng thái */}
             <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-              {['ALL', 'IN_PROGRESS', 'SCHEDULED', 'PUBLISHED'].map(st => (
+              {[
+                { id: 'ALL', label: 'Tất cả trạng thái' },
+                { id: 'IN_PROGRESS', label: 'Đang thi' },
+                { id: 'SCHEDULED', label: 'Lên lịch' },
+                { id: 'COMPLETED', label: 'Đã kết thúc' },
+                { id: 'PUBLISHED', label: 'Đã có điểm' }
+              ].map(st => (
                 <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
+                  key={st.id}
+                  onClick={() => setStatusFilter(st.id)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                    statusFilter === st ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    statusFilter === st.id ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {st === 'ALL' ? 'Tất cả trạng thái' : st === 'IN_PROGRESS' ? 'Đang thi' : st === 'SCHEDULED' ? 'Lên lịch' : 'Đã có điểm'}
+                  {st.label}
                 </button>
               ))}
             </div>
@@ -189,102 +249,137 @@ export default function ExamSessions() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map(s => (
-              <div
-                key={s._id}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all group"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
-                        {s.code}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        s.examType === 'ONLINE_QUIZ'
-                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                          : s.examType === 'BYOD_LAPTOP'
-                          ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-                          : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/30'
-                      }`}>
-                        {s.examType === 'ONLINE_QUIZ' ? '⚡ QUIZ' : s.examType === 'BYOD_LAPTOP' ? '💻 BYOD' : '🖥️ LAB'}
+            {filtered.map(s => {
+              const statusInfo = getSessionStatus(s);
+              return (
+                <div
+                  key={s._id}
+                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                          {s.code}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          s.examType === 'ONLINE_QUIZ'
+                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            : s.examType === 'BYOD_LAPTOP'
+                            ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
+                            : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/30'
+                        }`}>
+                          {s.examType === 'ONLINE_QUIZ' ? '⚡ QUIZ' : s.examType === 'BYOD_LAPTOP' ? '💻 BYOD' : '🖥️ LAB'}
+                        </span>
+                      </div>
+
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${statusInfo.badgeClass}`}>
+                        {statusInfo.label}
                       </span>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      s.gradingStatus === 'PUBLISHED'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : s.status === 'IN_PROGRESS'
-                        ? 'bg-cyan-500/10 text-cyan-400 animate-pulse'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      {s.gradingStatus === 'PUBLISHED' ? 'ĐÃ CÔNG BỐ ĐIỂM' : s.status === 'IN_PROGRESS' ? 'ĐANG THI' : 'LÊN LỊCH'}
-                    </span>
+                    <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
+                      {s.title}
+                    </h3>
+
+                    {/* Dải thông tin Lịch làm bài thi chi tiết */}
+                    <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300 bg-cyan-950/40 border border-cyan-800/40 px-3 py-2 rounded-xl">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate">{formatTimeRange(s.startTime, s.endTime)}</span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Môn học:</span>
+                        <span className="text-slate-200 font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Phòng thi:</span>
+                        <span className="text-slate-200 font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Thời lượng:</span>
+                        <span className="text-slate-200">{s.durationMinutes} phút</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Thí sinh đã xếp:</span>
+                        <span className="text-cyan-400 font-bold">{s.studentCount !== undefined ? s.studentCount : '—'} thí sinh</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Cán bộ coi thi:</span>
+                        <span className="text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
-                    {s.title}
-                  </h3>
+                  {/* Nút nghiệp vụ & Điều khiển ca thi */}
+                  <div className="space-y-2 pt-4 border-t border-slate-800/80 mt-4 text-xs font-semibold">
+                    {/* Nút Quản lý Thí sinh & SBD */}
+                    <button
+                      onClick={() => setSelectedSessionForCandidates(s)}
+                      className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400/60 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm"
+                    >
+                      <Users className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Quản Lý Thí Sinh & Số Báo Danh ({s.studentCount !== undefined ? s.studentCount : '—'})</span>
+                    </button>
 
-                  <div className="space-y-1.5 text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Môn học:</span>
-                      <span className="text-slate-200 font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Phòng thi:</span>
-                      <span className="text-slate-200 font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Thời lượng:</span>
-                      <span className="text-slate-200">{s.durationMinutes} phút</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Cán bộ coi thi:</span>
-                      <span className="text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
+                    {/* Nút Vào Làm Bài hoặc Thông báo Buồng thi đã đóng */}
+                    {statusInfo.isEnded ? (
+                      <div className="w-full py-2 bg-slate-950/80 border border-slate-800 text-slate-400 rounded-xl flex items-center justify-center space-x-1.5 text-center">
+                        <Lock className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Buồng Thi Đã Đóng (Đã Thu Bài)</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => navigate('/take-exam')}
+                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20 active:scale-95"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-white" />
+                        <span>Làm Bài Thi Quiz</span>
+                      </button>
+                    )}
+
+                    {/* Nút Kết thúc ca thi & Thu bài (Dành cho Cán bộ coi thi khi ca thi chưa đóng) */}
+                    {!statusInfo.isEnded && (
+                      <button
+                        onClick={() => handleEndSession(s)}
+                        disabled={closingSessionId === s._id}
+                        className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-500/50 rounded-xl transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50"
+                      >
+                        {closingSessionId === s._id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-rose-400" />
+                        )}
+                        <span>Kết Thúc Ca Thi & Đóng Buồng Thi</span>
+                      </button>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => navigate(`/live-proctor/${s._id}`)}
+                        className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl transition flex items-center justify-center space-x-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Phòng 3D Live</span>
+                      </button>
+
+                      <button
+                        onClick={() => navigate(`/grading-review/${s._id}`)}
+                        className={`p-2 rounded-xl transition flex items-center justify-center space-x-1 ${
+                          statusInfo.isEnded
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-md shadow-indigo-600/30'
+                            : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30'
+                        }`}
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>{statusInfo.isEnded ? 'Rà Soát Điểm Ngay' : 'Rà Soát Điểm'}</span>
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* 4 Nút nghiệp vụ */}
-                <div className="space-y-2 pt-4 border-t border-slate-800/80 mt-4 text-xs font-semibold">
-                  {/* Nút Quản lý Thí sinh & SBD */}
-                  <button
-                    onClick={() => setSelectedSessionForCandidates(s)}
-                    className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400/60 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm"
-                  >
-                    <Users className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Quản Lý Thí Sinh & Số Báo Danh</span>
-                  </button>
-
-                  <button
-                    onClick={() => navigate('/take-exam')}
-                    className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Làm Bài Thi Quiz</span>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => navigate(`/live-proctor/${s._id}`)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl transition flex items-center justify-center space-x-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Phòng 3D Live</span>
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/grading-review/${s._id}`)}
-                      className="p-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl transition flex items-center justify-center space-x-1"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Rà Soát Điểm</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

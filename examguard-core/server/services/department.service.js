@@ -1,4 +1,5 @@
 const Department = require('../models/department.model');
+require('../models/teacher.model');
 
 class DepartmentService {
   async getAllDepartments() {

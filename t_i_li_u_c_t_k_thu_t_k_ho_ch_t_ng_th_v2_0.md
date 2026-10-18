@@ -350,3 +350,11 @@ Dưới đây là các module kỹ thuật và nghiệp vụ khảo thí nâng c
 *   **Modal Cảnh Báo An Ninh Toàn Màn Hình:** Hiển thị popup viền đỏ/vàng rung lắc nổi bật, phát âm thanh Web Audio API cảnh báo tần số cao và hiển thị số điểm uy tín bị trừ.
 *   **Tái Cấu Trúc Thẻ Thí Sinh Compact:** Bố cục 2 cột gọn nhẹ trên thanh công cụ làm bài thi, hiển thị rõ ràng SBD, MSSV, Dãy/Cột, Ca thi và Tên môn thi.
 *   **Bảo Mật Điểm Số & Đáp Án:** Sau khi nộp bài, hệ thống chỉ cấp **Phiếu Xác Nhận Nộp Bài Thi**. Kết quả điểm số và lời giải chỉ được mở khi Giảng viên / Hội đồng khảo thí công bố (`gradingStatus === 'PUBLISHED'`).
+
+### 6.4. Quản Lý Vòng Đời Ca Thi, Tự Động Thu Bài Khi Hết Giờ & Đóng Buồng Thi Nghiêm Ngặt
+*   **Định lượng thời gian & Lịch thi rõ ràng:** Trên mỗi thẻ ca thi (`ExamSessions.tsx`), hiển thị chi tiết thời gian: `HH:mm - HH:mm • DD/MM/YYYY`, thời lượng, số lượng thí sinh đã xếp và trạng thái trực quan (`LÊN LỊCH`, `ĐANG THI (Còn X phút)`, `ĐÃ KẾT THÚC`, `ĐÃ CÔNG BỐ ĐIỂM`).
+*   **Cơ chế Hết Giờ Tự Động (Auto-Termination):** Khi thời gian hiện tại vượt quá `session.endTime`, hệ thống tự động cập nhật `session.status = 'COMPLETED'` và `gradingStatus = 'AUTO_GRADED'`. Tuyệt đối không để ca thi mở vô thời hạn.
+*   **Tự Động Thu Bài Hàng Loạt (Auto-Submit):** Toàn bộ thí sinh còn lại chưa kịp nộp bài khi hết giờ sẽ được hệ thống tự động thu bài, chấm điểm máy trắc nghiệm và chuyển trạng thái sang `SUBMITTED`.
+*   **Nút Nghiệp Vụ Kết Thúc Ca Thi Thủ Công:** Cung cấp nút **"Kết Thúc Ca Thi & Đóng Buồng Thi"** trên cả `ExamSessions.tsx` và `LiveProctor.tsx` (gọi endpoint `POST /api/exam/sessions/:sessionId/end-session`), có hộp thoại xác nhận và phát sự kiện Socket.IO `session:ended`.
+*   **Màn hình Buồng Thi Đã Đóng (`TakeExam.tsx`):** Khi ca thi đã kết thúc, thí sinh truy cập sẽ nhận màn hình thông báo niêm phong buồng thi với thông tin chi tiết: Giờ kết thúc, SBD, Họ tên, MSSV, Điểm uy tín và xác nhận bài thi đã nộp an toàn, giấu toàn bộ nội dung câu hỏi đề thi (Zero-Knowledge).
+*   **Khắc Phục Lỗi Dữ Liệu API:** Đã sửa triệt để lỗi 404 `/api/campuses`, 500 `/api/departments` (bổ sung trường `members` và nạp model `Teacher`), 500 `fallback_session` (xử lý an toàn tra cứu ca thi mới nhất khi không truyền ID).

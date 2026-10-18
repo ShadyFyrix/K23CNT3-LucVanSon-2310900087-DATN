@@ -3203,22 +3203,81 @@ Hệ thống trao quyền cho Cán bộ coi thi / Trưởng điểm thi mở bà
 
 ---
 
-### 20.4. Danh Mục Cải Tiến Bảo Mật & Hoàn Thiện Giao Diện Làm Bài Đã Triển Khai
-1. **Sửa triệt để lỗi trừ điểm uy tín undefined & debounced penalty:**
-   - Khắc phục lỗi kiểm tra điều kiện trạng thái sinh viên trong `proctor.controller.js` (`IN_EXAM` vs `IN_PROGRESS`).
-   - Quy chuẩn bảng xử phạt vi phạm an ninh máy trạm: F12/DevTools (-30đ), Rời tab (-10đ), Thoát toàn màn hình (-10đ), Copy/Paste (-10đ), Chuột phải (-5đ).
-2. **Modal Cảnh Báo An Ninh Chống Gian Lận Toàn Màn Hình:**
-   - Kích hoạt modal cảnh báo nổi bật giữa màn hình với hiệu ứng âm thanh Web Audio API cảnh báo tần số cao.
-   - Hiển thị trực quan số điểm uy tín bị trừ và điểm uy tín còn lại, tự động đóng sau 8s.
-3. **Thiết Kế Lại Thẻ Thông Tin Thí Sinh Gọn Gàng:**
-   - Cấu trúc lưới 2 cột nhỏ gọn trên thanh điều khiển bài thi: SBD, Họ tên, MSSV, Lớp, Vị trí bàn (Dãy/Cột), Mã ca và Tên môn thi đầy đủ.
-4. **Chuẩn Hóa Chính Sách Giấu Điểm Thi & Đối Chiếu Đáp Án:**
-   - Mặc định sau khi nộp bài: Chỉ xuất **Phiếu Xác Nhận Nộp Bài Thi Chính Thức**.
-   - Điểm số chi tiết, kết quả đúng/sai và lời giải thích chỉ được công bố khi Giảng viên / Hội đồng phê duyệt (`gradingStatus === 'PUBLISHED'`).
+---
+
+## 21. QUẢN LÝ VÒNG ĐỜI CA THI (EXAM LIFECYCLE), TỰ ĐỘNG THU BÀI & ĐÓNG BUỒNG THI
+
+Nhằm khắc phục triệt để tình trạng ca thi bị mở vô thời hạn ("mở mãi à"), quản lý lịch thi thiếu rõ ràng và giải quyết bài toán: **Lúc nào hết giờ? Bài kết thúc thì như thế nào?**, hệ thống đã chuẩn hóa toàn bộ vòng đời ca thi theo quy trình 3 giai đoạn nghiêm ngặt:
+
+```
+[SCHEDULED: Lên Lịch]
+       │ (now >= startTime)
+       ▼
+[IN_PROGRESS: Đang Diễn Ra]
+       │
+       ├─► Điều kiện 1: Hết giờ theo lịch (now >= endTime hoặc startTime + durationMinutes)
+       │         ──► TỰ ĐỘNG KẾT THÚC (Auto-End Session)
+       │
+       └─► Điều kiện 2: Giám thị / Khảo thí bấm "Kết thúc ca thi & Đóng buồng thi"
+                 ──► THỦ CÔNG KẾT THÚC (POST /api/exam/sessions/:sessionId/end-session)
+                         │
+                         ▼
+             [COMPLETED: Đã Kết Thúc & Đóng Phòng]
+                         │
+                         ├─ 1. Tự động thu toàn bộ bài thi chưa nộp (Auto-Submit)
+                         ├─ 2. Tự động chấm điểm trắc nghiệm (Auto-Grade)
+                         ├─ 3. Chuyển trạng thái chấm sang 'AUTO_GRADED'
+                         ├─ 4. Khóa quyền làm bài & hiển thị Màn hình Niêm phong buồng thi
+                         └─ 5. Phát tín hiệu Socket.IO 'session:ended' tới toàn bộ thí sinh & giám thị
+```
+
+### 21.1. Ba Giai Đoạn Vòng Đời Ca Thi (Lifecycle States)
+1. **`SCHEDULED` (Lên Lịch / Sắp Bắt Đầu):**
+   - Điều kiện: `now < session.startTime`.
+   - Cơ chế bảo vệ: Buồng thi chưa mở, đề thi được bảo vệ tuyệt đối theo chuẩn **Zero-Knowledge** (`questions: []`).
+   - Phía Thí sinh: Hiển thị giao diện Phòng chờ với Đồng hồ đếm ngược Flip Clock (`HH:MM:SS`), thẻ thông tin thí sinh và màn soi camera.
+2. **`IN_PROGRESS` (Đang Thi / Buồng Thi Đang Mở):**
+   - Điều kiện: `now >= session.startTime && now <= session.endTime && session.status !== 'COMPLETED'`.
+   - Cơ chế: Cung cấp đề thi đã khử đáp án đúng (`getSanitizedQuestions`), kích hoạt giám sát AI webcam và chống gian lận đa tầng.
+   - Thẻ ca thi hiển thị: Badge xanh nhấp nháy `ĐANG THI (Còn X phút)`, dải giờ thi chi tiết `HH:mm - HH:mm • DD/MM/YYYY`.
+3. **`COMPLETED` (Đã Kết Thúc / Buồng Thi Đã Đóng & Niêm Phong):**
+   - Kích hoạt khi:
+     - **Tự động theo thời gian:** Ngay khi `now > session.endTime`, API `getExamSessions` hoặc `getSanitizedQuestions` tự động đánh giá và cập nhật trạng thái `session.status = 'COMPLETED'`. Ca thi **tuyệt đối không bao giờ mở mãi**.
+     - **Thủ công bởi Cán bộ coi thi:** Nút **"Kết Thúc Ca Thi & Đóng Buồng Thi"** trên `ExamSessions.tsx` và `LiveProctor.tsx` cho phép kết thúc sớm hoặc đóng ca thi ngay khi toàn bộ thí sinh đã hoàn thành.
+
+### 21.2. Nghiệp Vụ Khi Ca Thi Kết Thúc ("Bài Kết Thúc Thì Như Thế Nào?")
+Khi ca thi chuyển sang `COMPLETED`:
+1. **Tự động thu bài hàng loạt (Auto-Submission):**
+   - Hệ thống quét toàn bộ thí sinh trong ca thi đang ở trạng thái `IN_EXAM`, `ASSIGNED` hoặc `CHECKED_IN` mà chưa bấm nộp bài.
+   - Lấy toàn bộ đáp án nháp đã auto-save và tạo/cập nhật bản ghi `ExamSubmission`.
+   - Cập nhật trạng thái thí sinh `ExamStudent.status = 'SUBMITTED'`, lưu thời điểm `submittedAt = now`.
+2. **Tự động chấm điểm máy trắc nghiệm (Auto-Grading Engine):**
+   - Chấm điểm từng câu hỏi trắc nghiệm khách quan (`MULTIPLE_CHOICE`), tính tổng điểm `autoGradeTotal`, đếm số câu đúng, sai, bỏ qua.
+   - Gán `examStudent.autoGradeScore = autoGradeTotal` và `examStudent.adjustedScore = autoGradeTotal`.
+   - Cập nhật trạng thái chấm của ca thi sang `gradingStatus = 'AUTO_GRADED'`.
+3. **Khóa quyền làm bài & Hiển thị Màn hình Buồng Thi Đã Đóng (`TakeExam.tsx`):**
+   - Thí sinh vào sau khi ca thi kết thúc sẽ nhận `isSessionEnded: true` và `questions: []`.
+   - Giao diện chuyển sang màn hình **"Buồng Thi Đã Đóng & Niêm Phong Bài Thi"**:
+     - Badge xác nhận: `✓ BÀI LÀM ĐÃ ĐƯỢC THU NHẬN AN TOÀN`.
+     - Hiển thị giờ đóng buồng thi, SBD, Họ tên, MSSV, Điểm uy tín kết thúc.
+     - Nút điều hướng: `Xem Trạng Thái Điểm` và `Quay Lại Danh Sách Ca Thi`.
+4. **Đồng bộ Realtime Qua Socket.IO:**
+   - Server phát sự kiện `session:ended` kèm thông điệp đóng buồng thi.
+   - Toàn bộ máy trạm thí sinh đang mở bài thi sẽ lập tức dừng đếm ngược, hiển thị thông báo thu bài và chuyển sang màn hình kết thúc.
+   - Màn hình Giám thị `LiveProctor.tsx` chuyển trạng thái phòng sang `Buồng Thi Đã Đóng` và mở nút chuyển nhanh sang `Rà Soát Điểm Ngay`.
+
+### 21.3. Khắc Phục Triệt Để Các Lỗi Dữ Liệu & Endpoint Tuyến Đường
+1. **Lỗi 404 Tuyến đường Cơ sở (`/api/campuses`):**
+   - Đã khai báo và mount `campus.route.js` vào `server/routes/index.js` tại cả 2 đường dẫn `/campuses` và `/campus`.
+2. **Lỗi 500 Tuyến đường Khoa (`/api/departments`):**
+   - Bổ sung trường `members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Teacher' }]` vào `DepartmentSchema`.
+   - Đăng ký `teacher.model.js` trong `department.service.js` để triệt tiêu lỗi `MissingSchemaError`.
+3. **Lỗi 500 Khi Truy Cập `fallback_session`:**
+   - Tại `proctor.controller.js` và `grading.controller.js`: Xử lý an toàn khi `sessionId === 'fallback_session'` hoặc không phải `ObjectId` hợp lệ, tự động tra cứu ca thi mới nhất trên hệ thống, ngăn chặn lỗi `CastError`.
 
 ---
 
-*Blueprint version 3.1 — Cập nhật: 2026-10-18*  
+*Blueprint version 3.2 — Cập nhật: 2026-10-18*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
 *Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/package.json`, `examguard-ai/requirements.txt`, `run_system.bat`*
 

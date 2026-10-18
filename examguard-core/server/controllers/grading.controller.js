@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
 const ExamSession = require('../models/examSession.model');
 const ExamPaper = require('../models/examPaper.model');
+const ExamRoom = require('../models/examRoom.model');
 const ExamStudent = require('../models/examStudent.model');
 const ExamSubmission = require('../models/examSubmission.model');
+const Course = require('../models/course.model');
+const Student = require('../models/student.model');
+const Teacher = require('../models/teacher.model');
+const User = require('../models/user.model');
 
 /**
  * =========================================================================
@@ -129,21 +134,32 @@ exports.getReviewWorkspace = async (req, res) => {
   try {
     const { sessionId } = req.params;
 
-    const session = await ExamSession.findById(sessionId)
-      .populate('subject', 'name courseCode')
-      .populate('room', 'code name capacity')
-      .populate('examPaper');
-
+    let session = null;
+    if (sessionId && mongoose.Types.ObjectId.isValid(sessionId)) {
+      session = await ExamSession.findById(sessionId)
+        .populate('subject', 'name courseCode')
+        .populate('room', 'code name capacity')
+        .populate('examPaper');
+    }
     if (!session) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+      session = await ExamSession.findOne()
+        .sort({ createdAt: -1 })
+        .populate('subject', 'name courseCode')
+        .populate('room', 'code name capacity')
+        .populate('examPaper');
     }
 
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Chưa có ca thi nào trên hệ thống!' });
+    }
+
+    const realSessionId = session._id;
     const examPaper = session.examPaper;
-    const students = await ExamStudent.find({ session: sessionId })
+    const students = await ExamStudent.find({ session: realSessionId })
       .populate('student', 'name studentCode')
       .sort({ blindCode: 1 });
 
-    const submissions = await ExamSubmission.find({ session: sessionId });
+    const submissions = await ExamSubmission.find({ session: realSessionId });
     const submissionMap = new Map();
     submissions.forEach(s => submissionMap.set(s.examStudent.toString(), s));
 

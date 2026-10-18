@@ -419,6 +419,24 @@ export default function LiveProctor() {
     }
   };
 
+  // Hành động: Kết thúc ca thi & Đóng buồng thi
+  const handleEndSession = async () => {
+    if (!session?._id) return;
+    if (!window.confirm(`XÁC NHẬN KẾT THÚC CA THI VÀ ĐÓNG BUỒNG THI?\n\n- Toàn bộ bài làm của thí sinh sẽ được tự động thu nhận.\n- Hệ thống tự động tính điểm trắc nghiệm.\n- Buồng thi sẽ được niêm phong để chuyển sang hội đồng rà soát & duyệt điểm.`)) return;
+    setActionLoading(true);
+    try {
+      const res = await apiClient.post(`/api/exam/sessions/${session._id}/end-session`);
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Đã kết thúc ca thi và đóng buồng thi thành công!', { icon: '🏁' });
+        fetchRoomState();
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Lỗi khi kết thúc ca thi');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
@@ -498,6 +516,22 @@ export default function LiveProctor() {
               {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
               <span>{soundEnabled ? 'Chuông: Bật' : 'Chuông: Tắt'}</span>
             </button>
+
+            {session?.status === 'COMPLETED' ? (
+              <div className="px-3.5 py-2 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-sm">
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Buồng Thi Đã Đóng</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleEndSession}
+                disabled={actionLoading}
+                className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                <span>Kết Thúc Ca Thi & Đóng Phòng</span>
+              </button>
+            )}
 
             <button
               onClick={() => navigate(`/grading-review/${session?._id}`)}
