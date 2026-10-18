@@ -87,6 +87,7 @@ interface ExamData {
     name: string;
     studentCode: string;
     email: string;
+    className?: string;
   };
   session: {
     id: string;
@@ -154,6 +155,24 @@ export default function TakeExam() {
   const [directWarning, setDirectWarning] = useState<{ message: string; timestamp: Date } | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
   const [suspendReason, setSuspendReason] = useState('');
+
+  // Cảnh báo an ninh chống gian lận nổi bật toàn màn hình
+  const [securityAlert, setSecurityAlert] = useState<{
+    eventType: string;
+    title: string;
+    message: string;
+    penalty: number;
+    newScore: number;
+  } | null>(null);
+
+  // Tự động đóng cảnh báo an ninh sau 8 giây nếu thí sinh không bấm xác nhận
+  useEffect(() => {
+    if (!securityAlert) return;
+    const timer = setTimeout(() => {
+      setSecurityAlert(null);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [securityAlert]);
 
   // Bộ phát âm thanh tổng hợp (Web Audio API - không phụ thuộc file ngoài)
   const playQuizSound = (type: 'select' | 'flag' | 'warning' | 'finish') => {
@@ -267,23 +286,40 @@ export default function TakeExam() {
         eventType,
         details
       });
-      if (res.data?.success && !res.data.debounced) {
-        if (res.data.trustScore !== undefined) {
-          setTrustScore(res.data.trustScore);
+      if (res.data?.success) {
+        const penalty = Number(res.data.penalty ?? 0);
+        const updatedScore = res.data.trustScore !== undefined 
+          ? Number(res.data.trustScore) 
+          : Math.max(0, trustScore - penalty);
+        
+        setTrustScore(updatedScore);
+
+        if (!res.data.debounced && penalty > 0) {
+          playQuizSound('warning');
+
+          // Kích hoạt Modal Cảnh báo An ninh Toàn màn hình nổi bật
+          setSecurityAlert({
+            eventType,
+            title: res.data.title || 'CẢNH BÁO VI PHẠM QUY CHẾ THI',
+            message: res.data.message || 'Phát hiện hành vi không hợp lệ trên máy làm bài!',
+            penalty,
+            newScore: updatedScore
+          });
+
+          toast.error(`CẢNH BÁO AN NINH: ${res.data.title || eventType} (-${penalty}đ)`, {
+            duration: 6000,
+            icon: '🚨'
+          });
+
+          setAiLogs(prev => [
+            {
+              time: new Date().toLocaleTimeString('vi-VN'),
+              text: `${eventType}: ${res.data.title || res.data.message} (-${penalty}đ)`,
+              type: 'warn'
+            },
+            ...prev.slice(0, 15)
+          ]);
         }
-        playQuizSound('warning');
-        toast.error(`CẢNH BÁO AN NINH: ${res.data.message} (-${res.data.penalty}đ)`, {
-          duration: 5000,
-          icon: '🚨'
-        });
-        setAiLogs(prev => [
-          {
-            time: new Date().toLocaleTimeString('vi-VN'),
-            text: `${eventType}: ${res.data.message} (-${res.data.penalty}đ)`,
-            type: 'warn'
-          },
-          ...prev.slice(0, 10)
-        ]);
       }
     } catch (_) {}
   };
@@ -2062,21 +2098,52 @@ export default function TakeExam() {
                 </p>
               </div>
 
-              {/* 4. THÔNG TIN THÍ SINH & CA THI */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3.5 text-xs space-y-1.5">
-                <div className="flex justify-between py-1 border-b border-slate-800/60">
-                  <span className="text-slate-500">Môn thi:</span>
-                  <span className="text-slate-200 font-medium truncate max-w-[150px]">{examData.session.title}</span>
+              {/* 4. THÔNG TIN THÍ SINH & CA THI (COMPACT & COMPLETE) */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-xs space-y-2 shadow-lg">
+                {/* Header: Candidate Name & SBD */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                  <div className="min-w-0 pr-2">
+                    <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Thí sinh</span>
+                    <span className="text-white font-bold text-sm truncate block">
+                      {examData.student.name || 'Lục Văn Sơn'}
+                    </span>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Số báo danh</span>
+                    <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-bold text-xs rounded-lg inline-block">
+                      {examData.examStudent.candidateCode}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-800/60">
-                  <span className="text-slate-500">Vị trí ngồi:</span>
-                  <span className="text-cyan-400 font-bold">
-                    {examData.session.roomCode} — Dãy {examData.examStudent.seatRow}, Cột {examData.examStudent.seatCol}
+
+                {/* 2-Column Academic & Exam Info Grid */}
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px]">Mã sinh viên</span>
+                    <span className="text-slate-200 font-mono font-semibold">{examData.student.studentCode}</span>
+                  </div>
+                  <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px]">Lớp học</span>
+                    <span className="text-slate-200 font-medium truncate block">{examData.student.className || 'K23CNT3'}</span>
+                  </div>
+                  <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px]">Phòng thi & Vị trí</span>
+                    <span className="text-emerald-400 font-bold">
+                      {examData.session.roomCode} • D{examData.examStudent.seatRow}-C{examData.examStudent.seatCol}
+                    </span>
+                  </div>
+                  <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px]">Mã ca thi</span>
+                    <span className="text-slate-300 font-mono text-[10px] truncate block">{examData.session.code}</span>
+                  </div>
+                </div>
+
+                {/* Full Subject Title */}
+                <div className="bg-slate-950/40 px-2.5 py-1.5 rounded-xl border border-slate-800/40 flex items-center justify-between">
+                  <span className="text-slate-400 text-[10px] shrink-0">Học phần:</span>
+                  <span className="text-slate-200 font-medium text-[11px] truncate ml-2 text-right" title={examData.session.title}>
+                    {examData.session.title}
                   </span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Mã sinh viên:</span>
-                  <span className="text-slate-200 font-mono">{examData.student.studentCode}</span>
                 </div>
               </div>
 
@@ -2090,7 +2157,7 @@ export default function TakeExam() {
                   {aiLogs.map((log, i) => (
                     <div key={i} className="flex items-start space-x-1.5 text-slate-400">
                       <span className="font-mono text-slate-600">{log.time}</span>
-                      <span className={log.type === 'warn' ? 'text-amber-400' : log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}>
+                      <span className={log.type === 'warn' ? 'text-amber-400 font-medium' : log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}>
                         {log.text}
                       </span>
                     </div>
@@ -2116,7 +2183,7 @@ export default function TakeExam() {
 
             <h3 className="text-lg font-bold text-center text-white">Xác nhận Nộp Bài Quiz?</h3>
             <p className="text-xs text-slate-400 text-center mt-1">
-              Hệ thống ExamGuard AI sẽ tự động chấm điểm bài làm của bạn ngay tức thì.
+              Bài thi sẽ được ghi nhận an toàn trên máy chủ. Điểm số chính thức và đáp án sẽ được hiển thị khi Giảng viên công bố kết quả.
             </p>
 
             <div className="bg-slate-950 rounded-2xl p-4 my-4 space-y-2 text-xs border border-slate-800/80">
@@ -2162,6 +2229,72 @@ export default function TakeExam() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL CẢNH BÁO AN NINH CHỐNG GIAN LẬN NỔI BẬT TOÀN MÀN HÌNH ── */}
+      {securityAlert && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl shadow-red-950/60 animate-in zoom-in-95 space-y-4 text-center">
+            {/* Warning Shield Pulse */}
+            <div className="w-16 h-16 rounded-3xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center border border-red-500/40 shadow-lg shadow-red-500/20">
+              <ShieldAlert className="w-9 h-9 animate-pulse" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-block px-3 py-0.5 bg-red-500/20 border border-red-500/40 text-red-400 rounded-full text-[11px] font-black uppercase tracking-wider">
+                🚨 CẢNH BÁO VI PHẠM QUY CHẾ THI
+              </span>
+              <h3 className="text-xl font-extrabold text-white">
+                {securityAlert.title}
+              </h3>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-red-500/30 text-red-200 text-xs sm:text-sm font-medium">
+              "{securityAlert.message}"
+            </div>
+
+            {/* Penalty & Trust Score Card */}
+            <div className="grid grid-cols-2 gap-2 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 text-xs">
+              <div className="text-center p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                <span className="text-slate-400 block text-[11px]">Mức phạt trừ điểm</span>
+                <span className="text-xl font-black text-red-400">
+                  -{securityAlert.penalty} điểm
+                </span>
+              </div>
+              <div className="text-center p-2 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-slate-400 block text-[11px]">Điểm uy tín còn lại</span>
+                <span className={`text-xl font-black ${
+                  securityAlert.newScore >= 80 ? 'text-emerald-400' : securityAlert.newScore >= 50 ? 'text-amber-400' : 'text-red-400'
+                }`}>
+                  {securityAlert.newScore} / 100
+                </span>
+              </div>
+            </div>
+
+            {/* Serious Rule Explanation */}
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[11px] text-amber-300 text-left space-y-1 leading-relaxed">
+              <p className="font-bold flex items-center space-x-1 text-amber-200">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                <span>Quy chế An ninh Khảo thí Đại học:</span>
+              </p>
+              <p className="text-slate-300">
+                Mọi hành vi chuyển tab, mở công cụ DevTools, hoặc rời khỏi tầm mắt webcam đều được AI ghi nhận và gửi trực tiếp đến Cán bộ Coi thi.
+              </p>
+              <p className="text-red-400 font-semibold">
+                • Nếu điểm uy tín dưới 50đ: Chuyển sang diện NGHI VẤN GIAN LẬN.<br />
+                • Nếu điểm uy tín về 0đ: HỆ THỐNG TỰ ĐỘNG KHÓA BÀI & ĐÌNH CHỈ THI!
+              </p>
+            </div>
+
+            <button
+              onClick={() => setSecurityAlert(null)}
+              className="w-full py-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-red-600/30 uppercase tracking-wider"
+            >
+              TÔI ĐÃ HIỂU VÀ CAM KẾT TUÂN THỦ QUY CHẾ
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL CẢNH BÁO TRỰC TIẾP TỪ GIÁM THỊ (SOCKET.IO) ── */}
       {directWarning && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">

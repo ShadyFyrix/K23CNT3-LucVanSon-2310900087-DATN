@@ -64,33 +64,56 @@ export default function ExamResult() {
 
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ResultData | null>(null);
-  const [isPublished, setIsPublished] = useState(true);
+  const [isPublished, setIsPublished] = useState(false);
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealReason, setAppealReason] = useState('');
 
-  useEffect(() => {
-    async function fetchResult() {
-      try {
-        setLoading(true);
-        const targetId = sessionStudentId || 'fallback_student';
-        const res = await apiClient.get(`/api/exam/results/${targetId}`);
-        if (res.data) {
-          setIsPublished(res.data.isPublished !== false);
-          if (res.data.isPublished !== false && res.data.data) {
-            setResult(res.data.data);
-          } else {
-            setResult(res.data as any);
-          }
+  const fetchResult = async () => {
+    try {
+      setLoading(true);
+      const targetId = sessionStudentId || 'fallback_student';
+      const res = await apiClient.get(`/api/exam/results/${targetId}`);
+      if (res.data) {
+        const published = res.data.isPublished === true;
+        setIsPublished(published);
+        if (published && res.data.data) {
+          setResult(res.data.data);
+        } else {
+          setResult(res.data as any);
         }
-      } catch (err: any) {
-        console.error('Lỗi tải kết quả:', err);
-        toast.error('Không thể tải kết quả thi');
-      } finally {
-        setLoading(false);
       }
+    } catch (err: any) {
+      console.error('Lỗi tải kết quả:', err);
+      toast.error('Không thể tải kết quả thi');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchResult();
   }, [sessionStudentId]);
+
+  const handleRefresh = async () => {
+    toast.loading('Đang kiểm tra trạng thái công bố...', { id: 'check_pub' });
+    try {
+      const targetId = sessionStudentId || 'fallback_student';
+      const res = await apiClient.get(`/api/exam/results/${targetId}`);
+      if (res.data) {
+        const published = res.data.isPublished === true;
+        setIsPublished(published);
+        if (published && res.data.data) {
+          setResult(res.data.data);
+          toast.success('Điểm số và đáp án đã được Giảng viên công bố!', { id: 'check_pub' });
+        } else {
+          setResult(res.data as any);
+          toast('Ca thi đang được Giảng viên rà soát. Chưa công bố kết quả.', { id: 'check_pub', icon: '🔒' });
+        }
+      }
+    } catch (_) {
+      toast.error('Không thể kiểm tra trạng thái lúc này', { id: 'check_pub' });
+    }
+  };
 
   const handleSendAppeal = () => {
     if (!appealReason.trim()) {
@@ -105,47 +128,105 @@ export default function ExamResult() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-3"></div>
+        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mb-3"></div>
         <p className="text-slate-400 font-medium">Đang đối chiếu kết quả bài thi...</p>
       </div>
     );
   }
 
-  // TRƯỜNG HỢP CHƯA CÔNG BỐ ĐIỂM
+  // TRƯỜNG HỢP CHƯA CÔNG BỐ ĐIỂM (THEO QUY CHẾ: CHỈ SHOW KHI GIẢNG VIÊN BẤM CÔNG BỐ)
   if (!isPublished) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center shadow-2xl animate-in zoom-in-95">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-5 shadow-lg">
-            <Lock className="w-8 h-8" />
+        <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl animate-in zoom-in-95">
+          {/* Status Icon Badges */}
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center">
+              <Lock className="w-4 h-4" />
+            </div>
           </div>
 
-          <h2 className="text-xl font-bold text-white mb-2">Bài thi Đang Được Rà Soát</h2>
+          <div className="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-[11px] font-bold uppercase tracking-wider mb-3">
+            BẢO MẬT KHẢO THÍ • CHỜ CÔNG BỐ KẾT QUẢ
+          </div>
+
+          <h2 className="text-2xl font-bold text-white mb-2">Bài Thi Đã Nộp Thành Công!</h2>
           <p className="text-xs text-slate-400 leading-relaxed mb-6">
-            Hệ thống ExamGuard AI đã hoàn tất chấm tự động và đang trong giai đoạn rà soát bảo mật bởi Giảng viên & Ban Khảo thí.
+            Hệ thống ExamGuard AI đã ghi nhận toàn bộ bài làm của bạn an toàn trên máy chủ. Theo quy chế khảo thí của Nhà trường, <b>điểm số chính thức và đáp án chi tiết chỉ được hiển thị sau khi Giảng viên / Hội đồng Khảo thí phê duyệt và CÔNG BỐ KẾT QUẢ</b>.
           </p>
 
-          <div className="bg-slate-950 rounded-xl p-4 text-xs text-left space-y-2 mb-6 border border-slate-800/80">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Môn thi:</span>
-              <span className="text-slate-300 font-medium">{result?.session?.title || 'Kỹ thuật lập trình C'}</span>
+          {/* Phiếu Biên Nhận Nộp Bài (Official Receipt) */}
+          <div className="bg-slate-950 rounded-2xl p-4 text-xs text-left space-y-2.5 mb-6 border border-slate-800">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-800/80 pb-1.5 flex items-center justify-between">
+              <span>Xác nhận Nộp Bài Thi Trực Tuyến</span>
+              <span className="text-emerald-400 font-mono">ExamGuard Verified</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Thí sinh:</span>
-              <span className="text-cyan-400 font-bold">{result?.student?.name || 'Thí sinh'}</span>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Học phần:</span>
+              <span className="text-slate-200 font-semibold text-right max-w-[240px] truncate">
+                {result?.session?.title || 'Kỹ thuật lập trình C'}
+              </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Điểm uy tín:</span>
-              <span className="text-emerald-400 font-bold">{result?.student?.trustScore || 100} / 100</span>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Mã ca thi:</span>
+              <span className="text-slate-300 font-mono font-medium">
+                {result?.session?.code || 'CA-20261015-01'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Thí sinh:</span>
+              <span className="text-white font-bold">{result?.student?.name || 'Lục Văn Sơn'}</span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Số báo danh (SBD):</span>
+              <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-bold rounded">
+                {result?.student?.candidateCode || '20261015-019'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Thời gian nộp:</span>
+              <span className="text-slate-300 font-mono">
+                {result?.student?.submittedAt ? new Date(result.student.submittedAt).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN')}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-slate-800/80 pt-2">
+              <span className="text-slate-400">Điểm uy tín ca thi:</span>
+              <span className="text-emerald-400 font-bold">
+                {result?.student?.trustScore ?? 100} / 100 • Đạt chuẩn
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Trạng thái chấm:</span>
+              <span className="text-amber-400 font-medium">
+                Đã nộp • Chờ Giảng viên duyệt & công bố
+              </span>
             </div>
           </div>
 
-          <button
-            onClick={() => navigate('/')}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
-          >
-            Trở về Trang chủ
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              className="w-full sm:flex-1 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-cyan-500/20"
+            >
+              🔄 Kiểm tra Trạng thái Công bố
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full sm:flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+            >
+              Trở về Trang chủ
+            </button>
+          </div>
         </div>
       </div>
     );

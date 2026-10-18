@@ -494,56 +494,122 @@ exports.logAntiCheatEvent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Thí sinh không tồn tại!' });
     }
 
-    if (examStudent.status !== 'IN_PROGRESS') {
-      return res.json({ success: true, message: 'Thí sinh hiện không trong trạng thái làm bài.' });
+    // Chỉ chặn nếu thí sinh ĐÃ NỘP BÀI hoặc ĐÃ BỊ ĐÌNH CHỈ
+    if (examStudent.status === 'SUBMITTED' || examStudent.status === 'SUSPENDED') {
+      return res.json({ 
+        success: false, 
+        message: 'Thí sinh đã nộp bài hoặc bị đình chỉ thi.',
+        trustScore: examStudent.trustScore,
+        penalty: 0
+      });
     }
 
-    // Debounce check 15s cho cùng loại sự kiện trình duyệt
-    const fifteenSecAgo = new Date(Date.now() - 15 * 1000);
+    // Bảng quy chuẩn vi phạm chống gian lận & mức trừ điểm uy tín chuẩn xác
+    const ANTI_CHEAT_RULES = {
+      'DEVTOOLS_OPEN': {
+        severity: 'CRITICAL',
+        penalty: 30,
+        title: 'Mở công cụ lập trình Developer Tools (F12/Inspect)',
+        message: 'Phát hiện hành vi mở F12 hoặc kiểm tra mã nguồn trang thi'
+      },
+      'TAB_SWITCH': {
+        severity: 'MEDIUM',
+        penalty: 10,
+        title: 'Rời màn hình làm bài / Chuyển Tab',
+        message: 'Thí sinh chuyển sang tab hoặc ứng dụng khác ngoài phòng thi'
+      },
+      'COPY_PASTE': {
+        severity: 'MEDIUM',
+        penalty: 10,
+        title: 'Sao chép / Dán dữ liệu trái phép',
+        message: 'Phát hiện thao tác Copy / Paste trong thời gian làm bài'
+      },
+      'FULLSCREEN_EXIT': {
+        severity: 'MEDIUM',
+        penalty: 10,
+        title: 'Thoát chế độ toàn màn hình',
+        message: 'Thí sinh thoát khỏi giao diện thi bảo mật'
+      },
+      'RIGHT_CLICK': {
+        severity: 'LOW',
+        penalty: 5,
+        title: 'Chuột phải bị chặn',
+        message: 'Thao tác menu ngữ cảnh bị vô hiệu hóa theo quy chế'
+      },
+      'LOOK_AWAY': {
+        severity: 'LOW',
+        penalty: 5,
+        title: 'Nhìn lệch khỏi màn hình quá lâu',
+        message: 'Camera AI phát hiện thí sinh liếc nhìn ra ngoài màn hình'
+      },
+      'NO_FACE': {
+        severity: 'MEDIUM',
+        penalty: 10,
+        title: 'Rời khỏi vị trí ngồi thi',
+        message: 'Không phát hiện khuôn mặt thí sinh trước webcam'
+      },
+      'MULTI_FACE': {
+        severity: 'HIGH',
+        penalty: 15,
+        title: 'Phát hiện nhiều người trước camera',
+        message: 'Có người lạ xuất hiện trong khu vực làm bài của thí sinh'
+      },
+      'PHONE_DETECTED': {
+        severity: 'HIGH',
+        penalty: 20,
+        title: 'Phát hiện sử dụng điện thoại di động',
+        message: 'Camera AI phát hiện vật thể nghi vấn điện thoại trong phòng thi'
+      },
+      'IMPERSONATION_DETECTED': {
+        severity: 'CRITICAL',
+        penalty: 50,
+        title: 'Nghi vấn tráo người thi hộ',
+        message: 'Khuôn mặt trước camera không khớp với Vector Căn cước Gốc'
+      }
+    };
+
+    const rule = ANTI_CHEAT_RULES[eventType] || {
+      severity: 'LOW',
+      penalty: 5,
+      title: 'Hành vi bất thường trên máy thi',
+      message: 'Hệ thống AI ghi nhận thao tác không hợp lệ'
+    };
+
+    // Debounce check 6s cho cùng loại sự kiện để tránh spam lặp lại trong 1 giây
+    const sixSecAgo = new Date(Date.now() - 6 * 1000);
     const recentEvent = await ExamViolation.findOne({
       examStudent: examStudent._id,
       type: eventType,
-      createdAt: { $gte: fifteenSecAgo }
+      createdAt: { $gte: sixSecAgo }
     });
 
     if (recentEvent) {
       return res.json({
         success: true,
         debounced: true,
-        message: 'Sự kiện đã được ghi nhận gần đây.',
+        penalty: 0,
+        title: rule.title,
+        message: `Hành vi "${rule.title}" đã được ghi nhận. Vui lòng tập trung làm bài!`,
         trustScore: examStudent.trustScore
       });
     }
 
-    let severity = 'LOW';
-    let penalty = 5;
-    let message = 'Hành vi bất thường trên trình duyệt';
+    let severity = rule.severity;
+    let penalty = rule.penalty;
+    let message = rule.message;
 
-    try {
-      const evalRes = await faceAiService.evaluateAntiCheat({
-        sessionId: examStudent.session._id.toString(),
-        studentId: examStudent.student._id.toString(),
-        eventType,
-        details
-      });
-      severity = evalRes.severity || 'LOW';
-      penalty = evalRes.suggested_penalty || 5;
-      message = evalRes.message || message;
-    } catch (aiErr) {
-      const fallbackMap = {
-        'DEVTOOLS_OPEN': { severity: 'CRITICAL', penalty: 30 },
-        'TAB_SWITCH': { severity: 'MEDIUM', penalty: 10 },
-        'COPY_PASTE': { severity: 'MEDIUM', penalty: 10 },
-        'FULLSCREEN_EXIT': { severity: 'MEDIUM', penalty: 10 },
-        'RIGHT_CLICK': { severity: 'LOW', penalty: 5 }
-      };
-      const fb = fallbackMap[eventType] || { severity: 'LOW', penalty: 5 };
-      severity = fb.severity;
-      penalty = fb.penalty;
+    // Tính toán điểm uy tín mới
+    const currentScore = examStudent.trustScore !== undefined ? examStudent.trustScore : 100;
+    const newScore = Math.max(0, currentScore - penalty);
+    examStudent.trustScore = newScore;
+
+    // Tự động chuyển trạng thái nếu điểm uy tín tụt quá thấp
+    if (newScore === 0) {
+      examStudent.status = 'SUSPENDED';
+    } else if (newScore < 50 && examStudent.status !== 'SUSPENDED') {
+      examStudent.status = 'SUSPICIOUS';
     }
 
-    const newScore = Math.max(0, examStudent.trustScore - penalty);
-    examStudent.trustScore = newScore;
     await examStudent.save();
 
     const violation = await ExamViolation.create({
@@ -569,6 +635,7 @@ exports.logAntiCheatEvent = async (req, res) => {
       severity,
       penalty,
       newTrustScore: newScore,
+      title: rule.title,
       message,
       createdAt: violation.createdAt
     };
@@ -577,16 +644,19 @@ exports.logAntiCheatEvent = async (req, res) => {
     socketService.emitStudentUpdate(examStudent.session._id, {
       examStudentId: examStudent._id,
       candidateCode: examStudent.candidateCode,
-      trustScore: newScore
+      trustScore: newScore,
+      status: examStudent.status
     });
 
     return res.json({
       success: true,
+      debounced: false,
       violationId: violation._id,
       eventType,
       severity,
       penalty,
       trustScore: newScore,
+      title: rule.title,
       message
     });
   } catch (error) {

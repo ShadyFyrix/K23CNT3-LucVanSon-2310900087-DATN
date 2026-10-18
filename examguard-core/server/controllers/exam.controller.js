@@ -681,19 +681,21 @@ exports.getSanitizedQuestions = async (req, res) => {
     if (mongoose.Types.ObjectId.isValid(sessionStudentId)) {
       examStudent = await ExamStudent.findById(sessionStudentId)
         .populate('session')
-        .populate('student');
+        .populate({ path: 'student', populate: { path: 'class' } });
     } else {
       examStudent = await ExamStudent.findOne()
         .sort({ createdAt: -1 })
         .populate('session')
-        .populate('student');
+        .populate({ path: 'student', populate: { path: 'class' } });
     }
 
     if (!examStudent) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin thí sinh ca thi!' });
     }
 
-    const session = await ExamSession.findById(examStudent.session._id).populate('room');
+    const session = await ExamSession.findById(examStudent.session._id)
+      .populate('room')
+      .populate('subject');
     const examPaper = await ExamPaper.findById(session.examPaper);
 
     if (!examPaper) {
@@ -744,23 +746,25 @@ exports.getSanitizedQuestions = async (req, res) => {
           candidateCode: examStudent.candidateCode,
           seatRow: examStudent.seatRow,
           seatCol: examStudent.seatCol,
-          trustScore: examStudent.trustScore,
+          trustScore: examStudent.trustScore !== undefined ? examStudent.trustScore : 100,
           startedAt: examStudent.startedAt,
           extraTimeMinutes: examStudent.extraTimeMinutes
         },
         student: {
           id: examStudent.student._id,
-          name: examStudent.student.name,
+          name: examStudent.student.fullName || examStudent.student.name || 'Lục Văn Sơn',
           studentCode: examStudent.student.studentCode,
-          email: examStudent.student.email
+          email: examStudent.student.email,
+          className: examStudent.student.class?.name || examStudent.student.class?.code || 'K23CNT3'
         },
         session: {
           id: session._id,
           code: session.code,
           title: session.title,
+          subjectName: session.subject?.name || session.title,
           durationMinutes: session.durationMinutes + examStudent.extraTimeMinutes,
           roomCode: session.room?.code || 'P302',
-          roomName: session.room?.name || 'Phòng thi'
+          roomName: session.room?.name || 'Phòng P302'
         },
         examPaper: {
           id: examPaper._id,
