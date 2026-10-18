@@ -25,6 +25,8 @@
 15. [Luồng Quản lý Phân cấp Tổ chức: Khoa — Khóa học — Lớp — Sinh viên & Giảng viên](#15-luồng-quản-lý-phân-cấp-tổ-chức-khoa--khóa-học--lớp--sinh-viên--giảng-viên)
 16. [API Contracts & Dữ liệu: Tự động Chấm điểm, Rà soát, Phê duyệt & Công bố Đáp án](#16-api-contracts--dữ-liệu-tự-động-chấm-điểm-rà-soát-phê-duyệt--công-bố-đáp-án)
 17. [Nâng cấp Hệ thống Giám sát Phòng thi: Socket.IO Realtime, Face AI 3D Pose & Chống Gian lận Trình duyệt](#17-nâng-cấp-hệ-thống-giám-sát-phòng-thi-socketio-face-ai-3d-pose--anti-cheat)
+18. [Kiến trúc Đề thi Đa dạng: Đề thi Hỗn hợp, Đề theo File & Quy chế Chấm Đa đáp án](#18-kiến-trúc-đề-thi-đa-dạng-đề-thi-hỗn-hợp-trắc-nghiệm--tự-luận-đề-theo-file--quy-chế-chấm-đa-đáp-án-multi-select--alternative-keys)
+19. [Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification)](#19-danh-mục-toàn-diện-nền-tảng-hệ-thống-công-nghệ--thư-viện-tech-stack--libraries-specification)
 
 ---
 
@@ -1252,142 +1254,93 @@ Login → Kiểm tra Căn cước Sinh trắc học Gốc
 
 ## 10. TECHNICAL ARCHITECTURE
 
-### Cấu trúc thư mục Project
+### 10.1. Cấu trúc Thư mục Toàn dự án (Repository Directory Layout)
+
+Hệ thống được tổ chức theo kiến trúc **Microservices phân tầng**, phân tách rành mạch giữa Cổng điều phối / Ứng dụng Khảo thí (`examguard-core`) và Dịch vụ Trí tuệ Nhân tạo Sinh trắc học (`examguard-ai`):
 
 ```
-examguard/
-├── docker-compose.yml
-├── .env.example
+d:\K23CNT3-LucVanSon-2310900087\DATN\
+├── run_system.bat                    # Script khởi chạy tự động: Tự giải phóng Port 3011 & 8000, kiểm tra MongoDB, bật Core & AI
+├── stop_system.bat                   # Script dừng hệ thống an toàn & tắt toàn bộ tiến trình liên quan
+├── SYSTEM_BLUEPRINT.md               # Nguồn tham chiếu kỹ thuật & nghiệp vụ duy nhất (Single Source of Truth)
+├── README.md                         # Hướng dẫn cài đặt & vận hành nhanh
 │
-├── core-service/                    # Flask Python
-│   ├── run.py
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── __init__.py              # Flask app factory + SocketIO init
-│   │   ├── config.py
-│   │   ├── extensions.py            # db, jwt, socketio, redis instances
-│   │   ├── models/                  # SQLAlchemy models
-│   │   │   ├── user.py
-│   │   │   ├── sinh_vien.py
-│   │   │   ├── giang_vien.py
-│   │   │   ├── phong_thi.py
-│   │   │   ├── camera_phong_thi.py
-│   │   │   ├── ca_thi.py
-│   │   │   └── sinh_vien_ca_thi.py
-│   │   ├── api/                     # Flask Blueprints
-│   │   │   ├── auth.py              # /api/auth/*
-│   │   │   ├── admin.py             # /api/admin/*
-│   │   │   ├── proctor.py           # /api/proctor/*
-│   │   │   ├── byod.py              # /api/byod/*
-│   │   │   └── exam.py              # /api/exam/*
-│   │   ├── socket_handlers/
-│   │   │   ├── exam_room.py         # join/leave, broadcast events
-│   │   │   └── redis_listener.py    # Subscribe Redis → broadcast SocketIO
-│   │   ├── services/
-│   │   │   ├── ai_client.py         # HTTP client gọi FastAPI (với HMAC)
-│   │   │   ├── exam_service.py      # Business logic ca thi
-│   │   │   └── seat_service.py      # Xếp chỗ, tạo PIN
-│   │   └── utils/
-│   │       ├── ip_validator.py      # Check IP subnet
-│   │       └── seb_validator.py     # Validate SEB header
-│   └── migrations/                  # Flask-Migrate
+├── examguard-core/                   # Unified Fullstack Web & API Gateway (Node.js Express 5 + React 19 / Vite 6)
+│   ├── package.json                  # Khai báo toàn bộ thư viện Fullstack (Node 20+, React 19, Tailwind v4, Socket.IO, Mongoose...)
+│   ├── vite.config.ts                # Cấu hình Vite 6, TailwindCSS v4 plugin & Proxy backend
+│   ├── tsconfig.json                 # Cấu hình TypeScript compiler
+│   ├── index.html                    # Entry HTML tích hợp PDF.js CDN hỗ trợ Exam Snipping Canvas
+│   ├── .env / .env.example           # Biến môi trường Core (PORT=3011, MONGO_URI, JWT_SECRET, CORS_ORIGIN...)
+│   │
+│   ├── server/                       # Backend Server & API Gateway (Node.js & Express 5)
+│   │   ├── server.js                 # Entry point khởi tạo Express, HTTP Server & Socket.IO Realtime Server
+│   │   ├── configs/                  # Cấu hình kết nối cơ sở dữ liệu MongoDB qua Mongoose
+│   │   ├── constants/                # Hằng số toàn hệ thống, mã hóa quyền hạn (permissions.js)
+│   │   ├── controllers/              # Business logic: auth, exam, student, course, kyc, proctoring, grading...
+│   │   ├── middlewares/              # authMiddleware (JWT), roleCheck, uploadMiddleware (Multer), rateLimit, security
+│   │   ├── models/                   # Mongoose Schemas (User, ExamPaper, ExamSession, FaceKYC, Course, Department...)
+│   │   ├── routes/                   # RESTful API Endpoints (/api/auth, /api/exam, /api/courses, /api/proctoring...)
+│   │   ├── services/                 # Realtime Socket.IO Room manager, Face AI HTTP Client Bridge
+│   │   ├── utils/                    # examFileParser (PDF/Word), token generator, response helper
+│   │   └── uploads/                  # Thư mục lưu trữ đề thi gốc, tài liệu minh họa & ảnh bài làm thí sinh
+│   │
+│   └── src/                          # Modern React 19 Single Page Application
+│       ├── main.tsx                  # React DOM Root
+│       ├── App.tsx                   # Central Router, Route Guard (RBAC/CBAC) & Layout
+│       ├── index.css                 # Core Design System, CSS variables & Tailwind v4 Design Tokens
+│       ├── api/                      # Axios HTTP Client kết nối API Gateway Core (Port 3011) & AI Service (Port 8000)
+│       ├── store/                    # Zustand Stores: authStore, examStore, proctorStore
+│       ├── constants/                # Phân quyền UI, danh mục môn học, mã phòng thi
+│       ├── types/                    # TypeScript interfaces dùng chung cho toàn bộ Frontend
+│       ├── components/               # UI components tái sử dụng: Modal, Canvas, Navbar, Sidebar, Dropdown...
+│       └── pages/                    # 17+ Màn hình nghiệp vụ chuyên sâu:
+│           ├── auth/                 # Login, Register, Forgot Password
+│           ├── admin/                # Dashboard phân tích, Quản lý Người dùng, Môn học, Khoa, Lớp
+│           ├── exam/                 # ExamPapers (Dual-View Builder + Snipping Tool), TakeExam, ExamGrading...
+│           ├── student/              # FaceKyc (Thu thập KYC 5 góc), StudentSchedule, StudentResults...
+│           └── proctor/              # LiveMonitoring (Giám sát phòng thi 3D / Isometric, Báo động vi phạm)
 │
-├── ai-service/                      # FastAPI Python (adapt từ face_ai/)
-│   ├── main.py
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── config.py               # Thêm exam-specific settings
-│   │   ├── core/
-│   │   │   ├── hmac_auth.py        # Giữ nguyên
-│   │   │   └── liveness_checker.py # Giữ nguyên
-│   │   ├── api/
-│   │   │   ├── routes_kyc.py       # /v1/kyc/* — adapt từ routes.py
-│   │   │   ├── routes_checkin.py   # /v1/checkin/* — mới
-│   │   │   └── routes_proctor.py   # /v1/proctor/* — mới
-│   │   ├── services/
-│   │   │   ├── face_service.py     # Giữ nguyên từ face_ai/
-│   │   │   ├── exam_face_service.py # Wrap face_service cho exam context
-│   │   │   └── proctor_service.py  # YOLOv8 + CCTV stream + Shapely
-│   │   └── schemas/
-│   │       └── exam_models.py      # Pydantic schemas cho exam endpoints
-│   └── data/
-│       └── models/                 # ONNX model files
-│
-└── examguard-web/                   # React + Vite + TypeScript
-    ├── package.json
-    ├── vite.config.ts
-    ├── src/
-    │   ├── main.tsx
-    │   ├── App.tsx                  # Router setup
-    │   ├── index.css
-    │   ├── api/
-    │   │   ├── core.api.ts          # Axios instance → core-service:5000
-    │   │   ├── ai.api.ts            # Axios instance → ai-service:8000
-    │   │   └── socket.ts            # Socket.io client
-    │   ├── store/                   # Zustand stores
-    │   │   ├── authStore.ts
-    │   │   ├── examStore.ts
-    │   │   └── proctoringStore.ts
-    │   ├── pages/
-    │   │   ├── auth/
-    │   │   │   └── LoginPage.tsx
-    │   │   ├── admin/
-    │   │   │   ├── Dashboard.tsx
-    │   │   │   ├── RoomsPage.tsx
-    │   │   │   ├── CameraSetupPage.tsx   # ROI Polygon Drawer
-    │   │   │   ├── ExamsPage.tsx
-    │   │   │   └── IntegrityReport.tsx
-    │   │   ├── student/
-    │   │   │   ├── KYCPage.tsx           # Đăng ký khuôn mặt
-    │   │   │   ├── CheckInPage.tsx       # Check-in
-    │   │   │   └── ExamRoomPage.tsx      # Làm bài
-    │   │   └── proctor/
-    │   │       └── ProctorDashboard.tsx  # Phòng 3D + Feed vi phạm
-    │   ├── components/
-    │   │   ├── exam-room-3d/
-    │   │   │   ├── ExamRoom3D.tsx        # @react-three/fiber scene
-    │   │   │   ├── DeskGrid.tsx          # InstancedMesh bàn ghế
-    │   │   │   ├── StudentAvatar.tsx     # Avatar 3D + head rotation
-    │   │   │   ├── CameraMarker.tsx      # Icon camera trên tường
-    │   │   │   └── ViolationBeam.tsx     # Hiệu ứng cột sáng đỏ
-    │   │   ├── face-capture/
-    │   │   │   ├── WebcamCapture.tsx     # react-webcam wrapper
-    │   │   │   ├── FaceMeshWorker.ts     # Web Worker MediaPipe
-    │   │   │   └── PoseGuide.tsx         # Hướng dẫn xoay mặt cho KYC
-    │   │   ├── exam/
-    │   │   │   ├── QuestionMultiChoice.tsx
-    │   │   │   ├── QuestionEssay.tsx
-    │   │   │   ├── QuestionCoding.tsx    # Monaco Editor + Run button
-    │   │   │   └── TrustScoreBadge.tsx  # Hiển thị điểm uy tín
-    │   │   └── ui/                      # Shared UI components
-    │   └── types/
-    │       └── index.ts                 # TypeScript interfaces toàn hệ thống
+└── examguard-ai/                     # Dedicated Face AI & Computer Vision Microservice (Python FastAPI)
+    ├── main.py                       # FastAPI Application entry point (Port 8000)
+    ├── requirements.txt              # Thư viện AI (FastAPI, ONNX Runtime, OpenCV Headless, NumPy, PyMongo...)
+    ├── .env / .env.example           # Biến môi trường AI (MONGO_URI, MODEL_PATH, HMAC_SECRET...)
+    ├── app/                          # Modules xử lý AI nghiệp vụ
+    │   ├── api/                      # REST Endpoints: /v1/kyc, /v1/checkin, /v1/proctor, /v1/verify
+    │   ├── core/                     # Liveness checker (MiniFASNet), HMAC Security Authentication, Config
+    │   ├── services/                 # ArcFace 512-D embedding extraction, Head Pose 3D, Face Matching Engine
+    │   └── schemas/                  # Pydantic Schemas cho request/response sinh trắc học chuẩn hóa
+    └── data/
+        └── models/                   # ONNX Weight files (ArcFace 512-D, MiniFASNet, YOLOv8)
 ```
 
-### Docker Compose Overview
+### 10.2. Bản đồ Phân bổ Cổng & Hạ tầng Vận hành (Service Port Topology)
 
-```yaml
-services:
-  mysql:      image: mysql:8.0,    port: 3306
-  mongodb:    image: mongo:7.0,    port: 27017
-  redis:      image: redis:7.2,    port: 6379
-  core:       build: ./core-service, port: 5000  → depends: mysql, mongodb, redis
-  ai:         build: ./ai-service,   port: 8000  → depends: mongodb
-  web:        build: ./examguard-web, port: 5173 → depends: core, ai
-```
+| Thành phần (Component) | Nền tảng (Platform) | Cổng (Port) | Vai trò (Responsibility) | Giao thức (Protocol) |
+|:---|:---|:---|:---|:---|
+| **Core Web & API Gateway** (`examguard-core`) | Node.js v20+ / Express v5 | `3011` | Cổng API trung tâm, xác thực JWT, phân quyền RBAC/CBAC, quản lý ca thi, chấm thi tự động, Socket.IO Server & Phục vụ Frontend Web | HTTP / WebSocket (WS/WSS) |
+| **Face AI Microservice** (`examguard-ai`) | Python 3.10+ / FastAPI / Uvicorn | `8000` | Trích xuất Face Vector 512-D, kiểm tra Liveness chống giả mạo ảnh/video, tính toán góc xoay đầu 3D Pose, phát hiện vật thể lạ | HTTP / RESTful JSON |
+| **Cơ sở Dữ liệu Chính** (`MongoDB`) | MongoDB Community / Enterprise v7.0+ | `27017` | Lưu trữ dữ liệu người dùng, đề thi hỗn hợp, phiên thi, nhật ký vi phạm thời gian thực, vector khuôn mặt 512 chiều | TCP Wire Protocol |
 
-### Data Flow Summary
+### 10.3. Luồng Dữ liệu Thời Gian Thực (Realtime Data Flow Architecture)
 
 ```
-[Web Worker MediaPipe] → violation detected
-  → POST /v1/proctor/report-violation (ai-service)
-      → Ghi MongoDB
-      → Trừ điểm MySQL
-      → Publish Redis "exam_violations"
-          → Flask-SocketIO nhận (redis_listener.py)
-              → Emit "violation_alert" to room "exam_{id}"
-                  → [Giám thị] Bàn đỏ, sidebar ghim
-                  → [Sinh viên] Popup cảnh báo
+[Thí sinh làm bài thi (Client)] 
+      │ 
+      ├─► (1) Gửi Frame khuôn mặt định kỳ (20s) ──► POST /v1/proctor/verify ──► [examguard-ai:8000]
+      │                                                                               │
+      │   ◄── Kết quả vi phạm / Pose / Tráo người (Fraud alert) ──────────────────────┘
+      │
+      ├─► (2) Bắn sự kiện vi phạm hoặc thay đổi trạng thái ──► Socket.IO emit
+      │                                                               │
+      ▼                                                               ▼
+[examguard-core:3011 (Socket.IO Server)] ◄────────────────────────────┘
+      │
+      ├─► (3) Ghi nhận Log vi phạm & Trừ điểm uy tín tức thì ──► [MongoDB:27017]
+      │
+      └─► (4) Broadcast sự kiện tới Room Phòng thi `room_exam_{id}` 
+                │
+                ├─► [Màn hình Giám thị (Proctor Dashboard)]: Bàn đổi màu đỏ, ghim feed vi phạm, phát âm thanh cảnh báo
+                └─► [Màn hình Thí sinh (TakeExam)]: Hiển thị cảnh báo trực tiếp, trừ điểm uy tín (Trust Score)
 ```
 
 ---
@@ -3009,8 +2962,155 @@ Giảng viên được toàn quyền cấu hình phương thức làm bài riên
 
 ---
 
-*Blueprint version 2.5 — Cập nhật: 2026-10-17*  
-*Bổ sung: Cơ chế Chụp Bài Làm Giấy Chuẩn Quy Chế Phòng Thi Qua Webcam Máy Tính (Zero-Phone Paper Capture), Hiển thị Sơ đồ Mạch Kèm Câu hỏi (Visual Diagram Delivery & Split-View), và Thanh Ký hiệu Logic Toán Rời Rạc.*  
-*Nguồn tham chiếu gốc: `t_i_li_u_c_t_k_thu_t_k_ho_ch_t_ng_th_v2_0.md`*
+## 19. DANH MỤC TOÀN DIỆN NỀN TẢNG HỆ THỐNG, CÔNG NGHỆ & THƯ VIỆN (TECH STACK & LIBRARIES SPECIFICATION)
+
+> Tài liệu quy chuẩn hóa toàn bộ các nền tảng hệ điều hành, cơ sở dữ liệu, runtime, framework máy chủ, thư viện giao diện người dùng, và module thị giác máy tính đang được triển khai thực tế trong hệ thống **ExamGuard AI**.  
+> Được đối chiếu chính xác từ [package.json](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/package.json) và [requirements.txt](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-ai/requirements.txt).
+
+### 19.1. Nền Tảng Hệ Thống & Hạ Tầng Runtime (System Platforms & Infrastructure)
+
+| Nền tảng (Platform) | Phiên bản / Tiêu chuẩn | Vai trò & Mục đích Triển khai trong ExamGuard AI |
+|:---|:---|:---|
+| **Hệ Điều Hành Máy Chủ & Máy Trạm** | Windows 10/11 / Windows Server / Linux (Ubuntu 22.04 LTS) | Môi trường máy chủ dịch vụ và môi trường máy trạm thi chuẩn trong phòng Lab của Nhà trường. |
+| **Node.js Runtime** | Node.js v20.x+ (LTS) | Runtime máy chủ non-blocking I/O hiệu năng cao vận hành Backend Core API, Quản lý WebSocket & Phục vụ Frontend. |
+| **Python Runtime** | Python 3.10 / 3.11+ | Môi trường vận hành Microservice Trí tuệ Nhân tạo, xử lý tính toán số học ma trận và Deep Learning Inference. |
+| **Cơ sở Dữ liệu NoSQL (MongoDB)** | MongoDB v7.0+ (Port 27017) | Lưu trữ hướng tài liệu linh hoạt: Cấu trúc đề thi đa dạng, danh sách câu hỏi động, vector sinh trắc học 512 chiều, nhật ký giám sát realtime. |
+| **Kịch bản Khởi chạy Tự động** | Windows Batch Script (`run_system.bat`, `stop_system.bat`) | Tự động quét và giải phóng port xung đột (3011, 8000), kiểm tra socket kết nối MongoDB, khởi chạy song song 2 service và tự mở trình duyệt. |
+
+---
+
+### 19.2. Thư Viện Backend & Máy Chủ Cốt Lõi (`examguard-core` — Node.js / Express 5)
+
+Dưới đây là danh mục chi tiết các thư viện backend trong [examguard-core/package.json](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/package.json):
+
+| Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ trong Hệ thống |
+|:---|:---|:---|
+| `express` | `^5.2.1` | **Web Framework cốt lõi**: Định tuyến RESTful API, quản lý middleware, xử lý request/response của toàn bộ hệ thống quản lý thi. |
+| `mongoose` | `^9.3.0` | **Object Data Modeling (ODM)**: Định nghĩa Schema chặt chẽ cho MongoDB, quản lý model quan hệ, validation dữ liệu người dùng, ca thi, đề thi. |
+| `socket.io` | `^4.8.4` | **Giao thức WebSocket Realtime Server**: Tạo room phòng thi ảo (`room_exam_{id}`), phát sóng cảnh báo gian lận, đồng bộ trạng thái thí sinh tức thì tới Giám thị. |
+| `jsonwebtoken` | `^9.0.3` | **Xác thực Không trạng thái (Stateless Auth)**: Ký và kiểm tra JWT token, phân quyền theo vai trò (RBAC: Admin, Giảng viên, Sinh viên) và bối cảnh ca thi (CBAC). |
+| `bcrypt` & `bcryptjs` | `^6.0.0` / `^3.0.3` | **Bảo mật Mật khẩu**: Băm mật khẩu người dùng với muối ngẫu nhiên (Salt-Hash 10 rounds), chống giải mã từ điển và rò rỉ cơ sở dữ liệu. |
+| `multer` | `^2.1.1` | **Xử lý Tải tệp Đa phương tiện**: Tiếp nhận tệp đề thi (PDF, DOCX, XLSX), ảnh KYC sinh viên, và ảnh chụp bài làm tự luận từ Webcam/Thiết bị. |
+| `pdf-parse` | `^2.4.5` | **Trích xuất Nội dung Tệp PDF**: Đọc nội dung văn bản từ các tệp đề thi PDF học thuật, phân tích bố cục phục vụ bóc tách câu hỏi tự động. |
+| `mammoth` | `^1.13.0` | **Chuyển đổi Tài liệu Word (.docx)**: Trích xuất nội dung từ tệp Word sang HTML/Text chuẩn, bảo toàn cấu trúc in đậm, gạch chân và danh sách lựa chọn. |
+| `xlsx` | `^0.18.5` | **Xử lý Bảng tính Excel**: Đọc danh sách sinh viên theo lớp từ file Excel, xuất bảng điểm tổng hợp ca thi và ma trận đáp án. |
+| `helmet` | `^8.1.0` | **Bảo mật HTTP Headers**: Thiết lập các header an toàn (Content-Security-Policy, X-Frame-Options, X-XSS-Protection) chống tấn công web. |
+| `express-rate-limit` | `^8.3.1` | **Giới hạn Tần suất Truy cập (Rate Limiting)**: Chặn tấn công từ chối dịch vụ (DDoS) và brute-force mật khẩu tại các endpoint nhạy cảm. |
+| `express-mongo-sanitize`| `^2.2.0` | **Chống NoSQL Injection**: Làm sạch và loại bỏ các ký tự đặc biệt (`$`, `.`) trong body/query params gửi lên MongoDB. |
+| `xss-clean` | `^0.1.4` | **Chống Tấn công XSS**: Làm sạch dữ liệu đầu vào của người dùng, loại bỏ mã script độc hại trong câu hỏi, bài làm tự luận. |
+| `cors` | `^2.8.6` | **Kiểm soát Truy cập Nguồn gốc Chéo**: Cho phép kết nối an toàn giữa Frontend Web (Port 3011) và các microservice liên quan. |
+| `cookie-parser` | `^1.4.7` | **Quản lý Cookie HTTP-Only**: Đọc và lưu trữ token phiên đăng nhập bảo mật trên trình duyệt, chống đánh cắp qua JavaScript. |
+| `compression` | `^1.8.1` | **Nén Băng thông HTTP**: Tự động nén response bằng thuật toán Gzip, giảm độ trễ mạng khi truyền tải danh sách đề thi lớn. |
+| `dotenv` | `^17.3.1` | **Quản lý Cấu hình Môi trường**: Nạp an toàn các biến môi trường cấu hình cổng, chuỗi kết nối cơ sở dữ liệu, secret key từ tệp `.env`. |
+| `@google/genai` | `^1.29.0` | **Google Gemini AI SDK**: Tích hợp mô hình ngôn ngữ lớn hỗ trợ phân tích rubric tự luận, giải thích đáp án và đề xuất câu hỏi. |
+| `axios` | `^1.13.6` | **HTTP Client Máy chủ**: Giao tiếp HTTP bất đồng bộ giữa Node.js Core Backend và Python Face AI Microservice (Port 8000). |
+| `date-fns` | `^4.1.0` | **Xử lý Thời gian Học thuật**: Định dạng ngày thi, tính toán thời gian làm bài chính xác tới mili-giây, đếm ngược ca thi theo múi giờ chuẩn. |
+
+---
+
+### 19.3. Thư Viện Giao Diện Người Dùng & Trải Nghiệm Thí Sinh (`examguard-core` — React 19 / Vite 6)
+
+| Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ trong Giao diện |
+|:---|:---|:---|
+| `react` & `react-dom` | `^19.0.0` | **Thư viện UI thế hệ mới nhất**: Quản lý Virtual DOM, Server Actions, hooks hiện đại (`useActionState`, `useOptimistic`) cho giao diện mượt mà. |
+| `vite` | `^6.2.0` | **Next-Generation Frontend Tooling**: Biên dịch TypeScript siêu tốc với esbuild, Hot Module Replacement (HMR) tức thì dưới 50ms. |
+| `@vitejs/plugin-react` | `^5.0.4` | **Plugin Vite cho React**: Tối ưu hóa Fast Refresh và chuyển đổi mã JSX/TSX. |
+| `typescript` | `~5.8.2` | **Ngôn ngữ Type-Safe**: Đảm bảo an toàn kiểu dữ liệu cho toàn bộ State, Props, DTO, tránh lỗi runtime trong phòng thi. |
+| `tailwindcss` | `^4.1.14` | **CSS Framework tiện ích v4**: Hệ thống Design Token hiện đại (CSS Variables-first), tối ưu dung lượng CSS tải trang. |
+| `@tailwindcss/vite` | `^4.1.14` | **Tích hợp Tailwind v4 vào Vite**: Xử lý compile CSS trực tiếp trong pipeline của Vite mà không cần file cấu hình phức tạp. |
+| `react-router-dom` | `^7.13.1` | **Bộ điều hướng Single Page App**: Quản lý định tuyến động, bảo vệ đường dẫn theo Role (Role Guards), layout lồng nhau. |
+| `zustand` | `^5.0.14` | **Quản lý Trạng thái Toàn cục (Global State)**: Siêu nhẹ, lưu trữ session đăng nhập (`authStore`), tiến trình làm bài (`examStore`), trạng thái giám sát (`proctorStore`). |
+| `socket.io-client` | `^4.8.4` | **WebSocket Client**: Duy trì kết nối realtime 2 chiều liên tục giữa trình duyệt của Thí sinh / Giám thị với máy chủ thi. |
+| `lucide-react` | `^0.546.0` | **Thư viện Icon Vector**: Bộ biểu tượng chuẩn cho giao diện thi cử, camera, trạng thái bảo mật, công cụ cắt ảnh (`Scissors`, `Camera`, `ShieldAlert`...). |
+| `motion` (Framer Motion) | `^12.23.24` | **Animation & Micro-interactions**: Tạo hiệu ứng chuyển động mượt mà cho bảng điểm, modal cảnh báo, chuyển đổi thẻ câu hỏi. |
+| `recharts` | `^3.7.0` | **Biểu đồ Trực quan hóa Dữ liệu**: Vẽ biểu đồ phổ điểm thi, tỷ lệ vi phạm theo thời gian, độ tin cậy của ca thi. |
+| `react-hot-toast` | `^2.6.0` | **Thông báo Toast Thông minh**: Hiển thị thông báo tức thì (Cắt ảnh thành công, cảnh báo mất tiêu điểm, nhắc nhở thời gian). |
+| `canvas-confetti` | `^1.9.4` | **Hiệu ứng Khen thưởng**: Bắn pháo hoa đồ họa Canvas khi thí sinh hoàn thành nộp bài thi thành công. |
+| `@hello-pangea/dnd` | `^18.0.1` | **Kéo thả Trực quan (Drag & Drop)**: Hỗ trợ thao tác sắp xếp lại thứ tự câu hỏi, kéo thả sơ đồ bàn thi trong phòng thi. |
+| `clsx` & `tailwind-merge`| `^2.1.1` / `^3.5.0` | **Tối ưu Hóa Class CSS**: Ghép nối class có điều kiện và loại bỏ class Tailwind trùng lặp một cách chuẩn xác. |
+| **PDF.js CDN (Mozilla)** | `v3.11.174` | **Render Tài liệu PDF lên Canvas**: Nạp file PDF đề thi trực tiếp trên trình duyệt, cho phép giảng viên kéo rê chuột khoanh vùng cắt sơ đồ mạch điện tử. |
+
+---
+
+### 19.4. Thư Viện Trí Tuệ Nhân Tạo & Thị Giác Máy Tính (`examguard-ai` — Python FastAPI)
+
+Dưới đây là danh mục chi tiết các thư viện trong [examguard-ai/requirements.txt](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-ai/requirements.txt):
+
+| Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ AI |
+|:---|:---|:---|
+| `fastapi` | `>=0.110.0` | **High-performance AI Web Framework**: Xây dựng Microservice RESTful API bất đồng bộ (async/await), tự sinh tài liệu OpenAPI/Swagger. |
+| `uvicorn` | `>=0.28.0` | **ASGI Web Server**: Máy chủ bất đồng bộ chuẩn ASGI chạy trên cổng `8000`, tối ưu hóa xử lý đồng thời nhiều luồng camera/frame ảnh. |
+| `pydantic` | `>=2.6.0` | **Xác thực Dữ liệu AI**: Kiểm tra kiểu dữ liệu đầu vào của các vector khuôn mặt, tọa độ bounding box, thông số góc quay đầu 3D. |
+| `python-multipart` | `>=0.0.9` | **Tiếp nhận Dữ liệu Đa phần (Multipart Form)**: Hỗ trợ upload ảnh chụp khuôn mặt KYC, ảnh frame camera giám sát từ client. |
+| `numpy` | `>=1.24.0` | **Tính toán Ma trận & Đại số Tuyến tính**: Xử lý ma trận điểm mốc (landmarks), tính khoảng cách Cosine Distance so khớp vector 512-D, chuẩn hóa L2-norm. |
+| `pillow` (PIL) | `>=10.0.0` | **Xử lý Ảnh Số**: Đọc, nén, chuyển đổi không gian màu RGB/BGR, resize ảnh khuôn mặt về chuẩn $112 \times 112$ px trước khi đưa vào mạng nơ-ron. |
+| `opencv-python-headless` | `>=4.8.0` | **Thị giác Máy tính Toàn diện (OpenCV)**: Cắt cúp khuôn mặt (face crop), căn chỉnh 5 điểm mắt mũi miệng (face alignment), tính góc quay đầu 3D Pose (Pitch, Yaw, Roll). Phiên bản headless không phụ thuộc GUI X11, tối ưu cho môi trường server. |
+| `onnxruntime` | `>=1.16.0` | **Bộ Thực thi Mô hình Học sâu (Deep Learning Inference Engine)**: Chạy các mô hình ONNX tối ưu hóa phần cứng (ArcFace 512-D, MiniFASNet, YOLOv8) với tốc độ mili-giây trên CPU/GPU. |
+| `requests` | `>=2.31.0` | **HTTP Client**: Gửi webhook thông báo hoặc đồng bộ dữ liệu vi phạm sang các dịch vụ giám sát ngoại vi khi cần thiết. |
+| `pymongo` | `>=4.6.0` | **Driver Kết nối MongoDB Chính thức**: Truy vấn và lưu trữ trực tiếp vector sinh trắc học gốc và lịch sử điểm danh vào cơ sở dữ liệu MongoDB. |
+| `python-dotenv` | `>=1.0.0` | **Nạp Biến Môi trường**: Quản lý đường dẫn các mô hình ONNX, ngưỡng tương đồng khuôn mặt (`FACE_MATCH_THRESHOLD=0.75`), cấu hình cổng AI. |
+| `pytest` | `>=8.0.0` | **Kiểm thử Tự động Hóa (Test Suite)**: Viết và chạy unit test cho các module trích xuất đặc trưng khuôn mặt và logic phát hiện giả mạo. |
+
+---
+
+### 19.5. Danh Mục Các Mô Hình Học Sâu ONNX Tích Hợp (Embedded Deep Learning Models)
+
+Các mô hình được đóng gói dưới định dạng chuẩn công nghiệp **ONNX (Open Neural Network Exchange)** và nạp trực tiếp qua `onnxruntime`:
+
+1. **ArcFace 512-D Embedding Model (`arcface_resnet50.onnx` / `mobileface_v2.onnx`):**
+   - *Đầu vào:* Ảnh khuôn mặt đã được căn chỉnh (Aligned Face) kích thước $112 \times 112 \times 3$.
+   - *Đầu ra:* Vector đặc trưng sinh trắc học 512 chiều được chuẩn hóa ($\|v\|_2 = 1$).
+   - *Thuật toán so khớp:* Tính độ tương đồng Cosine Similarity:
+     $$\text{Similarity} = \frac{v_1 \cdot v_2}{\|v_1\|_2 \|v_2\|_2}$$
+   - *Ngưỡng định danh:* $\ge 0.75$ xác nhận cùng một người; $< 0.50$ kích hoạt cảnh báo tráo người (`IMPERSONATION_VIOLATION`).
+
+2. **MiniFASNet Liveness & Anti-Spoofing Model (`minifasnet_v2.onnx`):**
+   - *Chức năng:* Phát hiện các cuộc tấn công giả mạo (Presentation Attack Detection - PAD) bằng màn hình điện thoại, ảnh in giấy hoặc mặt nạ silicon.
+   - *Đầu ra:* Xác suất Liveness Score $[0.0 \dots 1.0]$. Ngưỡng cho phép $\ge 0.85$.
+
+3. **3D Head Pose & Facial Landmarks Estimation:**
+   - *Chức năng:* Dự đoán hướng nhìn và tư thế đầu của thí sinh thông qua 68 điểm mốc khuôn mặt và thuật toán Perspective-n-Point (PnP).
+   - *Ngưỡng phát hiện vi phạm:*
+     - Quay đầu trái/phải quá lớn: $|\text{Yaw}| > 35^\circ$
+     - Cúi đầu nhìn tài liệu dưới gầm bàn: $\text{Pitch} < -25^\circ$
+     - Nghiêng đầu trao đổi: $|\text{Roll}| > 30^\circ$
+
+4. **YOLOv8 Onnx Object Detection (`yolov8n.onnx`):**
+   - *Chức năng:* Phát hiện sự xuất hiện của các vật thể bị cấm trong phòng thi (Điện thoại di động `cell phone`, Tai nghe `earphone`, Sách vở tài liệu `book`).
+
+---
+
+### 19.6. Ma Trận Phối Hợp Giữa Các Thư Viện Trong Các Luồng Nghiệp Vụ Cốt Lõi
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                       MA TRẬN TÍCH HỢP LIÊN THƯ VIỆN THEO NGHIỆP VỤ (EXAMGUARD AI)                             │
+├──────────────────────────┬──────────────────────────────────────────┬──────────────────────────────────────────┤
+│ Luồng Nghiệp Vụ          │ Thư viện / Module Phía Client (Frontend) │ Thư viện / Module Phía Server & AI       │
+├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ **1. Đăng ký KYC 5 Góc** │ • React 19 + Lucide Icons + Motion       │ • Node.js Multer (Upload)                │
+│                          │ • WebRTC Camera Canvas Stream            │ • FastAPI + OpenCV (Alignment)           │
+│                          │ • React Hot Toast (Hướng dẫn xoay đầu)   │ • ONNX Runtime ArcFace 512-D + PyMongo   │
+├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ **2. Soạn & Cắt Đề Thi** │ • PDF.js CDN (Render trang PDF lên Canvas)│ • Node.js Multer + pdf-parse             │
+│                          │ • Lucide Scissors (Exam Snipping Tool)   │ • Mammoth (.docx to HTML AST)            │
+│                          │ • Canvas Selection Bounding Box          │ • Mongoose ExamPaper Schema              │
+├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ **3. Giám Sát Realtime** │ • Socket.IO Client (Phòng thi trực tiếp) │ • Node.js Socket.IO Server (Rooms)       │
+│                          │ • Fullscreen API + Event Listeners       │ • FastAPI Head Pose 3D + MiniFASNet      │
+│                          │ • Zero-Phone Webcam Paper Capture Canvas │ • Helmet + Rate-Limit + Mongoose Log     │
+├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ **4. Chấm Thi & Báo Cáo**│ • Recharts (Vẽ biểu đồ phổ điểm, vi phạm)│ • Node.js Scoring Pipeline (Auto-score)  │
+│                          │ • Canvas Confetti (Hiệu ứng hoàn thành)  │ • @google/genai (Gemini AI Rubric Assist)│
+│                          │ • XLSX Export Button                     │ • xlsx (Tạo file Bảng điểm Excel .xlsx)  │
+└──────────────────────────┴──────────────────────────────────────────┴──────────────────────────────────────────┘
+```
+
+---
+
+*Blueprint version 2.6 — Cập nhật: 2026-10-18*  
+*Bổ sung: Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification) đối chiếu 100% từ `package.json` và `requirements.txt`.*  
+*Nguồn tham chiếu gốc: `SYSTEM_BLUEPRINT.md`, `run_system.bat`, `examguard-core/package.json`, `examguard-ai/requirements.txt`*
+
 
 
