@@ -5,6 +5,7 @@ const http = require("http");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./configs/db");
+const { connectMySQL } = require("./configs/mysql");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const helmet = require("helmet");
 
@@ -150,6 +151,7 @@ app.use(cookieParser());
 // DB
 // ==============================
 connectDB();
+connectMySQL();
 
 // ==============================
 // Routes
@@ -160,6 +162,24 @@ app.use("/api", routes);
 // Test API
 app.get("/api/hello", (req, res) => {
   res.json({ message: "API running 🚀" });
+});
+
+// MySQL Health & Status
+app.get("/api/mysql/status", async (req, res) => {
+  try {
+    const { mysqlPool } = require("./configs/mysql");
+    const [rows] = await mysqlPool.query("SELECT COUNT(*) AS total_students FROM sinh_vien");
+    const [tables] = await mysqlPool.query("SHOW TABLES");
+    res.json({
+      success: true,
+      database: process.env.MYSQL_DATABASE || "examguard_db",
+      tablesCount: tables.length,
+      totalStudents: rows[0].total_students,
+      message: "MySQL 8.0 is active and connected to ExamGuard Core"
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ==============================

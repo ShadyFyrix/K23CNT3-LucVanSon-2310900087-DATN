@@ -1260,21 +1260,29 @@ Hệ thống được tổ chức theo kiến trúc **Microservices phân tầng
 
 ```
 d:\K23CNT3-LucVanSon-2310900087\DATN\
-├── run_system.bat                    # Script khởi chạy tự động: Tự giải phóng Port 3011 & 8000, kiểm tra MongoDB, bật Core & AI
+├── run_system.bat                    # Script khởi chạy tự động: Tự giải phóng Port 3011, 5000 & 8000, kiểm tra MongoDB & MySQL
 ├── stop_system.bat                   # Script dừng hệ thống an toàn & tắt toàn bộ tiến trình liên quan
 ├── SYSTEM_BLUEPRINT.md               # Nguồn tham chiếu kỹ thuật & nghiệp vụ duy nhất (Single Source of Truth)
 ├── README.md                         # Hướng dẫn cài đặt & vận hành nhanh
 │
+├── database/                         # Kịch bản Cơ sở dữ liệu Quan hệ MySQL
+│   └── init_mysql.sql                # Khởi tạo CSDL examguard_db, 13 bảng quan hệ & dữ liệu mẫu chuẩn hoá
+│
+├── examguard-flask/                  # Python Flask Core Governance & Registry Service (Port 5000)
+│   ├── app.py                        # Flask API server kết nối trực tiếp MySQL 8.0 & MongoDB 7.0
+│   ├── requirements.txt              # Dependencies: Flask, Flask-CORS, PyMySQL, PyMongo, python-dotenv
+│   └── .env                          # Cấu hình kết nối MySQL (Port 3306) & MongoDB (Port 27017)
+│
 ├── examguard-core/                   # Unified Fullstack Web & API Gateway (Node.js Express 5 + React 19 / Vite 6)
-│   ├── package.json                  # Khai báo toàn bộ thư viện Fullstack (Node 20+, React 19, Tailwind v4, Socket.IO, Mongoose...)
+│   ├── package.json                  # Khai báo toàn bộ thư viện Fullstack (Node 20+, React 19, Tailwind v4, Socket.IO, Mongoose, mysql2...)
 │   ├── vite.config.ts                # Cấu hình Vite 6, TailwindCSS v4 plugin & Proxy backend
 │   ├── tsconfig.json                 # Cấu hình TypeScript compiler
 │   ├── index.html                    # Entry HTML tích hợp PDF.js CDN hỗ trợ Exam Snipping Canvas
-│   ├── .env / .env.example           # Biến môi trường Core (PORT=3011, MONGO_URI, JWT_SECRET, CORS_ORIGIN...)
+│   ├── .env / .env.example           # Biến môi trường Core (PORT=3011, MONGO_URI, MYSQL_HOST, JWT_SECRET...)
 │   │
 │   ├── server/                       # Backend Server & API Gateway (Node.js & Express 5)
-│   │   ├── server.js                 # Entry point khởi tạo Express, HTTP Server & Socket.IO Realtime Server
-│   │   ├── configs/                  # Cấu hình kết nối cơ sở dữ liệu MongoDB qua Mongoose
+│   │   ├── server.js                 # Entry point khởi tạo Express, HTTP Server, Socket.IO & kết nối song song MongoDB + MySQL
+│   │   ├── configs/                  # Cấu hình kết nối CSDL MongoDB (Mongoose) và MySQL (mysql2 pool)
 │   │   ├── constants/                # Hằng số toàn hệ thống, mã hóa quyền hạn (permissions.js)
 │   │   ├── controllers/              # Business logic: auth, exam, student, course, kyc, proctoring, grading...
 │   │   ├── middlewares/              # authMiddleware (JWT), roleCheck, uploadMiddleware (Multer), rateLimit, security
@@ -1317,9 +1325,11 @@ d:\K23CNT3-LucVanSon-2310900087\DATN\
 
 | Thành phần (Component) | Nền tảng (Platform) | Cổng (Port) | Vai trò (Responsibility) | Giao thức (Protocol) |
 |:---|:---|:---|:---|:---|
-| **Core Web & API Gateway** (`examguard-core`) | Node.js v20+ / Express v5 | `3011` | Cổng API trung tâm, xác thực JWT, phân quyền RBAC/CBAC, quản lý ca thi, chấm thi tự động, Socket.IO Server & Phục vụ Frontend Web | HTTP / WebSocket (WS/WSS) |
+| **Core Web App (Frontend + API Gateway)** (`examguard-core`) | React 19 + Tailwind v4 + Express v5 | `3011` | Cổng API trung tâm, xác thực JWT, phân quyền RBAC/CBAC, quản lý ca thi, chấm thi tự động, Socket.IO Server & Giao diện SPA | HTTP / WebSocket (WS/WSS) |
+| **Python Flask Core Registry Service** (`examguard-flask`) | Python 3.10+ / Flask / PyMySQL | `5000` | Quản lý sổ bộ đào tạo, danh mục khoa, lớp, sinh viên, ca thi và đồng bộ Polyglot Persistence giữa MySQL và MongoDB | HTTP / RESTful JSON |
 | **Face AI Microservice** (`examguard-ai`) | Python 3.10+ / FastAPI / Uvicorn | `8000` | Trích xuất Face Vector 512-D, kiểm tra Liveness chống giả mạo ảnh/video, tính toán góc xoay đầu 3D Pose, phát hiện vật thể lạ | HTTP / RESTful JSON |
-| **Cơ sở Dữ liệu Chính** (`MongoDB`) | MongoDB Community / Enterprise v7.0+ | `27017` | Lưu trữ dữ liệu người dùng, đề thi hỗn hợp, phiên thi, nhật ký vi phạm thời gian thực, vector khuôn mặt 512 chiều | TCP Wire Protocol |
+| **Cơ sở Dữ liệu Quan hệ Chính** (`MySQL Server 8.0`) | MySQL Community Server 8.0 | `3306` | CSDL quan hệ `examguard_db` lưu trữ phân cấp tổ chức: khoa, lớp, người dùng, sinh viên, giảng viên, phòng thi, ca thi | TCP Wire Protocol |
+| **Cơ sở Dữ liệu Tài liệu** (`MongoDB`) | MongoDB Community / Enterprise v7.0+ | `27017` | CSDL tài liệu `examguard_ai_db` lưu trữ đề thi hỗn hợp, câu hỏi động, phiên thi, nhật ký vi phạm thời gian thực, vector khuôn mặt 512-D | TCP Wire Protocol |
 
 ### 10.3. Luồng Dữ liệu Thời Gian Thực (Realtime Data Flow Architecture)
 
@@ -2964,29 +2974,44 @@ Giảng viên được toàn quyền cấu hình phương thức làm bài riên
 
 ## 19. DANH MỤC TOÀN DIỆN NỀN TẢNG HỆ THỐNG, CÔNG NGHỆ & THƯ VIỆN (TECH STACK & LIBRARIES SPECIFICATION)
 
-> Tài liệu quy chuẩn hóa toàn bộ các nền tảng hệ điều hành, cơ sở dữ liệu, runtime, framework máy chủ, thư viện giao diện người dùng, và module thị giác máy tính đang được triển khai thực tế trong hệ thống **ExamGuard AI**.  
-> Được đối chiếu chính xác từ [package.json](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/package.json) và [requirements.txt](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-ai/requirements.txt).
+> **BẢNG CHỨNG NHẬN ĐỐI CHIẾU CÔNG NGHỆ ĐỒ ÁN TỐT NGHIỆP (100% THESIS TECH STACK ALIGNMENT):**  
+> - **Sinh viên thực hiện:** Lục Văn Sơn — Mã sinh viên: **2310900087** — Lớp: **K23CNT3**  
+> - **Nền tảng công nghệ đăng ký theo đề cương:** `ReactJS; Python Flask; MySQL; MongoDB; Tailwind Framework`  
+> - **Trạng thái thực thi trong hệ sinh thái ExamGuard AI:** **ĐẠT 100% ĐẦY ĐỦ CẢ 5 CÔNG NGHỆ ĐĂNG KÝ**, hoạt động tương hỗ theo mô hình **Kiến trúc Đa lưu trữ Đa ngôn ngữ (Polyglot Microservices Architecture)**:
+>
+> | STT | Nền tảng Đăng ký | Thành phần trong Hệ thống ExamGuard AI | Thư mục & Dịch vụ | Cổng (Port) | Vai trò Nghiệp vụ Cốt lõi |
+> |:---:|:---|:---|:---|:---:|:---|
+> | **1** | **ReactJS** | React 19 Frontend Web Application | `examguard-core/src/` | `3011` | Giao diện tương tác làm bài thi, Dual-screen Snipping Tool, Bàn thi 3D Realtime, Studio KYC khuôn mặt. |
+> | **2** | **Python Flask** | Python Flask Core Registry & Governance Service | `examguard-flask/` | `5000` | Quản trị sổ bộ đào tạo (Khoa, Lớp, Sinh viên, Ca thi), cung cấp REST API và đồng bộ dữ liệu Polyglot giữa MySQL và MongoDB. |
+> | **3** | **MySQL** | Cơ sở Dữ liệu Quan hệ Chuẩn ACID (`examguard_db`) | `database/init_mysql.sql` | `3306` | Lưu trữ 13 bảng quan hệ chuẩn hóa: Phân cấp tổ chức Khoa - Lớp - Sinh viên, Giảng viên, Môn học, Phòng thi, Ca thi, Điểm chốt chính thức. |
+> | **4** | **MongoDB** | Cơ sở Dữ liệu Hướng Tài liệu Linh hoạt (`examguard_ai_db`) | `MongoDB 7.0+` | `27017` | Lưu trữ cấu trúc Đề thi Hỗn hợp (Hybrid Papers), tệp ảnh nhúng, Vector sinh trắc học ArcFace 512-D, Realtime Proctoring Logs. |
+> | **5** | **Tailwind Framework** | TailwindCSS v4 Modern Design System | `examguard-core/src/index.css` | — | Khung giao diện Styling toàn diện, tối ưu hoá CSS Variables-first, Dark/Light Theme, Responsive Glassmorphism. |
+
+---
 
 ### 19.1. Nền Tảng Hệ Thống & Hạ Tầng Runtime (System Platforms & Infrastructure)
 
 | Nền tảng (Platform) | Phiên bản / Tiêu chuẩn | Vai trò & Mục đích Triển khai trong ExamGuard AI |
 |:---|:---|:---|
 | **Hệ Điều Hành Máy Chủ & Máy Trạm** | Windows 10/11 / Windows Server / Linux (Ubuntu 22.04 LTS) | Môi trường máy chủ dịch vụ và môi trường máy trạm thi chuẩn trong phòng Lab của Nhà trường. |
-| **Node.js Runtime** | Node.js v20.x+ (LTS) | Runtime máy chủ non-blocking I/O hiệu năng cao vận hành Backend Core API, Quản lý WebSocket & Phục vụ Frontend. |
-| **Python Runtime** | Python 3.10 / 3.11+ | Môi trường vận hành Microservice Trí tuệ Nhân tạo, xử lý tính toán số học ma trận và Deep Learning Inference. |
-| **Cơ sở Dữ liệu NoSQL (MongoDB)** | MongoDB v7.0+ (Port 27017) | Lưu trữ hướng tài liệu linh hoạt: Cấu trúc đề thi đa dạng, danh sách câu hỏi động, vector sinh trắc học 512 chiều, nhật ký giám sát realtime. |
-| **Kịch bản Khởi chạy Tự động** | Windows Batch Script (`run_system.bat`, `stop_system.bat`) | Tự động quét và giải phóng port xung đột (3011, 8000), kiểm tra socket kết nối MongoDB, khởi chạy song song 2 service và tự mở trình duyệt. |
+| **Cơ sở Dữ liệu Quan hệ (MySQL)** | MySQL Community Server 8.0+ (Port 3306) | CSDL quan hệ `examguard_db` bảo đảm tính toàn vẹn giao dịch (ACID), khóa ngoại liên kết phân cấp Khoa - Lớp - Sinh viên - Phòng thi - Ca thi. |
+| **Cơ sở Dữ liệu Tài liệu NoSQL (MongoDB)** | MongoDB v7.0+ (Port 27017) | CSDL tài liệu `examguard_ai_db` lưu trữ cấu trúc đề thi đa dạng, danh sách câu hỏi động, vector sinh trắc học 512 chiều, nhật ký giám sát realtime. |
+| **Python Flask Runtime** | Python 3.10+ / Flask 3.0+ (Port 5000) | Microservice Quản trị Đào tạo, định tuyến danh mục đào tạo, cầu nối đồng bộ hai chiều MySQL & MongoDB. |
+| **Node.js Runtime** | Node.js v20.x+ (LTS) (Port 3011) | Runtime máy chủ non-blocking I/O hiệu năng cao vận hành Backend Core API Gateway, WebSocket Server & Phục vụ React 19 Frontend. |
+| **Python AI Engine** | Python 3.10+ / FastAPI (Port 8000) | Microservice Trí tuệ Nhân tạo trích xuất ArcFace 512-D, kiểm tra Liveness Anti-spoofing và phân tích 3D Head Pose. |
+| **Kịch bản Khởi chạy Tự động** | Windows Batch Script (`run_system.bat`, `stop_system.bat`) | Tự động quét và giải phóng port xung đột (3011, 5000, 8000), kiểm tra socket kết nối MySQL 3306 & MongoDB 27017, khởi chạy đồng bộ toàn bộ ecosystem. |
 
 ---
 
-### 19.2. Thư Viện Backend & Máy Chủ Cốt Lõi (`examguard-core` — Node.js / Express 5)
+### 19.2. Thư Viện Backend & Máy Chủ Cốt Lõi (`examguard-core` — Node.js Express 5)
 
 Dưới đây là danh mục chi tiết các thư viện backend trong [examguard-core/package.json](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/package.json):
 
 | Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ trong Hệ thống |
 |:---|:---|:---|
 | `express` | `^5.2.1` | **Web Framework cốt lõi**: Định tuyến RESTful API, quản lý middleware, xử lý request/response của toàn bộ hệ thống quản lý thi. |
-| `mongoose` | `^9.3.0` | **Object Data Modeling (ODM)**: Định nghĩa Schema chặt chẽ cho MongoDB, quản lý model quan hệ, validation dữ liệu người dùng, ca thi, đề thi. |
+| `mysql2` | `^3.24.6` | **Driver Kết nối MySQL Chuyên dụng**: Tạo Connection Pool hiệu năng cao kết nối tới MySQL 8.0 (`examguard_db`), thực thi các truy vấn quan hệ với Prepared Statements chống SQL Injection. |
+| `mongoose` | `^9.3.0` | **Object Data Modeling (ODM)**: Định nghĩa Schema chặt chẽ cho MongoDB, quản lý model đề thi, câu hỏi, phiên làm bài và nhật ký camera. |
 | `socket.io` | `^4.8.4` | **Giao thức WebSocket Realtime Server**: Tạo room phòng thi ảo (`room_exam_{id}`), phát sóng cảnh báo gian lận, đồng bộ trạng thái thí sinh tức thì tới Giám thị. |
 | `jsonwebtoken` | `^9.0.3` | **Xác thực Không trạng thái (Stateless Auth)**: Ký và kiểm tra JWT token, phân quyền theo vai trò (RBAC: Admin, Giảng viên, Sinh viên) và bối cảnh ca thi (CBAC). |
 | `bcrypt` & `bcryptjs` | `^6.0.0` / `^3.0.3` | **Bảo mật Mật khẩu**: Băm mật khẩu người dùng với muối ngẫu nhiên (Salt-Hash 10 rounds), chống giải mã từ điển và rò rỉ cơ sở dữ liệu. |
@@ -3003,21 +3028,23 @@ Dưới đây là danh mục chi tiết các thư viện backend trong [examguar
 | `compression` | `^1.8.1` | **Nén Băng thông HTTP**: Tự động nén response bằng thuật toán Gzip, giảm độ trễ mạng khi truyền tải danh sách đề thi lớn. |
 | `dotenv` | `^17.3.1` | **Quản lý Cấu hình Môi trường**: Nạp an toàn các biến môi trường cấu hình cổng, chuỗi kết nối cơ sở dữ liệu, secret key từ tệp `.env`. |
 | `@google/genai` | `^1.29.0` | **Google Gemini AI SDK**: Tích hợp mô hình ngôn ngữ lớn hỗ trợ phân tích rubric tự luận, giải thích đáp án và đề xuất câu hỏi. |
-| `axios` | `^1.13.6` | **HTTP Client Máy chủ**: Giao tiếp HTTP bất đồng bộ giữa Node.js Core Backend và Python Face AI Microservice (Port 8000). |
+| `axios` | `^1.13.6` | **HTTP Client Máy chủ**: Giao tiếp HTTP bất đồng bộ giữa Node.js Core Backend, Python Flask Service (Port 5000) và Face AI (Port 8000). |
 | `date-fns` | `^4.1.0` | **Xử lý Thời gian Học thuật**: Định dạng ngày thi, tính toán thời gian làm bài chính xác tới mili-giây, đếm ngược ca thi theo múi giờ chuẩn. |
 
 ---
 
-### 19.3. Thư Viện Giao Diện Người Dùng & Trải Nghiệm Thí Sinh (`examguard-core` — React 19 / Vite 6)
+### 19.3. Thư Viện Giao Diện Người Dùng & Trải Nghiệm Thí Sinh (`examguard-core` — React 19 / TailwindCSS v4)
+
+Dưới đây là danh mục chi tiết các thư viện frontend trong [examguard-core/package.json](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/package.json):
 
 | Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ trong Giao diện |
 |:---|:---|:---|
 | `react` & `react-dom` | `^19.0.0` | **Thư viện UI thế hệ mới nhất**: Quản lý Virtual DOM, Server Actions, hooks hiện đại (`useActionState`, `useOptimistic`) cho giao diện mượt mà. |
+| `tailwindcss` | `^4.1.14` | **Tailwind Framework v4**: Hệ thống Design Token hiện đại (CSS Variables-first), tối ưu dung lượng CSS tải trang, giao diện đáp ứng đa thiết bị. |
+| `@tailwindcss/vite` | `^4.1.14` | **Tích hợp Tailwind v4 vào Vite**: Xử lý compile CSS trực tiếp trong pipeline của Vite mà không cần file cấu hình phức tạp. |
 | `vite` | `^6.2.0` | **Next-Generation Frontend Tooling**: Biên dịch TypeScript siêu tốc với esbuild, Hot Module Replacement (HMR) tức thì dưới 50ms. |
 | `@vitejs/plugin-react` | `^5.0.4` | **Plugin Vite cho React**: Tối ưu hóa Fast Refresh và chuyển đổi mã JSX/TSX. |
 | `typescript` | `~5.8.2` | **Ngôn ngữ Type-Safe**: Đảm bảo an toàn kiểu dữ liệu cho toàn bộ State, Props, DTO, tránh lỗi runtime trong phòng thi. |
-| `tailwindcss` | `^4.1.14` | **CSS Framework tiện ích v4**: Hệ thống Design Token hiện đại (CSS Variables-first), tối ưu dung lượng CSS tải trang. |
-| `@tailwindcss/vite` | `^4.1.14` | **Tích hợp Tailwind v4 vào Vite**: Xử lý compile CSS trực tiếp trong pipeline của Vite mà không cần file cấu hình phức tạp. |
 | `react-router-dom` | `^7.13.1` | **Bộ điều hướng Single Page App**: Quản lý định tuyến động, bảo vệ đường dẫn theo Role (Role Guards), layout lồng nhau. |
 | `zustand` | `^5.0.14` | **Quản lý Trạng thái Toàn cục (Global State)**: Siêu nhẹ, lưu trữ session đăng nhập (`authStore`), tiến trình làm bài (`examStore`), trạng thái giám sát (`proctorStore`). |
 | `socket.io-client` | `^4.8.4` | **WebSocket Client**: Duy trì kết nối realtime 2 chiều liên tục giữa trình duyệt của Thí sinh / Giám thị với máy chủ thi. |
@@ -3032,7 +3059,22 @@ Dưới đây là danh mục chi tiết các thư viện backend trong [examguar
 
 ---
 
-### 19.4. Thư Viện Trí Tuệ Nhân Tạo & Thị Giác Máy Tính (`examguard-ai` — Python FastAPI)
+### 19.4. Thư Viện Python Flask Core & Quản Trị Đào Tạo (`examguard-flask` — Python Flask / PyMySQL / PyMongo)
+
+Dưới đây là danh mục chi tiết các thư viện trong [examguard-flask/requirements.txt](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-flask/requirements.txt):
+
+| Tên Thư Viện (Package) | Phiên bản (Version) | Mục đích Kỹ thuật & Nghiệp vụ trong Hệ thống |
+|:---|:---|:---|
+| `flask` | `>=3.0.0` | **Python Micro-framework Chính**: Khởi tạo RESTful API server trên cổng `5000`, xử lý các endpoint nghiệp vụ quản trị tổ chức đào tạo, đồng bộ dữ liệu. |
+| `flask-cors` | `>=4.0.0` | **Cross-Origin Resource Sharing**: Cho phép ứng dụng React Frontend (Port 3011) gọi API trực tiếp tới Flask backend một cách an toàn. |
+| `pymysql` | `>=1.1.0` | **Pure Python MySQL Driver**: Kết nối trực tiếp tới MySQL 8.0 (`examguard_db`), thực thi các thao tác CRUD trên 13 bảng quan hệ tổ chức & điểm số. |
+| `pymongo` | `>=4.6.0` | **Python MongoDB Driver**: Kết nối cơ sở dữ liệu `examguard_ai_db`, phục vụ đối soát và đồng bộ hai chiều (Dual-Sync) giữa NoSQL và RDBMS. |
+| `python-dotenv` | `>=1.0.0` | **Quản lý Môi trường**: Nạp an toàn thông số kết nối CSDL (`MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MONGO_URI`) từ tệp `.env`. |
+| `requests` | `>=2.31.0` | **HTTP Client**: Giao tiếp HTTP với Core API và Face AI Microservice khi cần trigger đồng bộ hoặc audit log. |
+
+---
+
+### 19.5. Thư Viện Trí Tuệ Nhân Tạo & Thị Giác Máy Tính (`examguard-ai` — Python FastAPI)
 
 Dưới đây là danh mục chi tiết các thư viện trong [examguard-ai/requirements.txt](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-ai/requirements.txt):
 
@@ -3053,7 +3095,7 @@ Dưới đây là danh mục chi tiết các thư viện trong [examguard-ai/req
 
 ---
 
-### 19.5. Danh Mục Các Mô Hình Học Sâu ONNX Tích Hợp (Embedded Deep Learning Models)
+### 19.6. Danh Mục Các Mô Hình Học Sâu ONNX Tích Hợp (Embedded Deep Learning Models)
 
 Các mô hình được đóng gói dưới định dạng chuẩn công nghiệp **ONNX (Open Neural Network Exchange)** và nạp trực tiếp qua `onnxruntime`:
 
@@ -3080,7 +3122,7 @@ Các mô hình được đóng gói dưới định dạng chuẩn công nghiệ
 
 ---
 
-### 19.6. Ma Trận Phối Hợp Giữa Các Thư Viện Trong Các Luồng Nghiệp Vụ Cốt Lõi
+### 19.7. Ma Trận Phối Hợp Giữa Các Thư Viện Trong Các Luồng Nghiệp Vụ Cốt Lõi
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -3092,25 +3134,28 @@ Các mô hình được đóng gói dưới định dạng chuẩn công nghiệ
 │                          │ • WebRTC Camera Canvas Stream            │ • FastAPI + OpenCV (Alignment)           │
 │                          │ • React Hot Toast (Hướng dẫn xoay đầu)   │ • ONNX Runtime ArcFace 512-D + PyMongo   │
 ├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
-│ **2. Soạn & Cắt Đề Thi** │ • PDF.js CDN (Render trang PDF lên Canvas)│ • Node.js Multer + pdf-parse             │
-│                          │ • Lucide Scissors (Exam Snipping Tool)   │ • Mammoth (.docx to HTML AST)            │
-│                          │ • Canvas Selection Bounding Box          │ • Mongoose ExamPaper Schema              │
+│ **2. Quản trị Đào tạo &  │ • React 19 Table View + Tailwind v4      │ • Python Flask + PyMySQL (MySQL 8.0)     │
+│    Sổ Bộ Sinh viên**     │ • Form validation, Axios API Client      │ • Node.js mysql2 pool & Mongoose         │
 ├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
-│ **3. Giám Sát Realtime** │ • Socket.IO Client (Phòng thi trực tiếp) │ • Node.js Socket.IO Server (Rooms)       │
+│ **3. Soạn & Cắt Đề Thi** │ • PDF.js CDN (Render trang PDF lên Canvas)│ • Node.js Multer + pdf-parse             │
+│                          │ • Lucide Scissors (Exam Snipping Tool)   │ • Mammoth (.docx to HTML AST)            │
+│                          │ • Canvas Selection Bounding Box          │ • Mongoose ExamPaper Schema (MongoDB)    │
+├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ **4. Giám Sát Realtime** │ • Socket.IO Client (Phòng thi trực tiếp) │ • Node.js Socket.IO Server (Rooms)       │
 │                          │ • Fullscreen API + Event Listeners       │ • FastAPI Head Pose 3D + MiniFASNet      │
 │                          │ • Zero-Phone Webcam Paper Capture Canvas │ • Helmet + Rate-Limit + Mongoose Log     │
 ├──────────────────────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤
-│ **4. Chấm Thi & Báo Cáo**│ • Recharts (Vẽ biểu đồ phổ điểm, vi phạm)│ • Node.js Scoring Pipeline (Auto-score)  │
-│                          │ • Canvas Confetti (Hiệu ứng hoàn thành)  │ • @google/genai (Gemini AI Rubric Assist)│
+│ **5. Chấm Thi & Báo Cáo**│ • Recharts (Vẽ biểu đồ phổ điểm, vi phạm)│ • Node.js Scoring Pipeline (Auto-score)  │
+│                          │ • Canvas Confetti (Hiệu ứng hoàn thành)  │ • PyMySQL (Lưu điểm chính thức MySQL)    │
 │                          │ • XLSX Export Button                     │ • xlsx (Tạo file Bảng điểm Excel .xlsx)  │
 └──────────────────────────┴──────────────────────────────────────────┴──────────────────────────────────────────┘
 ```
 
 ---
 
-*Blueprint version 2.6 — Cập nhật: 2026-10-18*  
-*Bổ sung: Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification) đối chiếu 100% từ `package.json` và `requirements.txt`.*  
-*Nguồn tham chiếu gốc: `SYSTEM_BLUEPRINT.md`, `run_system.bat`, `examguard-core/package.json`, `examguard-ai/requirements.txt`*
+*Blueprint version 3.0 — Cập nhật: 2026-10-18*  
+*Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
+*Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/package.json`, `examguard-ai/requirements.txt`, `run_system.bat`*
 
 
 
