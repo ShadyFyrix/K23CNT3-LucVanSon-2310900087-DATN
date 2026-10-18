@@ -702,6 +702,112 @@ exports.getSanitizedQuestions = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đề thi của ca này!' });
     }
 
+    const now = new Date();
+    const startTime = session.startTime ? new Date(session.startTime) : new Date();
+    const durationMinutes = (session.durationMinutes || 60) + (examStudent.extraTimeMinutes || 0);
+    const durationMs = durationMinutes * 60 * 1000;
+    const endTime = session.endTime ? new Date(session.endTime) : new Date(startTime.getTime() + durationMs);
+
+    // 1. KIỂM TRA ĐẾM NGƯỢC GIỜ VÀO THI (Chưa đến giờ bắt đầu: now < startTime)
+    if (now.getTime() < startTime.getTime()) {
+      const countdownSeconds = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
+      return res.json({
+        success: true,
+        data: {
+          isPreExamWaiting: true,
+          countdownSeconds,
+          serverTime: now.toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          examStudent: {
+            id: examStudent._id,
+            candidateCode: examStudent.candidateCode,
+            seatRow: examStudent.seatRow,
+            seatCol: examStudent.seatCol,
+            seatPin: examStudent.seatPin,
+            trustScore: examStudent.trustScore !== undefined ? examStudent.trustScore : 100,
+            status: examStudent.status,
+            isLateUnlocked: examStudent.isLateUnlocked || false
+          },
+          student: {
+            id: examStudent.student._id,
+            name: examStudent.student.fullName || examStudent.student.name || 'Lục Văn Sơn',
+            studentCode: examStudent.student.studentCode,
+            email: examStudent.student.email,
+            className: examStudent.student.class?.name || examStudent.student.class?.code || 'K23CNT3'
+          },
+          session: {
+            id: session._id,
+            code: session.code,
+            title: session.title,
+            subjectName: session.subject?.name || session.title,
+            durationMinutes,
+            roomCode: session.room?.code || 'P302',
+            roomName: session.room?.name || 'Phòng P302',
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString()
+          },
+          examPaper: {
+            id: examPaper._id,
+            code: examPaper.code,
+            title: examPaper.title,
+            paperType: examPaper.paperType || 'STRUCTURED_QUIZ',
+            structureType: examPaper.structureType || 'PURE_MCQ',
+            totalQuestions: examPaper.totalQuestions || (examPaper.questions ? examPaper.questions.length : 0),
+            submissionMode: examPaper.submissionMode || 'OMR_BUBBLE_SHEET'
+          },
+          savedAnswers: {},
+          questions: [] // ZERO-KNOWLEDGE: Giữ bí mật đề thi tuyệt đối cho đến khi hết countdown
+        }
+      });
+    }
+
+    // 2. KIỂM TRA CHẶN VÀO THI KHI ĐI MUỘN QUÁ 15 PHÚT
+    // Điều kiện: now > startTime + 15 phút, thí sinh chưa bắt đầu làm bài trước đó, và chưa được Giám thị mở bàn đặc cách
+    const lateThresholdMs = 15 * 60 * 1000;
+    const isPast15Minutes = now.getTime() > (startTime.getTime() + lateThresholdMs);
+    const hasStartedBefore = examStudent.status === 'IN_EXAM' || examStudent.status === 'SUBMITTED';
+
+    if (isPast15Minutes && !hasStartedBefore && !examStudent.isLateUnlocked) {
+      const lateMinutes = Math.floor((now.getTime() - startTime.getTime()) / 60000);
+      return res.json({
+        success: true,
+        data: {
+          isLateBlocked: true,
+          lateMinutes,
+          serverTime: now.toISOString(),
+          startTime: startTime.toISOString(),
+          message: `BÀN THI ĐÃ BỊ KHÓA! Thí sinh đã đến muộn ${lateMinutes} phút (vượt quá 15 phút cho phép theo Quy chế coi thi). Vui lòng báo cáo Cán bộ coi thi tại phòng để được mở bàn đặc cách.`,
+          examStudent: {
+            id: examStudent._id,
+            candidateCode: examStudent.candidateCode,
+            seatRow: examStudent.seatRow,
+            seatCol: examStudent.seatCol,
+            trustScore: examStudent.trustScore !== undefined ? examStudent.trustScore : 100,
+            status: examStudent.status,
+            isLateUnlocked: false
+          },
+          student: {
+            id: examStudent.student._id,
+            name: examStudent.student.fullName || examStudent.student.name || 'Lục Văn Sơn',
+            studentCode: examStudent.student.studentCode,
+            email: examStudent.student.email,
+            className: examStudent.student.class?.name || examStudent.student.class?.code || 'K23CNT3'
+          },
+          session: {
+            id: session._id,
+            code: session.code,
+            title: session.title,
+            subjectName: session.subject?.name || session.title,
+            roomCode: session.room?.code || 'P302',
+            roomName: session.room?.name || 'Phòng P302',
+            startTime: startTime.toISOString()
+          },
+          questions: []
+        }
+      });
+    }
+
     // Pipeline bảo mật: Xóa tuyệt đối đáp án đúng & lời giải thích
     let questionsPayload = examPaper.questions.map((q, idx) => {
       const sanitized = {
@@ -746,9 +852,11 @@ exports.getSanitizedQuestions = async (req, res) => {
           candidateCode: examStudent.candidateCode,
           seatRow: examStudent.seatRow,
           seatCol: examStudent.seatCol,
+          seatPin: examStudent.seatPin,
           trustScore: examStudent.trustScore !== undefined ? examStudent.trustScore : 100,
           startedAt: examStudent.startedAt,
-          extraTimeMinutes: examStudent.extraTimeMinutes
+          extraTimeMinutes: examStudent.extraTimeMinutes,
+          isLateUnlocked: examStudent.isLateUnlocked || false
         },
         student: {
           id: examStudent.student._id,
@@ -764,7 +872,9 @@ exports.getSanitizedQuestions = async (req, res) => {
           subjectName: session.subject?.name || session.title,
           durationMinutes: session.durationMinutes + examStudent.extraTimeMinutes,
           roomCode: session.room?.code || 'P302',
-          roomName: session.room?.name || 'Phòng P302'
+          roomName: session.room?.name || 'Phòng P302',
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString()
         },
         examPaper: {
           id: examPaper._id,

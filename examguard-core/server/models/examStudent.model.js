@@ -64,7 +64,13 @@ const ExamStudentSchema = new mongoose.Schema({
   
   extraTimeMinutes: { type: Number, default: 0 },
   proctorOverrideUntil: { type: Date, default: null }, // Khi giám thị kiểm tra trực tiếp
-  shuffleMapping: { type: Map, of: Array, default: {} } // Lưu thứ tự đảo câu/đáp án
+  shuffleMapping: { type: Map, of: Array, default: {} }, // Lưu thứ tự đảo câu/đáp án
+  
+  // Quản lý thí sinh đến muộn & mở bàn đặc cách (>15 phút)
+  isLateUnlocked: { type: Boolean, default: false },
+  lateUnlockedAt: { type: Date, default: null },
+  lateUnlockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  lateUnlockReason: { type: String, default: '' }
 }, { timestamps: true });
 
 // Index đảm bảo mỗi sinh viên chỉ có 1 chỗ ngồi trong 1 ca thi

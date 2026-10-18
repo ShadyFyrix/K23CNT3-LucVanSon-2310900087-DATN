@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const examController = require('../controllers/exam.controller');
+const proctorController = require('../controllers/proctor.controller');
 
 const multer = require('multer');
 const path = require('path');
@@ -60,6 +61,7 @@ router.delete('/sessions/:sessionId/students/:examStudentId', examController.rem
 router.get('/questions/:sessionStudentId', examController.getSanitizedQuestions);
 router.post('/save-progress', examController.saveProgress);
 router.post('/submit', examController.submitExam);
+router.post('/unlock-late-student', proctorController.unlockLateStudent);
 
 // Tra cứu kết quả kèm đáp án & lời giải thích
 router.get('/results/:sessionStudentId', examController.getStudentExamResult);

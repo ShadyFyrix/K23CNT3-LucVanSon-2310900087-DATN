@@ -25,6 +25,9 @@ router.post('/dismiss-violation', proctorController.dismissViolation);
 // Đình chỉ thi thí sinh gian lận
 router.post('/suspend', proctorController.suspendCandidate);
 
+// Giám thị mở bàn đặc cách cho thí sinh đi muộn quá 15 phút
+router.post('/unlock-late-student', proctorController.unlockLateStudent);
+
 // Ghi nhận vi phạm chống gian lận trình duyệt (Tab switch, DevTools, Copy paste, v.v.)
 router.post('/anti-cheat-event', proctorController.logAntiCheatEvent);
 

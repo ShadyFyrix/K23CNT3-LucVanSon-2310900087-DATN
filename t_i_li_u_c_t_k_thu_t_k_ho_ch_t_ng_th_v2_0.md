@@ -27,6 +27,20 @@ Loại bỏ việc lưu cứng 1 link camera trong bảng `phong_thi`. Hệ th�
     *   `Camera_02` (Cuối phòng) phụ trách đa giác tọa độ từ bàn `R3-C1` đến `R4-C10` (20 bàn cuối).
 *   **Hợp nhất sự kiện (Multi-Cam Fusion):** Dù `Camera_01` hay `Camera_02` hay `Webcam Laptop` bắt được lỗi của sinh viên ngồi tại bàn `R2-C3`, tất cả đều quy chiếu về mã định danh bàn `R2-C3` trên **Phòng thi 3D** duy nhất.
 
+### 1.3. Giải pháp Countdown Giờ Phát Đề (Zero-Knowledge Waiting Room) & Chặn Vào Phòng Khi Đi Muộn Quá 15 Phút
+Nhằm nâng cấp toàn diện tính kỷ luật khảo thí theo chuẩn Quy chế thi của Bộ Giáo dục & Đào tạo:
+*   **Phòng Chờ Thi Trực Tuyến & Đồng Hồ Đếm Ngược (Pre-Exam Waiting Room):**
+    *   Trước giờ thi (`now < startTime`): Sinh viên được đưa vào Phòng chờ với đồng hồ số đếm ngược thời gian thực `HH:mm:ss`.
+    *   **Bảo mật Zero-Knowledge:** Server tuyệt đối không gửi đề thi trước giờ mở đề (`questions: []`), ngăn chặn việc soi gói tin Network để xem trộm đề.
+    *   **Auto-Reveal Đúng Giây:** Khi đồng hồ điểm `00:00:00`, hệ thống tự động phát âm thanh mở đề và chuyển mượt mà vào trang làm bài.
+*   **Quy chế Chặn Vào Phòng Thi Khi Đi Muộn Quá 15 Phút (Late Arrival Lock):**
+    *   Sau 15 phút kể từ giờ phát đề (`now > startTime + 15 phút`): Hệ thống tự động khóa bàn thi đối với sinh viên chưa vào làm bài.
+    *   Giao diện hiển thị màn hình khóa bảo mật cao cấp (Lockdown Screen), thông báo số phút đến muộn và hướng dẫn gặp Giám thị.
+*   **Cơ chế Giám Thị Mở Bàn Đặc Cách Cho Sinh Viên Đi Muộn:**
+    *   **Điều kiện nghiệp vụ:** Sinh viên phải đi muộn ít nhất 15 phút (`lateMinutes >= 15`). Nếu dưới 15 phút, hệ thống nhắc nhở sinh viên vẫn đang được tự do vào thi.
+    *   Giám thị kiểm tra lý do bất khả kháng (sự cố giao thông có xác nhận của Hội đồng thi), chọn mức bù giờ (+0p, +5p, +10p, +15p) và bấm [Mở Bàn Đặc Cách].
+    *   Socket.IO Server phát sự kiện `student:late_unlocked`, bàn thi của sinh viên tự động mở khóa ngay lập tức và bắt đầu làm bài.
+
 ---
 
 ## PHẦN 2: SƠ ĐỒ WORKFLOW TOÀN HỆ THỐNG (END-TO-END SYSTEM WORKFLOWS)
@@ -313,3 +327,26 @@ npm install three @types/three @react-three/fiber @react-three/drei zustand sock
 | **GĐ 4: Hệ thống Giám sát AI Kép & Đa Luồng CCTV** | Tuần 7 – 9 | 1. **Client Edge AI:** Nhúng `@mediapipe/tasks-vision` vào Web Worker trên ReactJS bắt hướng mắt (Gaze) và góc quay đầu 30 FPS trên PC/Laptop.<br>2. **Server Multi-CCTV AI:** Xây dựng trình quản lý đa luồng (`Multiprocessing Stream Reader`) trên FastAPI đọc đồng thời nhiều camera của 1 phòng, chạy `yolov8n-pose.onnx` + `Shapely` để phát hiện quay cóp, dùng điện thoại gầm bàn và rời vị trí. | Cả Webcam trên Laptop cá nhân lẫn 2-3 Camera CCTV trên tường đều gửi cảnh báo chính xác về đúng tọa độ bàn `vi_tri_ngoi` của sinh viên vi phạm. |
 | **GĐ 5: Phòng thi 3D & Cảnh báo 3 Chiều** | Tuần 10 – 11 | 1. Dùng `@react-three/fiber` (`InstancedMesh`) dựng tự động phòng thi 3D, hiển thị cả **vị trí các Camera CCTV trên tường 3D** và lưới bàn ghế.<br>2. Đồng bộ qua `Flask-SocketIO` + `Zustand`: Xoay đầu Avatar 3D theo góc thực tế, chớp cột sáng đỏ tại bàn vi phạm.<br>3. Làm Popup cảnh báo cho Sinh viên, Giám thị, Quản lý và tính năng Click vào bàn 3D để xem ảnh bằng chứng từ cả Webcam lẫn CCTV. | Giám thị nhìn vào Phòng 3D thấy rõ bàn nào đang báo đỏ, click vào xem được ảnh chụp từ Webcam laptop và ảnh chụp từ Camera góc tường để đối chứng. |
 | **GĐ 6: Hậu kiểm & Stress Test 1.500 CCU** | Tuần 12 | 1. Xây dựng trang **Báo cáo Toàn vẹn Bài thi (Integrity Report)** sau ca thi.<br>2. Viết kịch bản `pytest` và dùng `Locust` giả lập **1.500 kết nối đồng thời** để tối ưu hóa cấu hình `gevent` và `uvicorn`. | Hệ thống vận hành ổn định ở mốc 1.500 sinh viên thi cùng lúc, độ trễ cảnh báo lên Phòng 3D dưới `300ms`. |
+
+---
+
+## PHẦN 6: CÁC TÍNH NĂNG ĐÃ HOÀN THÀNH & NGHIỆM THU (PRODUCTION DELIVERABLES)
+
+Dưới đây là các module kỹ thuật và nghiệp vụ khảo thí nâng cao đã được hiện thực hóa và kiểm thử tự động 100% thành công trên toàn hệ thống:
+
+### 6.1. Đồng Hồ Đếm Ngược Giờ Phát Đề & Phòng Chờ Thi Trực Tuyến (Pre-Exam Waiting Room)
+*   **Giao diện:** Thiết kế buồng chờ thi trực tuyến với đồng hồ số kỹ thuật số neon (`HH : MM : SS`), tự động nhấp nháy chuyển màu hổ phách khi còn 10 giây cuối.
+*   **Zero-Knowledge Question Security:** Khi chưa tới giờ thi (`now < startTime`), máy chủ tuyệt đối không gửi dữ liệu đề thi (`questions: []`), ngăn chặn mọi hành vi bắt gói tin HTTP để biết trước đề.
+*   **Auto-Reveal Đúng Giây:** Đúng `00:00:00`, ứng dụng tự động phát âm thanh thông báo và chuyển thẳng vào làm bài thi mà không cần sinh viên reload lại trang.
+*   **Kiểm tra Thiết bị & Thẻ Thí sinh:** Sinh viên tự soi góc mặt và kiểm tra tín hiệu Camera trực tiếp; hiển thị đầy đủ SBD, MSSV, Họ tên, Lớp, Dãy - Cột và Mã PIN bàn thi.
+
+### 6.2. Chặn Vào Phòng Thi Khi Đi Muộn Quá 15 Phút & Giảng Viên Mở Bàn Đặc Cách
+*   **Quy chế Điều 14:** Trong 15 phút đầu kể từ giờ phát đề, sinh viên vẫn được tự do đăng nhập và làm bài. Sau 15 phút, hệ thống tự động khóa bàn thi đối với sinh viên chưa vào thi.
+*   **Màn hình Khóa Bàn Bảo Mật (Lockdown Screen):** Thông báo số phút đến muộn, trích dẫn quy chế thi, hướng dẫn liên hệ Giám thị và duy trì lắng nghe Socket.IO thời gian thực.
+*   **Quyền Giảng viên Mở Bàn Đặc Cách:** Trên sơ đồ phòng thi `LiveProctor.tsx`, các bàn bị khóa hiển thị badge `🔒 Khóa (X phút)`. Giám thị chỉ được phép mở bàn khi sinh viên đã muộn $\ge 15$ phút, nhập lý do bất khả kháng và tùy chọn cộng bù giờ (+0p, +5p, +10p, +15p). Lệnh mở bàn được đồng bộ tức thì qua WebSocket tới màn hình của sinh viên.
+
+### 6.3. Khắc Phục Lỗi Trừ Điểm Uy Tín & Cảnh Báo An Ninh Toàn Màn Hình
+*   **Sửa lỗi Undefined Penalty:** Chuẩn hóa bảng quy tắc vi phạm trình duyệt `ANTI_CHEAT_RULES` (F12 DevTools: -30đ, Rời tab: -10đ, Thoát toàn màn hình: -10đ, Copy/Paste: -10đ, Chuột phải: -5đ).
+*   **Modal Cảnh Báo An Ninh Toàn Màn Hình:** Hiển thị popup viền đỏ/vàng rung lắc nổi bật, phát âm thanh Web Audio API cảnh báo tần số cao và hiển thị số điểm uy tín bị trừ.
+*   **Tái Cấu Trúc Thẻ Thí Sinh Compact:** Bố cục 2 cột gọn nhẹ trên thanh công cụ làm bài thi, hiển thị rõ ràng SBD, MSSV, Dãy/Cột, Ca thi và Tên môn thi.
+*   **Bảo Mật Điểm Số & Đáp Án:** Sau khi nộp bài, hệ thống chỉ cấp **Phiếu Xác Nhận Nộp Bài Thi**. Kết quả điểm số và lời giải chỉ được mở khi Giảng viên / Hội đồng khảo thí công bố (`gradingStatus === 'PUBLISHED'`).

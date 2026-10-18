@@ -738,3 +738,103 @@ exports.getTimeline = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 11. Giám thị Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách với điều kiện chậm ít nhất 15 phút)
+exports.unlockLateStudent = async (req, res) => {
+  try {
+    const { sessionStudentId, reason, extraMinutes, forceUnlock } = req.body;
+
+    const examStudent = await ExamStudent.findById(sessionStudentId)
+      .populate('session')
+      .populate('student');
+
+    if (!examStudent) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin thí sinh!' });
+    }
+
+    const session = await ExamSession.findById(examStudent.session._id || examStudent.session);
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+    }
+
+    const now = new Date();
+    const startTime = session.startTime ? new Date(session.startTime) : now;
+    const lateMinutes = Math.max(0, Math.floor((now.getTime() - startTime.getTime()) / 60000));
+
+    // Kiểm tra điều kiện: Chậm ít nhất 15 phút (trừ khi forceUnlock)
+    if (lateMinutes < 15 && !forceUnlock) {
+      return res.status(400).json({
+        success: false,
+        message: `Thí sinh mới đến muộn ${lateMinutes} phút (chưa đủ 15 phút). Theo quy chế, thí sinh dưới 15 phút vẫn được tự do đăng nhập và làm bài bình thường, không cần mở bàn đặc cách!`
+      });
+    }
+
+    examStudent.isLateUnlocked = true;
+    examStudent.lateUnlockedAt = now;
+    examStudent.lateUnlockReason = reason || `Giám thị mở bàn đặc cách thí sinh đi muộn (${lateMinutes} phút)`;
+    examStudent.lateUnlockedBy = req.user?._id || null;
+
+    if (extraMinutes && Number(extraMinutes) > 0) {
+      examStudent.extraTimeMinutes = (examStudent.extraTimeMinutes || 0) + Number(extraMinutes);
+    }
+
+    if (examStudent.status === 'ASSIGNED' || examStudent.status === 'ABSENT') {
+      examStudent.status = 'CHECKED_IN';
+    }
+    await examStudent.save();
+
+    // Ghi nhật ký vào Timeline vi phạm / sự kiện
+    try {
+      await ExamViolation.create({
+        session: session._id,
+        examStudent: examStudent._id,
+        student: examStudent.student._id,
+        type: 'PROCTOR_INSPECTION',
+        severity: 'LOW',
+        penalty: 0,
+        snapshotUrl: '',
+        isProctorPresence: true,
+        proctorName: req.user?.fullName || 'Cán bộ coi thi',
+        isDismissed: true,
+        dismissReason: `Giám thị mở bàn đặc cách lúc ${now.toLocaleTimeString('vi-VN')} (Muộn ${lateMinutes}p: ${examStudent.lateUnlockReason})`
+      });
+    } catch (logErr) {
+      console.warn('Lỗi ghi audit log mở bàn đặc cách:', logErr.message);
+    }
+
+    // Phát Socket.IO Realtime: Thông báo cho thí sinh & phòng thi
+    socketService.emitRoomBroadcast(session._id, 'student:late_unlocked', {
+      examStudentId: examStudent._id,
+      candidateCode: examStudent.candidateCode,
+      studentId: examStudent.student._id,
+      studentName: examStudent.student.fullName || examStudent.student.name,
+      seatRow: examStudent.seatRow,
+      seatCol: examStudent.seatCol,
+      lateMinutes,
+      extraMinutes: Number(extraMinutes) || 0,
+      reason: examStudent.lateUnlockReason
+    });
+
+    socketService.emitStudentUpdate(session._id, {
+      examStudentId: examStudent._id,
+      candidateCode: examStudent.candidateCode,
+      status: examStudent.status,
+      isLateUnlocked: true,
+      extraTimeMinutes: examStudent.extraTimeMinutes
+    });
+
+    return res.json({
+      success: true,
+      message: `Đã mở bàn thi đặc cách cho thí sinh ${examStudent.candidateCode} (Đi muộn ${lateMinutes} phút)!`,
+      data: {
+        examStudentId: examStudent._id,
+        isLateUnlocked: true,
+        lateMinutes,
+        extraTimeMinutes: examStudent.extraTimeMinutes
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi unlockLateStudent:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

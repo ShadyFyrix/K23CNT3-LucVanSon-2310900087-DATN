@@ -48,7 +48,10 @@ import {
   UploadCloud,
   ImageIcon,
   FileCheck,
-  Trash2
+  Trash2,
+  Lock,
+  Unlock,
+  Hourglass
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -73,29 +76,41 @@ interface Question {
 }
 
 interface ExamData {
+  isPreExamWaiting?: boolean;
+  countdownSeconds?: number;
+  isLateBlocked?: boolean;
+  lateMinutes?: number;
+  serverTime?: string;
+  startTime?: string;
   examStudent: {
     id: string;
     candidateCode: string;
     seatRow: number;
     seatCol: number;
+    seatPin?: string;
     trustScore: number;
-    startedAt: string;
+    startedAt?: string;
     extraTimeMinutes: number;
+    isLateUnlocked?: boolean;
+    status?: string;
   };
   student: {
     id: string;
     name: string;
     studentCode: string;
-    email: string;
+    email?: string;
     className?: string;
   };
   session: {
     id: string;
     code: string;
     title: string;
+    subjectName?: string;
     durationMinutes: number;
     roomCode: string;
     roomName: string;
+    startTime?: string;
+    endTime?: string;
   };
   examPaper?: {
     id: string;
@@ -213,42 +228,91 @@ export default function TakeExam() {
     } catch (_) {}
   };
 
-  // 1. Tải đề thi đã lọc bảo mật
-  useEffect(() => {
-    async function fetchExam() {
-      try {
-        setLoading(true);
-        const targetId = sessionStudentId || 'fallback_student';
-        const res = await apiClient.get(`/api/exam/questions/${targetId}`);
-        if (res.data && res.data.success) {
-          const data: ExamData = res.data.data;
-          setExamData(data);
-          setAnswers(data.savedAnswers || {});
-          setTrustScore(data.examStudent.trustScore || 100);
+  // Quản lý Đếm ngược Giờ vào thi (Countdown Waiting Room) & Chặn Vào Phòng khi Đi Muộn (>15p)
+  const [isPreExamWaiting, setIsPreExamWaiting] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
+  const [isLateBlocked, setIsLateBlocked] = useState(false);
+  const [lateMinutes, setLateMinutes] = useState(0);
 
-          // Tính thời gian còn lại
-          const totalSec = (data.session.durationMinutes || 60) * 60;
-          if (data.examStudent.startedAt) {
-            const elapsed = Math.floor((Date.now() - new Date(data.examStudent.startedAt).getTime()) / 1000);
-            setTimeLeft(Math.max(0, totalSec - elapsed));
-          } else {
-            setTimeLeft(totalSec);
-          }
+  // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn
+  const fetchExam = async () => {
+    try {
+      setLoading(true);
+      const targetId = sessionStudentId || 'fallback_student';
+      const res = await apiClient.get(`/api/exam/questions/${targetId}`);
+      if (res.data && res.data.success) {
+        const data: ExamData = res.data.data;
+        setExamData(data);
 
-          // Tự động chuyển sang chế độ Chia đôi (Đề thi & Phiếu tô OMR) nếu là đề thi đính kèm tệp
-          if (data.examPaper?.paperType === 'FILE_ATTACHED') {
-            setWorkspaceMode('SPLIT_FILE');
-          }
+        // Trường hợp 1: Chưa đến giờ thi -> Kích hoạt Phòng chờ & Đếm ngược
+        if (data.isPreExamWaiting) {
+          setIsPreExamWaiting(true);
+          setCountdownSeconds(data.countdownSeconds || 0);
+          setIsLateBlocked(false);
+          return;
         }
-      } catch (err: any) {
-        console.error('Lỗi tải đề thi Quiz:', err);
-        toast.error('Không thể tải bài thi. Đang kết nối lại...');
-      } finally {
-        setLoading(false);
+
+        // Trường hợp 2: Đi muộn quá 15 phút -> Chặn vào phòng thi
+        if (data.isLateBlocked) {
+          setIsLateBlocked(true);
+          setLateMinutes(data.lateMinutes || 15);
+          setIsPreExamWaiting(false);
+          return;
+        }
+
+        // Trường hợp 3: Vào phòng thi và làm bài bình thường
+        setIsPreExamWaiting(false);
+        setIsLateBlocked(false);
+        setAnswers(data.savedAnswers || {});
+        setTrustScore(data.examStudent?.trustScore !== undefined ? data.examStudent.trustScore : 100);
+
+        // Tính thời gian còn lại
+        const totalSec = (data.session.durationMinutes || 60) * 60;
+        if (data.examStudent.startedAt) {
+          const elapsed = Math.floor((Date.now() - new Date(data.examStudent.startedAt).getTime()) / 1000);
+          setTimeLeft(Math.max(0, totalSec - elapsed));
+        } else {
+          setTimeLeft(totalSec);
+        }
+
+        // Tự động chuyển sang chế độ Chia đôi (Đề thi & Phiếu tô OMR) nếu là đề thi đính kèm tệp
+        if (data.examPaper?.paperType === 'FILE_ATTACHED') {
+          setWorkspaceMode('SPLIT_FILE');
+        }
       }
+    } catch (err: any) {
+      console.error('Lỗi tải đề thi Quiz:', err);
+      toast.error('Không thể tải bài thi. Đang kết nối lại...');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchExam();
   }, [sessionStudentId]);
+
+  // Bộ đếm ngược tự động giờ phát đề thi (Pre-Exam Countdown Timer)
+  useEffect(() => {
+    if (!isPreExamWaiting || countdownSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setCountdownSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          playQuizSound('finish');
+          toast.success('ĐÃ ĐẾN GIỜ PHÁT ĐỀ THI! Đang tải đề thi...', { icon: '🎯', duration: 4000 });
+          setTimeout(() => {
+            fetchExam();
+          }, 800);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isPreExamWaiting, countdownSeconds]);
 
   // 2. Khởi tạo Webcam
   useEffect(() => {
@@ -391,7 +455,7 @@ export default function TakeExam() {
 
   // 4. Gửi frame camera định kỳ lên server để phân tích AI (Adaptive Interval theo điểm uy tín)
   useEffect(() => {
-    if (!cameraActive || !examData) return;
+    if (!cameraActive || !examData || isPreExamWaiting || isLateBlocked) return;
 
     // Tần suất thích ứng: uy tín < 70 -> 10s, < 90 -> 15s, >= 90 -> 20s
     const checkIntervalMs = trustScore >= 90 ? 20000 : trustScore >= 70 ? 15000 : 10000;
@@ -449,7 +513,7 @@ export default function TakeExam() {
     }, checkIntervalMs);
 
     return () => clearInterval(interval);
-  }, [cameraActive, examData, trustScore]);
+  }, [cameraActive, examData, trustScore, isPreExamWaiting, isLateBlocked]);
 
   // 5. Kết nối Socket.IO thời gian thực để nhận cảnh báo từ Giám thị & gửi Heartbeat
   useEffect(() => {
@@ -467,8 +531,25 @@ export default function TakeExam() {
         sessionId: examData.session.id,
         role: 'student',
         studentId: examData.student.id,
-        candidateCode: examData.examStudent.candidateCode
+        candidateCode: examData.examStudent?.candidateCode
       });
+    });
+
+    // Nhận thông báo mở bàn thi đặc cách từ Giám thị
+    socket.on('student:late_unlocked', (data: any) => {
+      if (
+        data.candidateCode === examData.examStudent?.candidateCode ||
+        data.examStudentId === examData.examStudent?.id ||
+        data.studentId === examData.student?.id
+      ) {
+        playQuizSound('finish');
+        toast.success(`CÁN BỘ COI THI ĐÃ MỞ BÀN THI ĐẶC CÁCH CHO BẠN!${data.extraMinutes > 0 ? ` (+${data.extraMinutes} phút bù)` : ''}`, {
+          icon: '🔓',
+          duration: 8000
+        });
+        setIsLateBlocked(false);
+        fetchExam();
+      }
     });
 
     // Nhận cảnh báo trực tiếp từ Giám thị
@@ -488,7 +569,7 @@ export default function TakeExam() {
 
     // Nhận thông báo cộng bù giờ
     socket.on('student:extra_time', (data: any) => {
-      if (data.candidateCode === examData.examStudent.candidateCode) {
+      if (data.candidateCode === examData.examStudent?.candidateCode) {
         setTimeLeft(prev => prev + (data.extraMinutes || 5) * 60);
         toast.success(`GIÁM THỊ ĐÃ CỘNG BÙ ${data.extraMinutes} PHÚT LÀM BÀI CHO BẠN!`, { duration: 6000 });
       }
@@ -496,19 +577,20 @@ export default function TakeExam() {
 
     // Nhận thông báo đình chỉ thi
     socket.on('student:suspended', (data: any) => {
-      if (data.candidateCode === examData.examStudent.candidateCode) {
+      if (data.candidateCode === examData.examStudent?.candidateCode) {
         setIsSuspended(true);
         setSuspendReason(data.reason || 'Vi phạm quy chế thi');
         toast.error('BẠN ĐÃ BỊ ĐÌNH CHỈ THI BỞI HỘI ĐỒNG COI THI!', { duration: 10000 });
       }
     });
 
-    // Gửi Heartbeat định kỳ 10s cho giám thị
+    // Gửi Heartbeat định kỳ 10s cho giám thị (chỉ khi đang thi)
     const heartbeatInterval = setInterval(() => {
+      if (isPreExamWaiting || isLateBlocked) return;
       socket.emit('student:heartbeat', {
         sessionId: examData.session.id,
         studentId: examData.student.id,
-        candidateCode: examData.examStudent.candidateCode,
+        candidateCode: examData.examStudent?.candidateCode,
         currentQuestion: currentIdx + 1,
         trustScore
       });
@@ -518,7 +600,7 @@ export default function TakeExam() {
       clearInterval(heartbeatInterval);
       socket.disconnect();
     };
-  }, [examData, currentIdx, trustScore]);
+  }, [examData, currentIdx, trustScore, isPreExamWaiting, isLateBlocked]);
 
   // 5. Bộ đếm ngược thời gian (Countdown)
   useEffect(() => {
@@ -879,6 +961,361 @@ export default function TakeExam() {
         </div>
         <p className="mt-4 text-slate-300 font-medium">Đang tải phòng thi Quiz ExamGuard AI...</p>
         <span className="text-xs text-slate-500 mt-1">Đang mã hóa dữ liệu & nạp thuật toán chống gian lận</span>
+      </div>
+    );
+  }
+
+  // ── MÀN HÌNH 1: BÀN THI BỊ KHÓA DO ĐẾN MUỘN QUÁ 15 PHÚT ──
+  if (isLateBlocked) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none relative overflow-hidden">
+        {/* Background glow effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top Header */}
+        <div className="max-w-4xl w-full mx-auto flex items-center justify-between pb-4 border-b border-slate-800/80 relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center">
+              <ShieldAlert className="w-6 h-6 text-rose-400" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>EXAMGUARD AI</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  SECURITY LOCKDOWN
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400">{examData?.session?.title || 'Phòng thi Trực tuyến'}</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xs font-mono text-slate-400 block">{examData?.session?.roomName || 'Phòng thi'}</span>
+            <span className="text-[11px] font-mono text-cyan-400 font-semibold">{examData?.session?.code}</span>
+          </div>
+        </div>
+
+        {/* Center Card */}
+        <div className="max-w-xl w-full mx-auto my-auto relative z-10 py-6">
+          <div className="bg-slate-900/90 border border-rose-500/40 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl space-y-6 text-center ring-1 ring-rose-500/20">
+            {/* Lock Icon */}
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 bg-rose-500/20 rounded-full animate-ping" />
+              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 shadow-xl shadow-rose-950/50">
+                <Lock className="w-10 h-10" />
+              </div>
+            </div>
+
+            {/* Title & Warning */}
+            <div className="space-y-2">
+              <h2 className="text-xl md:text-2xl font-black text-white tracking-wide">
+                BÀN THI ĐÃ BỊ KHÓA
+              </h2>
+              <div className="inline-block px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold uppercase tracking-wider">
+                ĐẾN MUỘN {lateMinutes} PHÚT (VƯỢT QUÁ QUY ĐỊNH 15 PHÚT)
+              </div>
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed max-w-md mx-auto pt-1">
+                Theo <b className="text-amber-400">Điều 14 Quy chế coi thi</b> của Nhà trường: Thí sinh đến muộn quá 15 phút sau khi phát đề và bắt đầu tính giờ làm bài sẽ <b className="text-rose-400">không được phép tự ý vào phòng thi</b>.
+              </p>
+            </div>
+
+            {/* Detailed Info Grid */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-left grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-[11px] text-slate-500 block">Thí sinh:</span>
+                <span className="font-bold text-slate-200">{examData?.student?.name}</span>
+                <span className="block text-[10px] text-slate-400 font-mono">MSSV: {examData?.student?.studentCode}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Số báo danh / Vị trí bàn:</span>
+                <span className="font-bold text-cyan-400 font-mono">{examData?.examStudent?.candidateCode}</span>
+                <span className="block text-[10px] text-slate-400">Dãy {examData?.examStudent?.seatRow} - Cột {examData?.examStudent?.seatCol}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Giờ bắt đầu ca thi:</span>
+                <span className="font-semibold text-slate-300 font-mono">
+                  {examData?.session?.startTime ? new Date(examData.session.startTime).toLocaleTimeString('vi-VN') : 'Đang tải...'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-500 block">Trạng thái khóa bàn:</span>
+                <span className="font-bold text-rose-400 flex items-center space-x-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                  <span>ĐANG KHÓA (CHỜ GIÁM THỊ)</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Instruction box */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-left text-xs text-amber-200/90 space-y-1">
+              <div className="font-bold flex items-center space-x-1.5 text-amber-300">
+                <AlertTriangle className="w-4 h-4" />
+                <span>HƯỚNG DẪN XỬ LÝ ĐẶC CÁCH:</span>
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Vui lòng <b>báo cáo trực tiếp với Giám thị tại phòng thi</b>. Nếu có lý do bất khả kháng được Hội đồng thi chấp thuận, Giám thị sẽ dùng quyền quản trị mở bàn đặc cách cho bạn trên màn hình giám sát.
+              </p>
+            </div>
+
+            {/* Socket Live Pulse */}
+            <div className="flex items-center justify-center space-x-2 text-[11px] text-cyan-400 font-mono">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <span>Đang kết nối Realtime Socket.IO — Tự động mở khi Giám thị duyệt...</span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => fetchExam()}
+                disabled={loading}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Kiểm Tra Lại Trạng Thái Bàn Thi</span>
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              >
+                Về Trang Chủ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-slate-600 relative z-10 pt-4">
+          ExamGuard AI Security Engine • Hệ thống Giám sát Khảo thí Toàn vẹn v2.0
+        </div>
+      </div>
+    );
+  }
+
+  // ── MÀN HÌNH 2: PHÒNG CHỜ THI TRỰC TUYẾN & ĐẾM NGƯỢC GIỜ PHÁT ĐỀ ──
+  if (isPreExamWaiting) {
+    const hours = Math.floor(countdownSeconds / 3600);
+    const mins = Math.floor((countdownSeconds % 3600) / 60);
+    const secs = countdownSeconds % 60;
+
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none relative overflow-hidden">
+        {/* Hidden canvas for webcam */}
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* Ambient glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top Header */}
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between pb-4 border-b border-slate-800/80 relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <ShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>EXAMGUARD AI</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span>PHÒNG CHỜ THI TRỰC TUYẾN</span>
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400">{examData?.session?.subjectName || examData?.session?.title}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 text-xs font-mono">
+            <div className="hidden sm:block text-right">
+              <span className="text-slate-400 block">{examData?.session?.roomName}</span>
+              <span className="text-cyan-400 font-bold">Mã ca: {examData?.session?.code}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content: 2-column layout */}
+        <div className="max-w-6xl w-full mx-auto my-auto relative z-10 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Left Column (7 cols): Hero Countdown Timer */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-slate-900/90 border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <span className="text-xs font-bold text-cyan-400 flex items-center space-x-1.5 tracking-wider uppercase">
+                  <Clock className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+                  <span>ĐỒNG HỒ ĐẾM NGƯỢC GIỜ PHÁT ĐỀ</span>
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Phát đề lúc: <b className="text-white">{examData?.session?.startTime ? new Date(examData.session.startTime).toLocaleTimeString('vi-VN') : ''}</b>
+                </span>
+              </div>
+
+              {/* Huge Digital Clock */}
+              <div className="py-6 text-center">
+                <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-md mx-auto">
+                  {/* Hours */}
+                  <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 md:p-4 shadow-inner">
+                    <div className="text-3xl md:text-5xl font-black font-mono text-cyan-400 tracking-wider">
+                      {String(hours).padStart(2, '0')}
+                    </div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-semibold tracking-widest mt-1">GIỜ</div>
+                  </div>
+
+                  {/* Minutes */}
+                  <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 md:p-4 shadow-inner">
+                    <div className="text-3xl md:text-5xl font-black font-mono text-cyan-400 tracking-wider">
+                      {String(mins).padStart(2, '0')}
+                    </div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-semibold tracking-widest mt-1">PHÚT</div>
+                  </div>
+
+                  {/* Seconds */}
+                  <div className={`bg-slate-950/90 border rounded-2xl p-3 md:p-4 shadow-inner transition-colors ${
+                    countdownSeconds <= 10 ? 'border-amber-500/60 bg-amber-950/30' : 'border-slate-800'
+                  }`}>
+                    <div className={`text-3xl md:text-5xl font-black font-mono tracking-wider ${
+                      countdownSeconds <= 10 ? 'text-amber-400 animate-pulse' : 'text-cyan-400'
+                    }`}>
+                      {String(secs).padStart(2, '0')}
+                    </div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-semibold tracking-widest mt-1">GIÂY</div>
+                  </div>
+                </div>
+
+                {countdownSeconds <= 10 && (
+                  <p className="mt-4 text-xs font-bold text-amber-300 animate-bounce">
+                    ⚡ CHUẨN BỊ MỞ ĐỀ THI TRONG {countdownSeconds} GIÂY...
+                  </p>
+                )}
+                {countdownSeconds > 10 && (
+                  <p className="mt-4 text-xs text-slate-400">
+                    Đề thi sẽ tự động hiển thị và bắt đầu tính giờ ngay khi đồng hồ về <b className="text-cyan-400 font-mono">00:00:00</b>. Vui lòng giữ nguyên màn hình!
+                  </p>
+                )}
+              </div>
+
+              {/* Ca thi overview stats */}
+              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-center text-xs">
+                <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Thời lượng:</span>
+                  <span className="font-bold text-white font-mono">{examData?.session?.durationMinutes || 60} phút</span>
+                </div>
+                <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Số lượng câu:</span>
+                  <span className="font-bold text-white font-mono">{examData?.examPaper?.totalQuestions || 'Theo đề'} câu</span>
+                </div>
+                <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Hình thức nộp:</span>
+                  <span className="font-bold text-cyan-400 font-mono">Trắc nghiệm Quiz</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick check button */}
+            <div className="flex items-center justify-between text-xs text-slate-400 px-2">
+              <span className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Hệ thống giám sát ExamGuard AI đã sẵn sàng</span>
+              </span>
+              <button
+                onClick={() => fetchExam()}
+                className="text-cyan-400 hover:text-cyan-300 underline font-medium"
+              >
+                Làm mới trạng thái
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column (5 cols): Camera Check & Candidate Info Card */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Candidate Card */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+                  <User className="w-4 h-4 text-cyan-400" />
+                  <span>THÔNG TIN THÍ SINH DỰ THI</span>
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">
+                  SBD: {examData?.examStudent?.candidateCode}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">Họ và tên:</span>
+                  <span className="font-bold text-white truncate block">{examData?.student?.name}</span>
+                </div>
+                <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">Mã sinh viên:</span>
+                  <span className="font-mono font-bold text-slate-200 block">{examData?.student?.studentCode}</span>
+                </div>
+                <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">Lớp quản lý:</span>
+                  <span className="font-bold text-slate-300 block">{examData?.student?.className || 'K23CNT3'}</span>
+                </div>
+                <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">Vị trí bàn thi:</span>
+                  <span className="font-bold text-cyan-400 font-mono block">Dãy {examData?.examStudent?.seatRow} - Cột {examData?.examStudent?.seatCol}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Webcam Live Test Box */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+                  <Camera className="w-4 h-4 text-cyan-400" />
+                  <span>KIỂM TRA CAMERA & KHUÔN MẶT</span>
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                  cameraActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                }`}>
+                  {cameraActive ? 'CAMERA HOẠT ĐỘNG' : 'CHƯA BẬT CAMERA'}
+                </span>
+              </div>
+
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover mirror"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+                {!cameraActive && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-950/80">
+                    <Camera className="w-8 h-8 text-slate-600 mb-1" />
+                    <p className="text-[11px] text-slate-400">Vui lòng cấp quyền Camera trình duyệt để tiến hành nhận diện AI</p>
+                  </div>
+                )}
+                {cameraActive && (
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-sm border border-emerald-500/30 text-[10px] font-mono text-emerald-400 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>AI Face Liveness Active</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quy chế thi tóm tắt */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3.5 text-xs text-slate-400 space-y-1.5">
+              <span className="font-bold text-slate-300 block text-[11px] uppercase tracking-wider">
+                Lưu ý Quy chế coi thi:
+              </span>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+                <li>Tuyệt đối <b>không chuyển tab</b> hoặc mở DevTools (Hệ thống trừ điểm uy tín).</li>
+                <li>Ngồi thẳng, giữ khuôn mặt luôn ở giữa khung hình camera.</li>
+                <li>Thí sinh đến muộn quá 15 phút sẽ bị khóa bàn thi theo Quy chế.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-slate-600 relative z-10 pt-4">
+          ExamGuard AI • Phòng Chờ Thi Trực Tuyến & Chống Gian Lận Đa Tầng v2.0
+        </div>
       </div>
     );
   }

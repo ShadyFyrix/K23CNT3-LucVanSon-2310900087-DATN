@@ -26,7 +26,9 @@ import {
   BarChart3,
   ExternalLink,
   Wifi,
-  WifiOff
+  WifiOff,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { io, Socket } from 'socket.io-client';
@@ -39,10 +41,13 @@ interface StudentSeat {
   seatRow: number;
   seatCol: number;
   seatPin: string;
-  status: 'ASSIGNED' | 'CHECKED_IN' | 'IN_EXAM' | 'SUBMITTED' | 'SUSPENDED';
+  status: 'ASSIGNED' | 'CHECKED_IN' | 'IN_EXAM' | 'SUBMITTED' | 'SUSPENDED' | 'ABSENT';
   trustScore: number;
   extraTimeMinutes: number;
   proctorOverrideUntil?: string;
+  isLateUnlocked?: boolean;
+  lateUnlockedAt?: string;
+  lateUnlockReason?: string;
   isOnline?: boolean;
   currentQuestion?: number;
   student: {
@@ -114,6 +119,8 @@ export default function LiveProctor() {
 
   // Modal actions
   const [warningMsg, setWarningMsg] = useState('Yêu cầu tập trung làm bài, nhìn thẳng vào màn hình.');
+  const [lateReason, setLateReason] = useState('Được sự đồng ý đặc cách của Hội đồng / Trưởng điểm thi');
+  const [lateExtraMinutes, setLateExtraMinutes] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
@@ -349,6 +356,28 @@ export default function LiveProctor() {
     }
   };
 
+  // Hành động: Mở bàn thi cho thí sinh đi muộn (Đặc cách)
+  const handleUnlockLateStudent = async () => {
+    if (!selectedSeat) return;
+    setActionLoading(true);
+    try {
+      const res = await apiClient.post('/api/proctor/unlock-late-student', {
+        sessionStudentId: selectedSeat._id,
+        reason: lateReason,
+        extraMinutes: lateExtraMinutes
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Đã mở bàn thi đặc cách thành công!');
+        setSelectedSeat(null);
+        fetchRoomState();
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Lỗi mở bàn thí sinh đi muộn');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Hành động: Đình chỉ thi
   const handleSuspend = async () => {
     if (!selectedSeat) return;
@@ -577,6 +606,11 @@ export default function LiveProctor() {
 
                         const isOverride = st?.proctorOverrideUntil && new Date(st.proctorOverrideUntil) > new Date();
 
+                        // Kiểm tra thí sinh đi muộn quá 15 phút (bàn bị khóa)
+                        const sessionStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
+                        const currentLateMinutes = sessionStartTime > 0 ? Math.floor((Date.now() - sessionStartTime) / 60000) : 0;
+                        const isLateLocked = st && (st.status === 'ASSIGNED' || st.status === 'ABSENT') && currentLateMinutes >= 15 && !st.isLateUnlocked;
+
                         // Lọc bỏ nếu không khớp filter
                         const isHiddenByFilter = st && filterMode !== 'ALL' && !filteredStudents.some(f => f._id === st._id);
 
@@ -588,6 +622,10 @@ export default function LiveProctor() {
                             cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 ring-1 ring-rose-500/40';
                           } else if (isOverride) {
                             cardClass = 'bg-purple-950/40 border-purple-500/60 text-purple-300 animate-pulse ring-1 ring-purple-500/50';
+                          } else if (isLateLocked) {
+                            cardClass = 'bg-amber-950/40 border-amber-500/80 text-amber-300 ring-1 ring-amber-500/60 animate-pulse';
+                          } else if (st.isLateUnlocked) {
+                            cardClass = 'bg-cyan-950/30 border-cyan-500/60 text-cyan-200 ring-1 ring-cyan-500/40';
                           } else if (st.trustScore < 60) {
                             cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 animate-pulse ring-1 ring-rose-500/50';
                           } else if (st.trustScore < 85) {
@@ -630,6 +668,16 @@ export default function LiveProctor() {
                                   {isOverride ? (
                                     <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">
                                       Tại bàn
+                                    </span>
+                                  ) : isLateLocked ? (
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold flex items-center space-x-0.5">
+                                      <Lock className="w-2.5 h-2.5 inline" />
+                                      <span>Khóa {currentLateMinutes}p</span>
+                                    </span>
+                                  ) : st.isLateUnlocked ? (
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold flex items-center space-x-0.5">
+                                      <Unlock className="w-2.5 h-2.5 inline" />
+                                      <span>Đặc cách</span>
                                     </span>
                                   ) : st.status === 'IN_EXAM' ? (
                                     <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">
@@ -820,7 +868,77 @@ export default function LiveProctor() {
                 </div>
               </div>
 
-              {/* 4. Đình chỉ thi */}
+              {/* 4. Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách) */}
+              {(() => {
+                const sStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
+                const lateMins = sStartTime > 0 ? Math.floor((Date.now() - sStartTime) / 60000) : 0;
+                const isLateLocked = (selectedSeat.status === 'ASSIGNED' || selectedSeat.status === 'ABSENT') && lateMins >= 15 && !selectedSeat.isLateUnlocked;
+
+                return (
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-300 flex items-center space-x-1.5">
+                        <Unlock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>4. Mở Bàn Cho SV Đi Muộn (Đặc cách):</span>
+                      </span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        isLateLocked ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {lateMins >= 15 ? `Muộn ${lateMins}p (Bàn bị khóa)` : `Muộn ${lateMins}p (<15p)`}
+                      </span>
+                    </div>
+
+                    {selectedSeat.isLateUnlocked ? (
+                      <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-300 text-[11px]">
+                        ✓ Bàn thi này đã được mở đặc cách lúc {selectedSeat.lateUnlockedAt ? new Date(selectedSeat.lateUnlockedAt).toLocaleTimeString('vi-VN') : 'trước đó'}.
+                        <span className="block text-[10px] text-slate-400 mt-0.5 italic">Lý do: {selectedSeat.lateUnlockReason || 'Giám thị phê duyệt'}</span>
+                      </div>
+                    ) : lateMins < 15 ? (
+                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 text-[11px] leading-relaxed">
+                        ℹ️ Thí sinh đến muộn dưới 15 phút. Theo quy chế thi, thí sinh vẫn được tự do đăng nhập và làm bài bình thường mà không bị hệ thống khóa. Giám thị chỉ mở bàn đặc cách khi thí sinh đến muộn từ 15 phút trở lên.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-amber-300/90 leading-tight">
+                          ⚠️ Bàn thi của thí sinh đang bị hệ thống khóa do muộn quá 15 phút ({lateMins} phút). Nhập lý do mở bàn đặc cách và tùy chọn cộng bù giờ:
+                        </p>
+                        <input
+                          type="text"
+                          value={lateReason}
+                          onChange={e => setLateReason(e.target.value)}
+                          placeholder="Lý do mở bàn (vd: Có xác nhận sự cố từ Hội đồng thi)..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                        />
+                        <div className="flex items-center space-x-1.5 text-[11px]">
+                          <span className="text-slate-400">Bù giờ:</span>
+                          {[0, 5, 10, 15].map(mins => (
+                            <button
+                              key={mins}
+                              type="button"
+                              onClick={() => setLateExtraMinutes(mins)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
+                                lateExtraMinutes === mins ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                              }`}
+                            >
+                              {mins === 0 ? '0p (Cùng giờ)' : `+${mins}p`}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={handleUnlockLateStudent}
+                          disabled={actionLoading}
+                          className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-lg transition shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Xác Nhận Mở Bàn Cho Thí Sinh Đi Muộn</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 5. Đình chỉ thi */}
               <button
                 onClick={handleSuspend}
                 disabled={actionLoading}

@@ -27,6 +27,7 @@
 17. [Nâng cấp Hệ thống Giám sát Phòng thi: Socket.IO Realtime, Face AI 3D Pose & Chống Gian lận Trình duyệt](#17-nâng-cấp-hệ-thống-giám-sát-phòng-thi-socketio-face-ai-3d-pose--anti-cheat)
 18. [Kiến trúc Đề thi Đa dạng: Đề thi Hỗn hợp, Đề theo File & Quy chế Chấm Đa đáp án](#18-kiến-trúc-đề-thi-đa-dạng-đề-thi-hỗn-hợp-trắc-nghiệm--tự-luận-đề-theo-file--quy-chế-chấm-đa-đáp-án-multi-select--alternative-keys)
 19. [Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification)](#19-danh-mục-toàn-diện-nền-tảng-hệ-thống-công-nghệ--thư-viện-tech-stack--libraries-specification)
+20. [Quy Chế Khảo Thí: Đếm Ngược Giờ Phát Đề (Countdown Waiting Room), Chặn Vào Phòng Khi Đi Muộn & Giám Thị Mở Bàn Đặc Cách](#20-quy-chế-khảo-thí-đếm-ngược-giờ-phát-đề-countdown-waiting-room-chặn-vào-phòng-khi-đi-muộn--giám-thị-mở-bàn-đặc-cách)
 
 ---
 
@@ -3153,7 +3154,71 @@ Các mô hình được đóng gói dưới định dạng chuẩn công nghiệ
 
 ---
 
-*Blueprint version 3.0 — Cập nhật: 2026-10-18*  
+## 20. QUY CHẾ KHẢO THÍ: ĐẾM NGƯỢC GIỜ PHÁT ĐỀ (COUNTDOWN WAITING ROOM), CHẶN VÀO PHÒNG KHI ĐI MUỘN & GIÁM THỊ MỞ BÀN ĐẶC CÁCH
+
+### 20.1. Nguyên Lý Bảo Mật Phát Đề: Zero-Knowledge Question Delivery & Pre-Exam Waiting Room
+Nhằm khắc phục triệt để nguy cơ rò rỉ đề thi khi thí sinh mở trước trình duyệt hoặc lợi dụng DevTools Network Inspect để bắt gói tin JSON chứa câu hỏi trước giờ thi, ExamGuard AI thiết lập cơ chế **Zero-Knowledge Question Delivery**:
+
+1. **Kiểm tra thời điểm máy chủ (`now < startTime`):**
+   - Khi thí sinh truy cập endpoint `GET /api/exam/questions/:sessionStudentId`:
+   - Nếu thời gian hiện tại của máy chủ nhỏ hơn `session.startTime`, hệ thống trả về cờ `isPreExamWaiting: true` kèm `countdownSeconds = (startTime - now) / 1000`.
+   - **Tuyệt đối không gửi mảng `questions`**: Payload trả về có `questions: []`. Thí sinh dù có kỹ năng can thiệp DevTools sâu cũng không thể xem trước nội dung đề.
+2. **Giao diện Phòng chờ thi Trực tuyến (Pre-Exam Waiting Room UI):**
+   - **Đồng hồ số kỹ thuật số (Digital Flip Clock):** Hiển thị trực quan Giờ : Phút : Giây dạng thẻ neon cyan/indigo, đếm ngược từng giây theo thời gian thực.
+   - **Cảnh báo chuyển tiếp 10 giây cuối:** Khi đồng hồ đếm ngược $\le 10$ giây, hiệu ứng phát sáng chuyển sang màu hổ phách và chớp nháy nhịp nhàng.
+   - **Cơ chế Auto-Reveal mượt mà:** Đúng thời khắc `00:00:00`, client tự động phát âm thanh chime thông báo, gọi lại API lấy đề thi chính thức và chuyển mượt mà vào không gian làm bài mà không cần thí sinh phải F5 hay thao tác thủ công.
+   - **Kiểm tra thiết bị & Căn cước trước giờ thi:** Tích hợp luồng xem trước Webcam (Live Camera Preview Mirror) để thí sinh kiểm tra góc nhìn, ánh sáng và kiểm tra trạng thái AI Face Liveness. Hiển thị thẻ thí sinh 2 cột: Họ tên, MSSV, SBD, Lớp, Vị trí bàn thi (Dãy - Cột) và Mã PIN bàn.
+
+---
+
+### 20.2. Quy Chế Chặn Vào Phòng Thi Khi Đi Muộn (Late Arrival Room Blocking)
+Tuân thủ chuẩn mực **Điều 14 Quy chế coi thi và đánh giá kết quả học tập** của các Trường Đại học:
+- **Khung giờ tự do (Trong 15 phút đầu kể từ giờ phát đề):** Thí sinh đến muộn trong khoảng $\le 15$ phút vẫn được phép tự do đăng nhập và vào làm bài thi bình thường (không được cộng bù giờ).
+- **Khung giờ cấm (Sau 15 phút kể từ giờ phát đề):**
+  - Điều kiện kích hoạt khóa bàn: `Date.now() > startTime + 15 * 60 * 1000`, thí sinh chưa từng vào thi (`status === 'ASSIGNED' || status === 'ABSENT'`) và chưa được Giám thị mở bàn đặc cách (`isLateUnlocked === false`).
+  - Phía Server: `getSanitizedQuestions` trả về `isLateBlocked: true`, `lateMinutes`, và thông báo chặn vi phạm quy chế.
+  - Phía Client: Giao diện chuyển sang màn hình **Khóa Bàn Thi Toàn Diện (Security Lockdown Screen)**:
+    - Biểu tượng Khóa bảo mật phát sáng đỏ/hổ phách `Lock` kèm hiệu ứng sóng âm `animate-ping`.
+    - Trích dẫn rõ điều khoản quy chế, số phút thí sinh đến muộn (ví dụ: `Đến muộn 18 phút`).
+    - Hướng dẫn thí sinh liên hệ trực tiếp với Cán bộ coi thi tại phòng để xin mở bàn đặc cách.
+    - Duy trì kết nối Realtime Socket.IO: Lắng nghe sự kiện `student:late_unlocked` để tự động mở khóa tức thì khi được duyệt.
+
+---
+
+### 20.3. Cơ Chế Giảng Viên (Giám Thị) Mở Bàn Đặc Cách Cho Thí Sinh Đi Muộn
+Hệ thống trao quyền cho Cán bộ coi thi / Trưởng điểm thi mở bàn đặc cách cho các trường hợp bất khả kháng (sự cố xe cộ, thời tiết có biên bản xác nhận):
+
+1. **Điều kiện mở bàn đặc cách:** Thí sinh phải đến muộn từ 15 phút trở lên (`lateMinutes >= 15`). Nếu dưới 15 phút, hệ thống nhắc nhở Giám thị rằng thí sinh vẫn đang được quyền tự do vào thi bình thường.
+2. **Giao diện Giám thị (`LiveProctor.tsx`):**
+   - Trên sơ đồ bàn thi (Desk Map): Thí sinh chưa vào thi mà ca thi đã trôi qua $\ge 15$ phút tự động hiển thị viền hổ phách nhấp nháy kèm nhãn `🔒 Khóa (X phút)`.
+   - Giám thị bấm vào bàn thi: Modal điều khiển hiển thị khối **"4. Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách)"**.
+   - Form mở bàn:
+     - Nhập lý do đặc cách (Lưu vết kiểm toán).
+     - Tùy chọn cộng bù giờ: 0 phút (kết thúc cùng ca), +5 phút, +10 phút, +15 phút.
+3. **Luồng dữ liệu & Đồng bộ Realtime (`POST /api/proctor/unlock-late-student`):**
+   - Server cập nhật `isLateUnlocked = true`, `lateUnlockedAt = now`, `lateUnlockReason = reason`, `status = 'CHECKED_IN'`.
+   - Ghi nhật ký kiểm toán vào `ExamViolation` với loại `PROCTOR_INSPECTION` (0đ phạt, đánh dấu `isDismissed = true`).
+   - Socket.IO Server phát sự kiện `student:late_unlocked` tới toàn phòng và channel riêng của thí sinh.
+   - Màn hình thí sinh nhận socket, tự động ẩn giao diện khóa và tải đề thi bắt đầu làm bài.
+
+---
+
+### 20.4. Danh Mục Cải Tiến Bảo Mật & Hoàn Thiện Giao Diện Làm Bài Đã Triển Khai
+1. **Sửa triệt để lỗi trừ điểm uy tín undefined & debounced penalty:**
+   - Khắc phục lỗi kiểm tra điều kiện trạng thái sinh viên trong `proctor.controller.js` (`IN_EXAM` vs `IN_PROGRESS`).
+   - Quy chuẩn bảng xử phạt vi phạm an ninh máy trạm: F12/DevTools (-30đ), Rời tab (-10đ), Thoát toàn màn hình (-10đ), Copy/Paste (-10đ), Chuột phải (-5đ).
+2. **Modal Cảnh Báo An Ninh Chống Gian Lận Toàn Màn Hình:**
+   - Kích hoạt modal cảnh báo nổi bật giữa màn hình với hiệu ứng âm thanh Web Audio API cảnh báo tần số cao.
+   - Hiển thị trực quan số điểm uy tín bị trừ và điểm uy tín còn lại, tự động đóng sau 8s.
+3. **Thiết Kế Lại Thẻ Thông Tin Thí Sinh Gọn Gàng:**
+   - Cấu trúc lưới 2 cột nhỏ gọn trên thanh điều khiển bài thi: SBD, Họ tên, MSSV, Lớp, Vị trí bàn (Dãy/Cột), Mã ca và Tên môn thi đầy đủ.
+4. **Chuẩn Hóa Chính Sách Giấu Điểm Thi & Đối Chiếu Đáp Án:**
+   - Mặc định sau khi nộp bài: Chỉ xuất **Phiếu Xác Nhận Nộp Bài Thi Chính Thức**.
+   - Điểm số chi tiết, kết quả đúng/sai và lời giải thích chỉ được công bố khi Giảng viên / Hội đồng phê duyệt (`gradingStatus === 'PUBLISHED'`).
+
+---
+
+*Blueprint version 3.1 — Cập nhật: 2026-10-18*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
 *Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/package.json`, `examguard-ai/requirements.txt`, `run_system.bat`*
 
