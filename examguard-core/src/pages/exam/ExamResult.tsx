@@ -138,7 +138,7 @@ export default function ExamResult() {
     if (Array.isArray(user.roles) && user.roles.some((r: any) => String(typeof r === 'object' ? r.name : r).toLowerCase().includes('student'))) {
       return true;
     }
-    return !!user.studentCode;
+    return !!(user as any)?.studentCode;
   }, [user]);
 
   // ViewMode: 'lecturer' (Giảng viên / Ban Khảo thí) hoặc 'student' (Sinh viên)
@@ -471,7 +471,7 @@ export default function ExamResult() {
                   <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-center">
                     <span className="text-[10px] text-slate-500 block uppercase font-bold">Tổng Thí sinh</span>
                     <span className="text-xl font-black text-white font-mono">
-                      {workspaceData.statistics.totalStudents}
+                      {workspaceData.statistics?.totalStudents ?? workspaceData.students?.length ?? 0}
                     </span>
                     <span className="text-[10px] text-slate-400 block">thí sinh dự thi</span>
                   </div>
@@ -479,7 +479,9 @@ export default function ExamResult() {
                   <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-center">
                     <span className="text-[10px] text-slate-500 block uppercase font-bold">Điểm Trung Bình</span>
                     <span className="text-xl font-black text-purple-400 font-mono">
-                      {workspaceData.statistics.avgScore.toFixed(2)}
+                      {workspaceData.statistics?.avgScore != null
+                        ? Number(workspaceData.statistics.avgScore).toFixed(2)
+                        : '0.00'}
                     </span>
                     <span className="text-[10px] text-slate-400 block">thang điểm 10</span>
                   </div>
@@ -487,15 +489,19 @@ export default function ExamResult() {
                   <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-center">
                     <span className="text-[10px] text-slate-500 block uppercase font-bold">Điểm Cao Nhất</span>
                     <span className="text-xl font-black text-emerald-400 font-mono">
-                      {workspaceData.statistics.maxScore.toFixed(2)}
+                      {workspaceData.statistics?.maxScore != null
+                        ? Number(workspaceData.statistics.maxScore).toFixed(2)
+                        : '0.00'}
                     </span>
-                    <span className="text-[10px] text-emerald-500/80 block font-semibold">Tỷ lệ đạt {workspaceData.statistics.passRate}%</span>
+                    <span className="text-[10px] text-emerald-500/80 block font-semibold">
+                      Tỷ lệ đạt {workspaceData.statistics?.passRate != null ? workspaceData.statistics.passRate : 0}%
+                    </span>
                   </div>
 
                   <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-center">
                     <span className="text-[10px] text-slate-500 block uppercase font-bold">Uy Tín AI Trung Bình</span>
                     <span className="text-xl font-black text-cyan-400 font-mono">
-                      {workspaceData.statistics.avgTrustScore ?? 98}/100
+                      {workspaceData.statistics?.avgTrustScore ?? 98}/100
                     </span>
                     <span className="text-[10px] text-cyan-500/80 block font-semibold">Độ tin cậy cao</span>
                   </div>
@@ -571,9 +577,9 @@ export default function ExamResult() {
                       </thead>
                       <tbody className="divide-y divide-slate-800/60 font-sans">
                         {filteredStudents.map((st, idx) => {
-                          const displayScore = st.officialScore !== null && st.officialScore !== undefined
-                            ? st.officialScore
-                            : (st.adjustedScore !== null && st.adjustedScore !== undefined ? st.adjustedScore : st.autoGradeScore);
+                          const rawScore = st.officialScore ?? st.adjustedScore ?? st.autoGradeScore;
+                          const hasScore = rawScore !== null && rawScore !== undefined && !isNaN(Number(rawScore));
+                          const scoreNum = hasScore ? Number(rawScore) : null;
 
                           return (
                             <tr key={st.id || idx} className="hover:bg-slate-800/40 transition">
@@ -582,8 +588,8 @@ export default function ExamResult() {
                               <td className="py-3 px-4 font-mono text-slate-300">{st.studentCode}</td>
                               <td className="py-3 px-4 font-bold text-white">{st.studentName}</td>
                               <td className="py-3 px-4 text-center font-mono font-black text-sm">
-                                <span className={displayScore >= 5.0 ? 'text-emerald-400' : 'text-red-400'}>
-                                  {displayScore !== undefined ? Number(displayScore).toFixed(2) : '—'}
+                                <span className={scoreNum !== null && scoreNum >= 5.0 ? 'text-emerald-400' : 'text-red-400'}>
+                                  {scoreNum !== null ? scoreNum.toFixed(2) : '—'}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-center">
