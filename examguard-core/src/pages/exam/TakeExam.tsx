@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -162,6 +162,7 @@ export default function TakeExam() {
 
   // Webcam & AI state
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [aiLogs, setAiLogs] = useState<Array<{ time: string; text: string; type: 'info' | 'warn' | 'success' }>>([
@@ -240,9 +241,11 @@ export default function TakeExam() {
   const [isSessionEnded, setIsSessionEnded] = useState(false);
 
   // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn / Ca thi kết thúc
-  const fetchExam = async () => {
+  const fetchExam = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !examData) {
+        setLoading(true);
+      }
       const targetId = sessionStudentId || 'fallback_student';
       const res = await apiClient.get(`/api/exam/questions/${targetId}`);
       if (res.data && res.data.success) {
@@ -330,32 +333,76 @@ export default function TakeExam() {
     return () => clearInterval(timer);
   }, [isPreExamWaiting, countdownSeconds]);
 
-  // 2. Khởi tạo Webcam
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    async function startCamera() {
-      try {
+  // 2. Quản lý Webcam bền vững — Tự động giữ stream và gắn lại tức thì khi đổi màn hình/làm mới
+  const startCamera = useCallback(async () => {
+    try {
+      let stream = streamRef.current;
+      const isLive = stream && stream.active && stream.getVideoTracks().some(t => t.readyState === 'live');
+      
+      if (!isLive) {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' },
           audio: false
         });
-        if (videoRef.current) {
+        streamRef.current = stream;
+      }
+      
+      setCameraActive(true);
+      if (videoRef.current && stream) {
+        if (videoRef.current.srcObject !== stream) {
           videoRef.current.srcObject = stream;
-          setCameraActive(true);
         }
-      } catch (err) {
-        console.warn('Không thể truy cập camera thực:', err);
-        setCameraActive(false);
+        videoRef.current.play().catch(e => console.warn('Camera play warning:', e));
+      }
+    } catch (err) {
+      console.warn('Không thể truy cập camera thực:', err);
+      setCameraActive(false);
+    }
+  }, []);
+
+  // Callback ref: Mỗi khi thẻ video được React mount vào DOM (phòng chờ, đề thi, thu/phóng HUD),
+  // ngay lập tức gắn stream và kích hoạt video không bao giờ bị màn hình đen
+  const bindVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el) {
+      if (streamRef.current && streamRef.current.active && streamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
+        if (el.srcObject !== streamRef.current) {
+          el.srcObject = streamRef.current;
+        }
+        el.play().catch(err => console.warn('bindVideoRef play err:', err));
+      } else {
+        startCamera();
       }
     }
+  }, [startCamera]);
+
+  // Khởi tạo camera khi mount component & dọn dẹp khi unmount hoàn toàn
+  useEffect(() => {
     startCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
-  }, []);
+  }, [startCamera]);
+
+  // Tự động gán lại stream khi chuyển đổi giữa Phòng chờ và Buồng thi chính, hoặc Thu gọn/Mở rộng HUD
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (videoRef.current && streamRef.current && streamRef.current.active) {
+        if (videoRef.current.srcObject !== streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+        }
+        videoRef.current.play().catch(() => {});
+      } else if (!streamRef.current || !streamRef.current.active) {
+        startCamera();
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [isPreExamWaiting, isProctorCollapsed, loading, isLateBlocked, startCamera]);
 
   // Hàm phát hiện vi phạm trình duyệt và gửi lên server
   const triggerAntiCheatEvent = async (eventType: string, details: any = {}) => {
@@ -1242,7 +1289,11 @@ export default function TakeExam() {
                 <span>Hệ thống giám sát ExamGuard AI đã sẵn sàng</span>
               </span>
               <button
-                onClick={() => fetchExam()}
+                onClick={() => {
+                  fetchExam(true);
+                  startCamera();
+                  toast.success('Đã cập nhật trạng thái phòng thi', { id: 'refreshed' });
+                }}
                 className="text-cyan-400 hover:text-cyan-300 underline font-medium"
               >
                 Làm mới trạng thái
@@ -1300,7 +1351,7 @@ export default function TakeExam() {
 
               <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center">
                 <video
-                  ref={videoRef}
+                  ref={bindVideoRef}
                   autoPlay
                   playsInline
                   muted
@@ -1308,9 +1359,15 @@ export default function TakeExam() {
                   style={{ transform: 'scaleX(-1)' }}
                 />
                 {!cameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-950/80">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-950/80 z-20">
                     <Camera className="w-8 h-8 text-slate-600 mb-1" />
-                    <p className="text-[11px] text-slate-400">Vui lòng cấp quyền Camera trình duyệt để tiến hành nhận diện AI</p>
+                    <p className="text-[11px] text-slate-400 mb-2">Vui lòng cấp quyền Camera trình duyệt để tiến hành nhận diện AI</p>
+                    <button
+                      onClick={() => startCamera()}
+                      className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition shadow-md"
+                    >
+                      Kích hoạt lại Camera
+                    </button>
                   </div>
                 )}
                 {cameraActive && (
@@ -2539,7 +2596,7 @@ export default function TakeExam() {
               {/* Mini camera */}
               <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-500/50 relative bg-slate-950" title="Webcam giám sát đang hoạt động">
                 <video
-                  ref={videoRef}
+                  ref={bindVideoRef}
                   autoPlay
                   playsInline
                   muted
@@ -2575,19 +2632,28 @@ export default function TakeExam() {
                   <ShieldCheck className="w-4 h-4 text-cyan-400" />
                   <span>GIÁM SÁT AI REALTIME</span>
                 </div>
-                <button
-                  onClick={() => setIsProctorCollapsed(true)}
-                  className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
-                  title="Thu gọn bảng giám sát"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => startCamera()}
+                    className="p-1 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition"
+                    title="Làm mới kết nối Webcam"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setIsProctorCollapsed(true)}
+                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                    title="Thu gọn bảng giám sát"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* 1. KHUNG CAMERA LIVE & HUD AI OVERLAY */}
               <div className="relative rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 aspect-video shadow-2xl group">
                 <video
-                  ref={videoRef}
+                  ref={bindVideoRef}
                   autoPlay
                   playsInline
                   muted
@@ -2595,9 +2661,15 @@ export default function TakeExam() {
                 />
 
                 {!cameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-slate-400 p-4 text-center">
-                    <Camera className="w-8 h-8 mb-2 text-slate-600 animate-pulse" />
-                    <span className="text-xs">Đang nạp Webcam giám sát...</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 text-slate-400 p-4 text-center z-20">
+                    <Camera className="w-8 h-8 mb-2 text-slate-500 animate-pulse" />
+                    <span className="text-xs mb-2">Webcam đang chờ cấp quyền hoặc bị ngắt</span>
+                    <button
+                      onClick={() => startCamera()}
+                      className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-semibold rounded-lg transition shadow-md"
+                    >
+                      Bật lại Camera
+                    </button>
                   </div>
                 )}
 
@@ -2942,7 +3014,10 @@ export default function TakeExam() {
                 <div className="relative w-full h-full flex items-center justify-center">
                   <video
                     ref={el => {
-                      if (el && videoRef.current && videoRef.current.srcObject) {
+                      if (el && streamRef.current && streamRef.current.active) {
+                        el.srcObject = streamRef.current;
+                        el.play().catch(() => {});
+                      } else if (el && videoRef.current && videoRef.current.srcObject) {
                         el.srcObject = videoRef.current.srcObject;
                         el.play().catch(() => {});
                       }

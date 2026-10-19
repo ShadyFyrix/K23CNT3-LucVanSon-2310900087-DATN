@@ -84,7 +84,8 @@ const navGroups: NavGroup[] = [
       { name: 'Giám thị Phòng 3D', path: '/live-proctor', icon: Eye, badge: 'LIVE' },
       { name: 'Rà soát & Duyệt điểm', path: '/grading-review', icon: FileCheck2 },
       { name: 'Phòng thi Làm bài', path: '/exam/take', icon: Monitor, badge: 'SV' },
-      { name: 'Kết quả & Đáp án', path: '/exam/result', icon: Award },
+      { name: 'Bảng điểm & Đáp án Ca thi', path: '/exam/result?view=lecturer', icon: Award, badge: 'GV' },
+      { name: 'Tra cứu Điểm & Bài thi SV', path: '/exam/result?view=student', icon: ClipboardCheck, badge: 'SV' },
     ]
   },
   {
