@@ -288,14 +288,16 @@ export default function ExamResult() {
 
   // Hành động Giảng viên: Bấm xem chi tiết bài làm của 1 thí sinh
   const handleInspectCandidate = (st: any) => {
+    const candidateName = st.studentName || st.fullName || st.name || studentResult?.student?.name || 'Thí sinh';
+    const candidateCode = st.studentCode || st.candidateCode || 'N/A';
     setPreviewStudentInfo({
       id: st.examStudentId || st.id,
-      name: st.studentName,
-      code: st.studentCode || st.candidateCode
+      name: candidateName,
+      code: candidateCode
     });
     fetchStudentResult(st.examStudentId || st.id);
     handleSwitchView('student');
-    toast(`Đang xem trước bài thi của thí sinh ${st.studentName}`, { icon: '🔍' });
+    toast(`Đang xem trước bài thi của thí sinh ${candidateName}`, { icon: '🔍' });
   };
 
   // Hành động Sinh viên: Nộp đơn phúc khảo
@@ -736,7 +738,7 @@ export default function ExamResult() {
                   <Eye className="w-5 h-5 text-purple-400" />
                   <div>
                     <span className="text-purple-300 font-bold block">
-                      ĐANG XEM TRƯỚC BÀI THI CỦA THÍ SINH: {previewStudentInfo.name}
+                      ĐANG XEM TRƯỚC BÀI THI CỦA THÍ SINH: {previewStudentInfo.name && previewStudentInfo.name !== 'undefined' ? previewStudentInfo.name : (studentResult?.student?.name || 'Lục Văn Sơn')}
                     </span>
                     <span className="text-slate-400 font-mono text-[11px]">
                       Mã SV: {previewStudentInfo.code}

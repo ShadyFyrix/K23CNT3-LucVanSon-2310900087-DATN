@@ -156,7 +156,7 @@ exports.getReviewWorkspace = async (req, res) => {
     const realSessionId = session._id;
     const examPaper = session.examPaper;
     const students = await ExamStudent.find({ session: realSessionId })
-      .populate('student', 'name studentCode')
+      .populate('student', 'fullName name studentCode')
       .sort({ blindCode: 1 });
 
     const submissions = await ExamSubmission.find({ session: realSessionId });
@@ -246,7 +246,7 @@ exports.getReviewWorkspace = async (req, res) => {
         id: st._id,
         blindCode: st.blindCode, // Mã phách ẩn danh
         candidateCode: st.candidateCode,
-        studentName: st.student ? st.student.name : 'N/A',
+        studentName: st.student ? (st.student.fullName || st.student.name || 'Thí sinh') : 'Thí sinh',
         studentCode: st.student ? st.student.studentCode : 'N/A',
         status: st.status,
         trustScore: st.trustScore,
