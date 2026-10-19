@@ -55,6 +55,7 @@ router.post('/sessions/:sessionId/assign-students', examController.assignStudent
 router.put('/sessions/:sessionId/students/:examStudentId', examController.updateExamStudent);
 router.post('/sessions/:sessionId/generate-candidate-codes', examController.bulkGenerateCandidateCodes);
 router.post('/sessions/:sessionId/add-student', examController.addStudentToSession);
+router.post('/sessions/:sessionId/bulk-add-students', examController.bulkAddStudentsToSession);
 router.delete('/sessions/:sessionId/students/:examStudentId', examController.removeStudentFromSession);
 router.post('/sessions/:sessionId/end-session', examController.endExamSession);
 

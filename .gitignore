@@ -36,3 +36,4 @@ Thumbs.db
 uploads/
 registered_faces/
 *.tmp
+.examguard_pids

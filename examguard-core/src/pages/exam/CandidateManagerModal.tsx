@@ -76,7 +76,14 @@ interface StudentOption {
   studentCode: string;
   email: string;
   isFaceKyc?: boolean;
-  classId?: { name: string };
+  class?: { _id?: string; name?: string; code?: string };
+  classId?: { _id?: string; name?: string; code?: string };
+}
+
+interface ClassOption {
+  _id: string;
+  name: string;
+  code: string;
 }
 
 export function CandidateManagerModal({
@@ -108,8 +115,11 @@ export function CandidateManagerModal({
   // Thêm thí sinh vào ca
   const [showAddStudentForm, setShowAddStudentForm] = useState(false);
   const [allStudents, setAllStudents] = useState<StudentOption[]>([]);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('ALL');
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isBulkAddingClass, setIsBulkAddingClass] = useState(false);
 
   // Đăng ký Face KYC Modal
   const [kycCandidate, setKycCandidate] = useState<ExamStudentItem | null>(null);
@@ -131,15 +141,41 @@ export function CandidateManagerModal({
     }
   };
 
-  // Lấy danh sách toàn bộ sinh viên khi mở form thêm thí sinh
+  // Lấy danh sách toàn bộ sinh viên và lớp học khi mở modal
   const fetchAllStudents = async () => {
     try {
-      const res = await apiClient.get('/api/academic/students?limit=300');
+      // 1. Tải danh sách sinh viên trường
+      const res = await apiClient.get('/api/students?limit=500');
       if (res.data && res.data.success) {
-        setAllStudents(res.data.data.students || res.data.data || []);
+        const studentList = Array.isArray(res.data.data)
+          ? res.data.data
+          : (res.data.data?.students || []);
+        setAllStudents(studentList);
       }
     } catch (err: any) {
-      console.error('Lỗi tải danh sách sinh viên trường:', err);
+      console.warn('Lỗi gọi /api/students, thử fallback /api/academic/students:', err);
+      try {
+        const res2 = await apiClient.get('/api/academic/students?limit=500');
+        if (res2.data) {
+          const studentList = Array.isArray(res2.data.data)
+            ? res2.data.data
+            : (res2.data.data?.students || res2.data.students || []);
+          setAllStudents(studentList);
+        }
+      } catch (e) {
+        console.error('Không thể tải danh sách sinh viên trường:', e);
+      }
+    }
+
+    try {
+      // 2. Tải danh sách lớp học
+      const cRes = await apiClient.get('/api/classes');
+      if (cRes.data && (cRes.data.success || Array.isArray(cRes.data.data))) {
+        const classList = Array.isArray(cRes.data.data) ? cRes.data.data : (cRes.data.data?.classes || []);
+        setClasses(classList);
+      }
+    } catch (cErr) {
+      console.warn('Không thể tải danh sách lớp học:', cErr);
     }
   };
 
@@ -273,18 +309,58 @@ export function CandidateManagerModal({
   };
 
   // Thí sinh chưa có trong ca thi (để chọn thêm)
-  const enrolledStudentIds = new Set(candidates.map(c => (c.student || c.studentId)?._id));
+  const enrolledStudentIds = new Set(
+    candidates.map(c => {
+      const s = c.student || c.studentId;
+      return (typeof s === 'object' ? s?._id : s)?.toString();
+    }).filter(Boolean)
+  );
+
   const availableStudentsToAdd = allStudents
-    .filter(st => !enrolledStudentIds.has(st._id))
+    .filter(st => !enrolledStudentIds.has(st._id?.toString()))
     .filter(st => {
-      if (!studentSearchTerm) return true;
-      const term = studentSearchTerm.toLowerCase();
-      return (
-        st.fullName?.toLowerCase().includes(term) ||
-        st.studentCode?.toLowerCase().includes(term) ||
-        st.email?.toLowerCase().includes(term)
-      );
+      // 1. Lọc theo lớp học nếu chọn cụ thể
+      if (selectedClassId !== 'ALL') {
+        const stClass = st.class || st.classId;
+        const stClassId = stClass?._id ? String(stClass._id) : '';
+        const stClassCode = stClass?.code || '';
+        if (stClassId !== selectedClassId && stClassCode !== selectedClassId) {
+          return false;
+        }
+      }
+
+      // 2. Lọc theo từ khóa tìm kiếm (MSSV, Họ tên, Email)
+      if (!studentSearchTerm.trim()) return true;
+      const term = studentSearchTerm.trim().toLowerCase();
+      const codeMatch = st.studentCode?.toLowerCase().includes(term);
+      const nameMatch = st.fullName?.toLowerCase().includes(term);
+      const emailMatch = st.email?.toLowerCase().includes(term);
+      return codeMatch || nameMatch || emailMatch;
     });
+
+  // Thêm tất cả sinh viên đang lọc vào ca thi
+  const handleBulkAddClass = async () => {
+    if (availableStudentsToAdd.length === 0) {
+      toast.error('Không có sinh viên nào để thêm');
+      return;
+    }
+    const studentIdsToAdd = availableStudentsToAdd.map(st => st._id);
+    try {
+      setIsBulkAddingClass(true);
+      const res = await apiClient.post(`/api/exam/sessions/${session._id}/bulk-add-students`, {
+        studentIds: studentIdsToAdd
+      });
+      if (res.data && res.data.success) {
+        toast.success(res.data.message || `Đã thêm ${studentIdsToAdd.length} sinh viên vào ca thi!`);
+        fetchSessionDetails();
+        if (onRefreshParent) onRefreshParent();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi thêm sinh viên vào ca thi');
+    } finally {
+      setIsBulkAddingClass(false);
+    }
+  };
 
   // In danh sách thí sinh phòng thi
   const handlePrintList = () => {
@@ -571,59 +647,111 @@ export function CandidateManagerModal({
                 </button>
               </div>
 
-              <div className="relative max-w-md">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Gõ tên hoặc MSSV để lọc..."
-                  value={studentSearchTerm}
-                  onChange={e => setStudentSearchTerm(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-                />
+              {/* Dải bộ lọc: Ô tìm kiếm MSSV/Họ tên + Chọn theo Lớp + Nút thêm cả lớp */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Gõ mã sinh viên (VD: 2310900087), họ tên hoặc email..."
+                    value={studentSearchTerm}
+                    onChange={e => setStudentSearchTerm(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+
+                <div className="w-full sm:w-64">
+                  <select
+                    value={selectedClassId}
+                    onChange={e => setSelectedClassId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value="ALL">🏫 Tất cả lớp (Toàn trường)</option>
+                    {classes.map(c => (
+                      <option key={c._id} value={c._id}>
+                        {c.code} - {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {availableStudentsToAdd.length > 0 && (
+                  <button
+                    onClick={handleBulkAddClass}
+                    disabled={isBulkAddingClass || isAddingStudent}
+                    className="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-500/20 disabled:opacity-50 whitespace-nowrap"
+                    title="Thêm tất cả các sinh viên đang hiển thị theo bộ lọc vào ca thi"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>
+                      {isBulkAddingClass ? 'Đang thêm...' : `+ Thêm tất cả (${availableStudentsToAdd.length} SV)`}
+                    </span>
+                  </button>
+                )}
               </div>
 
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+              {/* Danh sách thẻ sinh viên */}
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
                 {availableStudentsToAdd.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-3 text-center">Không tìm thấy sinh viên nào chưa có trong ca thi.</p>
+                  <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
+                    <p className="text-xs text-slate-400 font-medium">Không tìm thấy sinh viên nào chưa có trong ca thi.</p>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Thử xóa bộ lọc, tìm theo MSSV (VD: 2310900087) hoặc chọn "Tất cả lớp (Toàn trường)".
+                    </p>
+                  </div>
                 ) : (
-                  availableStudentsToAdd.slice(0, 20).map(st => (
-                    <div
-                      key={st._id}
-                      className="flex items-center justify-between p-2.5 bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-xl transition"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-300 font-bold flex items-center justify-center text-xs">
-                          {st.fullName?.charAt(0) || 'S'}
+                  availableStudentsToAdd.slice(0, 30).map(st => {
+                    const stClass = st.class || st.classId;
+                    const className = typeof stClass === 'object' ? (stClass?.code || stClass?.name) : '';
+                    return (
+                      <div
+                        key={st._id}
+                        className="flex items-center justify-between p-3 bg-slate-950/90 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl transition"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 border border-indigo-500/30 text-indigo-300 font-bold flex items-center justify-center text-xs">
+                            {st.fullName?.charAt(0) || 'S'}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <p className="text-xs font-semibold text-white">{st.fullName}</p>
+                              {className && (
+                                <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-mono">
+                                  {className}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              MSSV: <span className="font-mono text-cyan-400 font-bold">{st.studentCode}</span> • {st.email}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{st.fullName}</p>
-                          <p className="text-[11px] text-slate-400">
-                            MSSV: <span className="font-mono text-cyan-400 font-medium">{st.studentCode}</span> • {st.email}
-                          </p>
+
+                        <div className="flex items-center space-x-2">
+                          {st.isFaceKyc ? (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold flex items-center space-x-1">
+                              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                              <span>Đã KYC Face</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 flex items-center space-x-1">
+                              <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              <span>Chưa KYC</span>
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => handleAddStudent(st)}
+                            disabled={isAddingStudent || isBulkAddingClass}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition disabled:opacity-50 flex items-center space-x-1 shadow-sm"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>+ Thêm vào ca</span>
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center space-x-2">
-                        {st.isFaceKyc ? (
-                          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
-                            Đã KYC
-                          </span>
-                        ) : (
-                          <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
-                            Chưa KYC
-                          </span>
-                        )}
-
-                        <button
-                          onClick={() => handleAddStudent(st)}
-                          disabled={isAddingStudent}
-                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition disabled:opacity-50"
-                        >
-                          + Thêm vào ca
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

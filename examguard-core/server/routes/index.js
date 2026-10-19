@@ -37,6 +37,14 @@ router.use('/rooms', roomRoutes);
 router.use('/campuses', campusRoutes);
 router.use('/campus', campusRoutes);
 
+// Tương thích các endpoint /academic/*
+router.use('/academic/students', studentRoutes);
+router.use('/academic/classes', classRoutes);
+router.use('/academic/courses', courseRoutes);
+router.use('/academic/departments', departmentRoutes);
+router.use('/academic/batches', academicBatchRoutes);
+router.use('/academic-batches', academicBatchRoutes);
+
 // 3. Khảo thí: Ca thi, Ngân hàng đề thi, Làm bài thi & Nộp bài
 const examRoutes = require('./exam.route');
 router.use('/exam', examRoutes);

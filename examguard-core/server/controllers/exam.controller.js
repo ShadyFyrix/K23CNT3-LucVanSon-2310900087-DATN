@@ -863,6 +863,88 @@ exports.addStudentToSession = async (req, res) => {
   }
 };
 
+// Thêm danh sách nhiều sinh viên (hoặc cả lớp) vào ca thi mà không xóa các thí sinh hiện tại
+exports.bulkAddStudentsToSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { studentIds } = req.body;
+
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách sinh viên không hợp lệ!' });
+    }
+
+    const session = await ExamSession.findById(sessionId).populate('room');
+    if (!session) return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi!' });
+
+    const maxRows = session.room?.rows || 5;
+    const maxCols = session.room?.cols || 8;
+    const maxCapacity = maxRows * maxCols;
+
+    const existingStudents = await ExamStudent.find({ session: sessionId });
+    const existingStudentIds = new Set(existingStudents.map(s => s.student.toString()));
+    const occupiedSeats = new Set(existingStudents.map(s => `${s.seatRow}-${s.seatCol}`));
+
+    // Lọc ra các sinh viên chưa có trong ca
+    const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id.toString()));
+
+    if (newStudentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tất cả sinh viên được chọn đều đã có mặt trong ca thi này!' });
+    }
+
+    if (existingStudents.length + newStudentIds.length > maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Phòng ${session.room?.code || 'thi'} chỉ còn ${maxCapacity - existingStudents.length} chỗ trống, không đủ cho ${newStudentIds.length} sinh viên mới!`
+      });
+    }
+
+    // Tìm bàn trống cho từng sinh viên mới
+    const freeSeats = [];
+    for (let r = 1; r <= maxRows; r++) {
+      for (let c = 1; c <= maxCols; c++) {
+        if (!occupiedSeats.has(`${r}-${c}`)) {
+          freeSeats.push({ row: r, col: c });
+        }
+      }
+    }
+
+    let currentCount = existingStudents.length;
+    const addedList = [];
+
+    for (let i = 0; i < newStudentIds.length; i++) {
+      const sId = newStudentIds[i];
+      const seat = freeSeats[i] || { row: 1, col: 1 };
+      currentCount++;
+      const candidateCode = `${session.code}-${String(currentCount).padStart(3, '0')}`;
+      const blindCode = generateCode('PHACH', 6);
+      const seatPin = generatePin();
+
+      const item = await ExamStudent.create({
+        session: sessionId,
+        student: sId,
+        candidateCode,
+        blindCode,
+        seatRow: seat.row,
+        seatCol: seat.col,
+        seatPin,
+        status: 'ASSIGNED',
+        trustScore: 100
+      });
+
+      addedList.push(item);
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã thêm thành công ${addedList.length} sinh viên vào ca thi!`,
+      count: addedList.length,
+      data: addedList
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Xóa sinh viên khỏi ca thi
 exports.removeStudentFromSession = async (req, res) => {
   try {
