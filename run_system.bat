@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul 2>&1
 title EXAMGUARD AI - HE THONG KHOI CHAY TOAN DIEN
 color 0B
 
@@ -12,12 +13,10 @@ echo.
 set ROOT_DIR=%~dp0
 cd /d "%ROOT_DIR%"
 
-echo [0/4] Tu dong giai phong Port 3011, Port 5000 va Port 8000 (Chong xung dot EADDRINUSE)...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ports = @(3011, 5000, 8000); foreach ($p in $ports) { $conns = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue; if ($conns) { foreach ($c in $conns) { try { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue; Write-Host ('  [OK] Da giai phong tien trinh cu PID ' + $c.OwningProcess + ' tai Port ' + $p) -ForegroundColor Yellow } catch {} } } else { Write-Host ('  [OK] Port ' + $p + ' da san sang, khong bi chiem dung.') -ForegroundColor Green } }"
-for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /R /C:":3011 " ^| findstr "LISTENING"') do taskkill /F /T /PID %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /R /C:":5000 " ^| findstr "LISTENING"') do taskkill /F /T /PID %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /R /C:":8000 " ^| findstr "LISTENING"') do taskkill /F /T /PID %%a >nul 2>&1
-ping 127.0.0.1 -n 2 >nul 2>&1
+echo [0/4] Tu dong don dep terminal cu va giai phong Port 3011, 5000, 8000...
+set "CALLED_FROM_RUN_SYSTEM=1"
+call "%ROOT_DIR%stop_system.bat"
+set "CALLED_FROM_RUN_SYSTEM="
 echo.
 
 echo [1/4] Kiem tra ket noi MongoDB (Port 27017) va MySQL (Port 3306)...
@@ -26,23 +25,23 @@ echo.
 
 echo [2/4] Khoi chay Python Face AI Microservice (Port 8000)...
 cd /d "%ROOT_DIR%examguard-ai"
-start "Face AI Microservice (Port 8000)" cmd /c "title Face AI Microservice (Port 8000) && color 0D && echo Dang khoi dong Python FastAPI Face AI... && python main.py"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process cmd.exe -ArgumentList '/k title Face AI Microservice (Port 8000) && color 0D && echo [FACE AI] Dang khoi dong Python FastAPI Face AI (Port 8000)... && python main.py' -WorkingDirectory '%ROOT_DIR%examguard-ai' -PassThru; Add-Content -Path '%ROOT_DIR%.examguard_pids' -Value $p.Id"
 ping 127.0.0.1 -n 2 >nul 2>&1
-echo   [OK] Da gui lenh khoi chay Face AI Microservice (Port 8000).
+echo   [OK] Da khoi chay Face AI Microservice (Port 8000).
 echo.
 
 echo [3/4] Khoi chay Python Flask Core Registry Service (Port 5000)...
 cd /d "%ROOT_DIR%examguard-flask"
-start "ExamGuard Flask Service (Port 5000)" cmd /c "title ExamGuard Flask Service (Port 5000) && color 0E && echo Dang khoi dong Python Flask Core... && python app.py"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process cmd.exe -ArgumentList '/k title ExamGuard Flask Service (Port 5000) && color 0E && echo [FLASK] Dang khoi dong Python Flask Service (Port 5000)... && python app.py' -WorkingDirectory '%ROOT_DIR%examguard-flask' -PassThru; Add-Content -Path '%ROOT_DIR%.examguard_pids' -Value $p.Id"
 ping 127.0.0.1 -n 2 >nul 2>&1
-echo   [OK] Da gui lenh khoi chay Python Flask Service (Port 5000).
+echo   [OK] Da khoi chay Python Flask Service (Port 5000).
 echo.
 
 echo [4/4] Khoi chay ExamGuard Core Web App (Port 3011)...
 cd /d "%ROOT_DIR%examguard-core"
-start "ExamGuard Core Web (Port 3011)" cmd /c "title ExamGuard Core Web (Port 3011) && color 0A && echo Dang khoi dong ExamGuard Core... && node server/server.js"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process cmd.exe -ArgumentList '/k title ExamGuard Core Web (Port 3011) && color 0A && echo [CORE WEB] Dang khoi dong ExamGuard Core Server (Port 3011)... && node server/server.js' -WorkingDirectory '%ROOT_DIR%examguard-core' -PassThru; Add-Content -Path '%ROOT_DIR%.examguard_pids' -Value $p.Id"
 ping 127.0.0.1 -n 3 >nul 2>&1
-echo   [OK] Da gui lenh khoi chay ExamGuard Core Server (Port 3011).
+echo   [OK] Da khoi chay ExamGuard Core Server (Port 3011).
 echo.
 
 cd /d "%ROOT_DIR%"
@@ -67,9 +66,11 @@ start http://localhost:3011
 echo.
 echo ==============================================================================
 echo  [CHU Y] Nhan phim bat ky de DUNG HE THONG va DONG HET CAC TAB TERMINAL...
+echo  (Hoac chay file stop_system.bat bat ky luc nao de don sach se toan bo)
 echo ==============================================================================
 pause >nul
 echo.
 echo Dang tat he thong va dong tat ca cac cua so/tab terminal...
+set "CALLED_FROM_RUN_SYSTEM=1"
 call "%ROOT_DIR%stop_system.bat"
 exit
