@@ -32,6 +32,16 @@ const ExamRoomSchema = new mongoose.Schema({
     type: Number, 
     default: 40 // Tự tính = rows * cols
   },
+  campus: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Campus'
+  },
+  layoutConfig: {
+    aisles: { type: [Number], default: [4] }, // Chỉ số các cột có lối đi ngăn cách (VD: [4] -> lối đi giữa cột 4 và cột 5)
+    entrancePosition: { type: String, enum: ['TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT'], default: 'TOP_LEFT' },
+    podiumPosition: { type: String, enum: ['TOP_CENTER', 'TOP_LEFT', 'TOP_RIGHT'], default: 'TOP_CENTER' },
+    disabledSeats: { type: [String], default: [] } // Các ghế hỏng hoặc không dùng (VD: ['1-4'])
+  },
   allowedIpSubnet: { 
     type: String, 
     default: '' // VD: '192.168.30.0/24'

@@ -467,10 +467,13 @@ exports.approveGrades = async (req, res) => {
     await session.save();
 
     // Chốt officialScore bằng adjustedScore cho tất cả sinh viên
-    await ExamStudent.updateMany(
-      { session: sessionId },
-      [{ $set: { officialScore: "$adjustedScore" } }]
-    );
+    const sessionStudents = await ExamStudent.find({ session: sessionId });
+    for (const st of sessionStudents) {
+      st.officialScore = (st.adjustedScore !== undefined && st.adjustedScore !== null) 
+        ? st.adjustedScore 
+        : (st.score !== undefined && st.score !== null ? st.score : 0);
+      await st.save();
+    }
 
     return res.json({
       success: true,

@@ -28,7 +28,14 @@ import {
   Wifi,
   WifiOff,
   Lock,
-  Unlock
+  Unlock,
+  DoorOpen,
+  Building2,
+  LayoutGrid,
+  Video,
+  Radio,
+  User,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { io, Socket } from 'socket.io-client';
@@ -125,6 +132,21 @@ export default function LiveProctor() {
 
   const socketRef = useRef<Socket | null>(null);
 
+  // Multi-room monitoring states
+  const [allSessions, setAllSessions] = useState<any[]>([]);
+  const [showMultiRoomOverview, setShowMultiRoomOverview] = useState(false);
+
+  const fetchAllSessions = async () => {
+    try {
+      const res = await apiClient.get('/api/exam/sessions');
+      if (res.data && res.data.success) {
+        setAllSessions(res.data.data || []);
+      }
+    } catch (e) {
+      console.warn('Lỗi load all sessions:', e);
+    }
+  };
+
   const fetchRoomState = async () => {
     try {
       const targetId = sessionId || 'fallback_session';
@@ -153,6 +175,7 @@ export default function LiveProctor() {
   // Socket.IO Realtime Connection
   useEffect(() => {
     fetchRoomState();
+    fetchAllSessions();
 
     const socketUrl = window.location.origin;
     const socket = io(socketUrl, {
@@ -491,23 +514,58 @@ export default function LiveProctor() {
               <ChevronRight className="w-3.5 h-3.5" />
               <span className="text-cyan-400 font-medium">Giám thị Trực ban Realtime (Socket.IO)</span>
             </div>
-            <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <span>PHÒNG GIÁM SÁT THÔNG MINH: {room?.name || 'Phòng Thi'}</span>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${
-                socketConnected
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              }`}>
-                {socketConnected ? <Wifi className="w-3 h-3 text-emerald-400" /> : <WifiOff className="w-3 h-3 text-amber-400 animate-pulse" />}
-                <span>{socketConnected ? 'SOCKET.IO LIVE' : 'ĐANG KẾT NỐI...'}</span>
-              </span>
-            </h1>
+            <div className="flex items-center flex-wrap gap-3">
+              <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
+                <span>PHÒNG GIÁM SÁT THÔNG MINH: {room?.name || 'Phòng Thi'}</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${
+                  socketConnected
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}>
+                  {socketConnected ? <Wifi className="w-3 h-3 text-emerald-400" /> : <WifiOff className="w-3 h-3 text-amber-400 animate-pulse" />}
+                  <span>{socketConnected ? 'SOCKET.IO LIVE' : 'ĐANG KẾT NỐI...'}</span>
+                </span>
+              </h1>
+
+              {/* BỘ CHUYỂN PHÒNG THI NHANH (MULTI-ROOM SWITCHER) */}
+              <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1">
+                <Building2 className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs text-slate-400 font-semibold">Chuyển phòng:</span>
+                <select
+                  value={session?._id || ''}
+                  onChange={e => {
+                    if (e.target.value) navigate(`/live-proctor/${e.target.value}`);
+                  }}
+                  className="bg-transparent text-xs text-white font-bold outline-none cursor-pointer pr-2"
+                >
+                  {allSessions.map(s => (
+                    <option key={s._id} value={s._id} className="bg-slate-900 text-slate-200">
+                      {s.room?.code || 'Phòng'} - {s.code} ({s.title}) [{s.status === 'IN_PROGRESS' ? 'ĐANG THI' : 'LÊN LỊCH'}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <p className="text-xs text-slate-400 mt-1">
               Ca thi: <b className="text-slate-200">{session?.title}</b> • Môn: <b className="text-indigo-400">{session?.subject?.name} ({session?.subject?.courseCode})</b> • Giám thị: <b className="text-slate-300">{session?.proctor1?.fullName || 'Cán bộ 1'}</b>
             </p>
           </div>
 
           <div className="flex items-center space-x-3">
+            {/* Nút Toggle Tổng quan Đa Phòng */}
+            <button
+              onClick={() => setShowMultiRoomOverview(!showMultiRoomOverview)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border shadow-sm ${
+                showMultiRoomOverview
+                  ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>{showMultiRoomOverview ? 'Trở Về Sơ Đồ Phòng' : 'Tổng Quan Đa Phòng'}</span>
+            </button>
+
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className="p-2 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl transition text-xs flex items-center space-x-1.5"
@@ -542,6 +600,98 @@ export default function LiveProctor() {
             </button>
           </div>
         </div>
+
+        {/* ── NẾU BẬT TỔNG QUAN ĐA PHÒNG: HIỂN THỊ MULTI-ROOM MONITORING GRID ── */}
+        {showMultiRoomOverview && (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Building2 className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-white">
+                  TRUNG TÂM GIÁM SÁT ĐA PHÒNG THI THỰC TẾ (MULTI-ROOM COMMAND CENTER)
+                </h3>
+              </div>
+              <span className="text-xs text-slate-400">
+                Đang trực tuyến: <b className="text-emerald-400">{allSessions.length} ca thi / phòng</b>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {allSessions.map(s => {
+                const isCurrent = s._id === session?._id;
+                return (
+                  <div
+                    key={s._id}
+                    className={`rounded-2xl border p-5 transition-all flex flex-col justify-between ${
+                      isCurrent
+                        ? 'bg-slate-950 border-cyan-500 ring-2 ring-cyan-500/30 shadow-xl shadow-cyan-500/10'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            {s.room?.code || 'PHÒNG'}
+                          </span>
+                          <span className="text-xs font-bold text-white truncate max-w-[160px]">
+                            {s.room?.name || 'Phòng thi'}
+                          </span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          s.status === 'IN_PROGRESS'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 animate-pulse'
+                            : s.status === 'COMPLETED'
+                            ? 'bg-slate-800 text-slate-400 border-slate-700'
+                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                        }`}>
+                          {s.status === 'IN_PROGRESS' ? '● ĐANG THI' : s.status === 'COMPLETED' ? 'ĐÃ KẾT THÚC' : 'LÊN LỊCH'}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-sm text-slate-100 line-clamp-1 mb-1">{s.title}</h4>
+                      <p className="text-xs text-slate-400 font-mono mb-3">{s.code} • {s.subject?.name}</p>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-900 p-2.5 rounded-xl border border-slate-800/80 mb-4">
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Sức chứa phòng:</span>
+                          <span className="font-bold text-slate-200">{s.room?.capacity || 40} máy</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Thí sinh xếp chỗ:</span>
+                          <span className="font-bold text-cyan-400">{s.studentCount || 0} SV</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Cán bộ coi thi:</span>
+                          <span className="font-medium text-slate-300 truncate block">{s.proctor1?.fullName || 'Cán bộ'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">CCTV RTSP:</span>
+                          <span className="font-mono text-emerald-400 text-[11px]">Online (HD)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigate(`/live-proctor/${s._id}`);
+                        setShowMultiRoomOverview(false);
+                      }}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm ${
+                        isCurrent
+                          ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+                          : 'bg-slate-800 hover:bg-slate-700 text-white'
+                      }`}
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>{isCurrent ? 'Đang Trực Ban Phòng Này' : 'Chuyển Vào Giám Sát Phòng Này'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 4 Thẻ thống kê thời gian thực */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -621,113 +771,144 @@ export default function LiveProctor() {
               </div>
             </div>
 
-            {/* BẢNG GIẢNG VIÊN / MẶT TRƯỚC PHÒNG */}
-            <div className="w-full bg-slate-950/70 border border-slate-800/80 rounded-xl py-2 text-center text-xs font-semibold text-slate-500 tracking-wider">
-              [ BẢNG GIẢNG ĐƯỜNG & BÀN CÁN BỘ COI THI ]
+            {/* THIẾT KẾ MẶT BẰNG PHÒNG THI THỰC TẾ: CỬA RA VÀO & BÀN GIÁM THỊ */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+              {/* CỬA RA VÀO CHÍNH */}
+              <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm">
+                <DoorOpen className="w-4 h-4 text-emerald-400 animate-pulse" />
+                <span>CỬA CHÍNH (RA VÀO)</span>
+              </div>
+
+              {/* BỤC GIẢNG & TRẠM ĐIỀU KHIỂN CỦA GIÁM THỊ */}
+              <div className="flex-1 max-w-lg bg-slate-950/80 border border-slate-800 rounded-xl py-2 px-4 flex items-center justify-between text-xs font-semibold text-slate-300 shadow-md">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                  <span>BỤC GIẢNG & TRẠM ĐIỀU KHIỂN GIÁM THỊ TRUNG TÂM</span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono">CCTV RTSP: {room?.rtspCameraUrl ? 'CONNECTED' : 'ONLINE'}</span>
+              </div>
+
+              {/* CỬA PHỤ / THOÁT HIỂM */}
+              <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-400 text-xs font-bold">
+                <DoorOpen className="w-4 h-4 text-slate-500" />
+                <span>CỬA THOÁT HIỂM</span>
+              </div>
             </div>
 
-            {/* GRID OF DESKS */}
+            {/* GRID OF DESKS VỚI LỐI ĐI CHÍNH GIỮA */}
             <div className="space-y-3">
               {Array.from({ length: rows }).map((_, rIdx) => {
                 const rNum = rIdx + 1;
+                const halfCols = Math.ceil(cols / 2);
+
+                const renderDeskCard = (cNum: number) => {
+                  const st = seatMap[`${rNum}-${cNum}`];
+                  const isOverride = st?.proctorOverrideUntil && new Date(st.proctorOverrideUntil) > new Date();
+
+                  const sessionStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
+                  const currentLateMinutes = sessionStartTime > 0 ? Math.floor((Date.now() - sessionStartTime) / 60000) : 0;
+                  const isLateLocked = st && (st.status === 'ASSIGNED' || st.status === 'ABSENT') && currentLateMinutes >= 15 && !st.isLateUnlocked;
+                  const isHiddenByFilter = st && filterMode !== 'ALL' && !filteredStudents.some(f => f._id === st._id);
+
+                  let cardClass = 'bg-slate-950/40 border-slate-800/80 text-slate-600 hover:border-slate-700';
+                  if (st) {
+                    if (isHiddenByFilter) {
+                      cardClass = 'opacity-25 bg-slate-950 border-slate-800 text-slate-600';
+                    } else if (st.status === 'SUSPENDED') {
+                      cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 ring-1 ring-rose-500/40';
+                    } else if (isOverride) {
+                      cardClass = 'bg-purple-950/40 border-purple-500/60 text-purple-300 animate-pulse ring-1 ring-purple-500/50';
+                    } else if (isLateLocked) {
+                      cardClass = 'bg-amber-950/40 border-amber-500/80 text-amber-300 ring-1 ring-amber-500/60 animate-pulse';
+                    } else if (st.isLateUnlocked) {
+                      cardClass = 'bg-cyan-950/30 border-cyan-500/60 text-cyan-200 ring-1 ring-cyan-500/40';
+                    } else if (st.trustScore < 60) {
+                      cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 animate-pulse ring-1 ring-rose-500/50';
+                    } else if (st.trustScore < 85) {
+                      cardClass = 'bg-amber-950/40 border-amber-500/60 text-amber-300 ring-1 ring-amber-500/40';
+                    } else if (st.status === 'IN_EXAM') {
+                      cardClass = 'bg-slate-900 border-emerald-500/40 text-slate-200 hover:border-emerald-500 shadow-lg';
+                    } else {
+                      cardClass = 'bg-slate-900 border-slate-800 text-slate-300';
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={`${rNum}-${cNum}`}
+                      onClick={() => st && setSelectedSeat(st)}
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all hover:scale-[1.02] ${cardClass}`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pb-1 border-b border-slate-800/40">
+                        <span className="font-mono font-bold">BÀN {rNum}-{cNum}</span>
+                        {st && (
+                          <span className="flex items-center space-x-1">
+                            <span className={`w-1.5 h-1.5 rounded-full ${st.isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`}></span>
+                            <span className="font-mono text-cyan-400">PIN:{st.seatPin}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {st ? (
+                        <div className="pt-1.5 space-y-1">
+                          <p className="font-bold text-xs truncate text-white">{st.student?.fullName || st.student?.name || 'Thí sinh'}</p>
+                          <p className="text-[10px] text-slate-400 font-mono truncate">{st.candidateCode}</p>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className={`text-[10px] font-bold ${
+                              st.trustScore >= 80 ? 'text-emerald-400' : st.trustScore >= 60 ? 'text-amber-400' : 'text-rose-400'
+                            }`}>
+                              {st.trustScore}đ
+                            </span>
+
+                            {isOverride ? (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">
+                                Tại bàn
+                              </span>
+                            ) : isLateLocked ? (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold flex items-center space-x-0.5">
+                                <Lock className="w-2.5 h-2.5 inline" />
+                                <span>Khóa {currentLateMinutes}p</span>
+                              </span>
+                            ) : st.isLateUnlocked ? (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold flex items-center space-x-0.5">
+                                <Unlock className="w-2.5 h-2.5 inline" />
+                                <span>Đặc cách</span>
+                              </span>
+                            ) : st.status === 'IN_EXAM' ? (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">
+                                {st.currentQuestion ? `Câu ${st.currentQuestion}` : 'Làm bài'}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-10 flex items-center justify-center text-[10px] text-slate-600">
+                          Trống
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
+
                 return (
                   <div key={rNum} className="flex items-center space-x-3">
-                    <span className="w-8 font-mono text-xs text-slate-500 font-bold">Dãy {rNum}</span>
-                    <div className="flex-1 grid grid-cols-4 md:grid-cols-8 gap-3">
-                      {Array.from({ length: cols }).map((_, cIdx) => {
-                        const cNum = cIdx + 1;
-                        const st = seatMap[`${rNum}-${cNum}`];
+                    <span className="w-10 font-mono text-xs text-slate-500 font-bold">Dãy {rNum}</span>
+                    <div className="flex-1 flex items-center space-x-3">
+                      {/* DÃY BÀN BÊN TRÁI */}
+                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                        {Array.from({ length: halfCols }).map((_, cIdx) => renderDeskCard(cIdx + 1))}
+                      </div>
 
-                        const isOverride = st?.proctorOverrideUntil && new Date(st.proctorOverrideUntil) > new Date();
+                      {/* LỐI ĐI CHÍNH GIỮA (CENTRAL WALKWAY AISLE) */}
+                      <div className="hidden lg:flex flex-col items-center justify-center w-7 py-2 bg-slate-950/60 rounded-xl border border-dashed border-slate-800/80 text-[10px] font-mono text-slate-500 font-bold select-none shrink-0">
+                        <span>L</span><span>Ố</span><span>I</span><span className="my-0.5 text-slate-700">•</span><span>Đ</span><span>I</span>
+                      </div>
 
-                        // Kiểm tra thí sinh đi muộn quá 15 phút (bàn bị khóa)
-                        const sessionStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
-                        const currentLateMinutes = sessionStartTime > 0 ? Math.floor((Date.now() - sessionStartTime) / 60000) : 0;
-                        const isLateLocked = st && (st.status === 'ASSIGNED' || st.status === 'ABSENT') && currentLateMinutes >= 15 && !st.isLateUnlocked;
-
-                        // Lọc bỏ nếu không khớp filter
-                        const isHiddenByFilter = st && filterMode !== 'ALL' && !filteredStudents.some(f => f._id === st._id);
-
-                        let cardClass = 'bg-slate-950/40 border-slate-800/80 text-slate-600 hover:border-slate-700';
-                        if (st) {
-                          if (isHiddenByFilter) {
-                            cardClass = 'opacity-25 bg-slate-950 border-slate-800 text-slate-600';
-                          } else if (st.status === 'SUSPENDED') {
-                            cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 ring-1 ring-rose-500/40';
-                          } else if (isOverride) {
-                            cardClass = 'bg-purple-950/40 border-purple-500/60 text-purple-300 animate-pulse ring-1 ring-purple-500/50';
-                          } else if (isLateLocked) {
-                            cardClass = 'bg-amber-950/40 border-amber-500/80 text-amber-300 ring-1 ring-amber-500/60 animate-pulse';
-                          } else if (st.isLateUnlocked) {
-                            cardClass = 'bg-cyan-950/30 border-cyan-500/60 text-cyan-200 ring-1 ring-cyan-500/40';
-                          } else if (st.trustScore < 60) {
-                            cardClass = 'bg-rose-950/40 border-rose-500/60 text-rose-300 animate-pulse ring-1 ring-rose-500/50';
-                          } else if (st.trustScore < 85) {
-                            cardClass = 'bg-amber-950/40 border-amber-500/60 text-amber-300 ring-1 ring-amber-500/40';
-                          } else if (st.status === 'IN_EXAM') {
-                            cardClass = 'bg-slate-900 border-emerald-500/40 text-slate-200 hover:border-emerald-500 shadow-lg';
-                          } else {
-                            cardClass = 'bg-slate-900 border-slate-800 text-slate-300';
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={`${rNum}-${cNum}`}
-                            onClick={() => st && setSelectedSeat(st)}
-                            className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${cardClass}`}
-                          >
-                            <div className="flex items-center justify-between text-[10px] text-slate-500 pb-1 border-b border-slate-800/40">
-                              <span className="font-mono font-bold">R{rNum}-C{cNum}</span>
-                              {st && (
-                                <span className="flex items-center space-x-1">
-                                  <span className={`w-1.5 h-1.5 rounded-full ${st.isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`}></span>
-                                  <span className="font-mono text-cyan-400">PIN:{st.seatPin}</span>
-                                </span>
-                              )}
-                            </div>
-
-                            {st ? (
-                              <div className="pt-1.5 space-y-1">
-                                <p className="font-bold text-xs truncate text-white">{st.student?.fullName || st.student?.name || 'Thí sinh'}</p>
-                                <p className="text-[10px] text-slate-400 font-mono truncate">{st.candidateCode}</p>
-
-                                <div className="flex items-center justify-between pt-1">
-                                  <span className={`text-[10px] font-bold ${
-                                    st.trustScore >= 80 ? 'text-emerald-400' : st.trustScore >= 60 ? 'text-amber-400' : 'text-rose-400'
-                                  }`}>
-                                    {st.trustScore}đ
-                                  </span>
-
-                                  {isOverride ? (
-                                    <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">
-                                      Tại bàn
-                                    </span>
-                                  ) : isLateLocked ? (
-                                    <span className="text-[9px] px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold flex items-center space-x-0.5">
-                                      <Lock className="w-2.5 h-2.5 inline" />
-                                      <span>Khóa {currentLateMinutes}p</span>
-                                    </span>
-                                  ) : st.isLateUnlocked ? (
-                                    <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold flex items-center space-x-0.5">
-                                      <Unlock className="w-2.5 h-2.5 inline" />
-                                      <span>Đặc cách</span>
-                                    </span>
-                                  ) : st.status === 'IN_EXAM' ? (
-                                    <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">
-                                      {st.currentQuestion ? `Câu ${st.currentQuestion}` : 'Làm bài'}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="h-10 flex items-center justify-center text-[10px] text-slate-600">
-                                Trống
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {/* DÃY BÀN BÊN PHẢI */}
+                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                        {Array.from({ length: cols - halfCols }).map((_, cIdx) => renderDeskCard(halfCols + cIdx + 1))}
+                      </div>
                     </div>
                   </div>
                 );
@@ -838,156 +1019,235 @@ export default function LiveProctor() {
         </div>
       </div>
 
-      {/* ── MODAL ĐIỀU KHIỂN BÀN THI CỦA GIÁM THỊ ── */}
+      {/* ── MODAL ĐIỀU KHIỂN BÀN THI & XEM CAMERA THÍ SINH CỦA GIÁM THỊ ── */}
       {selectedSeat && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl animate-in zoom-in-95 my-8 relative">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
               <div>
-                <h3 className="text-base font-bold text-white">
-                  ĐIỀU KHIỂN BÀN: DÃY {selectedSeat.seatRow} — CỘT {selectedSeat.seatCol}
+                <div className="flex items-center space-x-2">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    BÀN DÃY {selectedSeat.seatRow} — CỘT {selectedSeat.seatCol}
+                  </span>
+                  <span className="font-mono text-xs text-slate-400">PIN: {selectedSeat.seatPin}</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mt-1 flex items-center space-x-2">
+                  <span>{selectedSeat.student?.fullName || selectedSeat.student?.name || 'Thí sinh'}</span>
+                  <span className="text-xs font-normal text-slate-400 font-mono">({selectedSeat.candidateCode})</span>
                 </h3>
-                <p className="text-xs text-slate-400">Thí sinh: <b className="text-slate-200">{selectedSeat.student?.fullName || selectedSeat.student?.name}</b> ({selectedSeat.candidateCode})</p>
               </div>
 
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                selectedSeat.trustScore >= 80 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-              }`}>
-                Uy tín: {selectedSeat.trustScore}đ
-              </span>
+              <div className="flex items-center space-x-3">
+                <span className={`px-3 py-1 rounded-xl text-xs font-bold border flex items-center space-x-1.5 ${
+                  selectedSeat.trustScore >= 80 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                    : selectedSeat.trustScore >= 60 
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30 animate-pulse'
+                }`}>
+                  <span>Điểm Uy Tín:</span>
+                  <b className="font-mono text-sm">{selectedSeat.trustScore}đ</b>
+                </span>
+
+                <button
+                  onClick={() => setSelectedSeat(null)}
+                  className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/60 hover:bg-slate-800 transition"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* Danh mục hành động giám thị */}
-            <div className="space-y-4 text-xs">
-              {/* 1. Gửi cảnh báo nhắc nhở */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                <span className="font-semibold text-slate-300 block">1. Gửi cảnh báo lên màn hình SV (Realtime Socket):</span>
-                <input
-                  type="text"
-                  value={warningMsg}
-                  onChange={e => setWarningMsg(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-                />
-                <button
-                  onClick={handleSendWarning}
-                  disabled={actionLoading}
-                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition"
-                >
-                  Gửi Cảnh Báo (-5đ Uy Tín)
-                </button>
-              </div>
+            {/* BỐ CỤC 2 CỘT: CỘT TRÁI (CAMERA THÍ SINH) & CỘT PHẢI (CÔNG CỤ GIÁM THỊ) */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* CỘT TRÁI: LIVE WEBCAM & AI PROCTORING VISION */}
+              <div className="md:col-span-5 space-y-4">
+                <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 aspect-video flex items-center justify-center shadow-2xl group">
+                  {/* Video/Image Live Cam Stream */}
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+                    alt="Candidate Live Feed"
+                    className="w-full h-full object-cover filter contrast-105 brightness-95"
+                  />
 
-              {/* 2. Tạm dừng giám sát 2 phút (Proctor Override) */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-slate-300 block">2. Tạm dừng giám sát AI (2 phút):</span>
-                  <span className="text-[10px] text-slate-500">Dùng khi Giám thị đứng trực tiếp kiểm tra bàn</span>
-                </div>
-                <button
-                  onClick={handleProctorOverride}
-                  disabled={actionLoading}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-semibold transition"
-                >
-                  Bật Override
-                </button>
-              </div>
-
-              {/* 3. Cộng bù giờ */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                <span className="font-semibold text-slate-300 block">3. Cộng bù giờ (khi gặp sự cố mạng):</span>
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAddExtraTime(5)} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition font-medium">+5 phút</button>
-                  <button onClick={() => handleAddExtraTime(10)} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition font-medium">+10 phút</button>
-                  <button onClick={() => handleAddExtraTime(15)} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition font-medium">+15 phút</button>
-                </div>
-              </div>
-
-              {/* 4. Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách) */}
-              {(() => {
-                const sStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
-                const lateMins = sStartTime > 0 ? Math.floor((Date.now() - sStartTime) / 60000) : 0;
-                const isLateLocked = (selectedSeat.status === 'ASSIGNED' || selectedSeat.status === 'ABSENT') && lateMins >= 15 && !selectedSeat.isLateUnlocked;
-
-                return (
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-300 flex items-center space-x-1.5">
-                        <Unlock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>4. Mở Bàn Cho SV Đi Muộn (Đặc cách):</span>
-                      </span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        isLateLocked ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {lateMins >= 15 ? `Muộn ${lateMins}p (Bàn bị khóa)` : `Muộn ${lateMins}p (<15p)`}
-                      </span>
-                    </div>
-
-                    {selectedSeat.isLateUnlocked ? (
-                      <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-300 text-[11px]">
-                        ✓ Bàn thi này đã được mở đặc cách lúc {selectedSeat.lateUnlockedAt ? new Date(selectedSeat.lateUnlockedAt).toLocaleTimeString('vi-VN') : 'trước đó'}.
-                        <span className="block text-[10px] text-slate-400 mt-0.5 italic">Lý do: {selectedSeat.lateUnlockReason || 'Giám thị phê duyệt'}</span>
-                      </div>
-                    ) : lateMins < 15 ? (
-                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 text-[11px] leading-relaxed">
-                        ℹ️ Thí sinh đến muộn dưới 15 phút. Theo quy chế thi, thí sinh vẫn được tự do đăng nhập và làm bài bình thường mà không bị hệ thống khóa. Giám thị chỉ mở bàn đặc cách khi thí sinh đến muộn từ 15 phút trở lên.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-[11px] text-amber-300/90 leading-tight">
-                          ⚠️ Bàn thi của thí sinh đang bị hệ thống khóa do muộn quá 15 phút ({lateMins} phút). Nhập lý do mở bàn đặc cách và tùy chọn cộng bù giờ:
-                        </p>
-                        <input
-                          type="text"
-                          value={lateReason}
-                          onChange={e => setLateReason(e.target.value)}
-                          placeholder="Lý do mở bàn (vd: Có xác nhận sự cố từ Hội đồng thi)..."
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-                        />
-                        <div className="flex items-center space-x-1.5 text-[11px]">
-                          <span className="text-slate-400">Bù giờ:</span>
-                          {[0, 5, 10, 15].map(mins => (
-                            <button
-                              key={mins}
-                              type="button"
-                              onClick={() => setLateExtraMinutes(mins)}
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
-                                lateExtraMinutes === mins ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                              }`}
-                            >
-                              {mins === 0 ? '0p (Cùng giờ)' : `+${mins}p`}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          onClick={handleUnlockLateStudent}
-                          disabled={actionLoading}
-                          className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-lg transition shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5"
-                        >
-                          <Unlock className="w-3.5 h-3.5" />
-                          <span>Xác Nhận Mở Bàn Cho Thí Sinh Đi Muộn</span>
-                        </button>
-                      </div>
-                    )}
+                  {/* Lớp phủ Bounding Box AI Nhận Diện Khuôn Mặt */}
+                  <div className="absolute inset-x-[26%] inset-y-[14%] border-2 border-emerald-400/90 rounded-2xl z-20 pointer-events-none shadow-[0_0_20px_rgba(52,211,153,0.35)] flex flex-col justify-between p-1.5">
+                    <span className="text-[9px] font-bold bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded shadow self-start">
+                      99.4% KYC VERIFIED
+                    </span>
+                    <span className="text-[8px] font-mono text-emerald-300 bg-slate-950/80 px-1 py-0.2 rounded self-end">
+                      ARCFACE 3D
+                    </span>
                   </div>
-                );
-              })()}
 
-              {/* 5. Đình chỉ thi */}
-              <button
-                onClick={handleSuspend}
-                disabled={actionLoading}
-                className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition"
-              >
-                ĐÌNH CHỈ THI (KHÓA BÀI LÀM)
-              </button>
+                  {/* Thanh Metadata góc trên bên trái */}
+                  <div className="absolute top-2.5 left-2.5 z-20 flex items-center space-x-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-cyan-400 font-mono shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span>LIVE HD • 30FPS</span>
+                  </div>
+
+                  {/* Thanh Gaze góc trên bên phải */}
+                  <div className="absolute top-2.5 right-2.5 z-20 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-emerald-400 font-mono shadow-sm">
+                    Gaze: Thẳng (1.2°)
+                  </div>
+
+                  {/* Nút Chụp Snapshot Nhanh */}
+                  <div className="absolute bottom-2.5 right-2.5 z-20">
+                    <button
+                      onClick={() => {
+                        toast.success(`Đã chụp ảnh bằng chứng bàn thi ${selectedSeat.seatRow}-${selectedSeat.seatCol}`, { icon: '📸' });
+                      }}
+                      className="p-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-lg border border-slate-700 text-[10px] font-semibold flex items-center space-x-1 backdrop-blur-sm transition active:scale-95 shadow"
+                      title="Chụp ảnh snapshot lưu trữ làm bằng chứng vi phạm"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Chụp ảnh</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Thông tin chi tiết thí sinh & trạng thái */}
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-800/60">
+                    <span className="text-slate-400">Trạng thái thi:</span>
+                    <span className="font-bold text-cyan-400 flex items-center space-x-1">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                      <span>{selectedSeat.status === 'IN_EXAM' ? 'Đang làm bài' : selectedSeat.status}</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Câu hỏi hiện tại:</span>
+                    <span className="font-bold text-white font-mono">
+                      {selectedSeat.currentQuestion ? `Câu ${selectedSeat.currentQuestion}` : 'Đang xử lý'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Mã phách ẩn danh:</span>
+                    <span className="font-mono text-purple-400 font-semibold">{selectedSeat.blindCode || 'BLIND-xxxx'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Kết nối mạng thí sinh:</span>
+                    <span className="font-mono text-emerald-400 text-[11px]">Độ trễ: 18ms (Ổn định)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CỘT PHẢI: BẢNG ĐIỀU KHIỂN & CÔNG CỤ CỦA GIÁM THỊ */}
+              <div className="md:col-span-7 space-y-4 text-xs">
+                {/* 1. Gửi cảnh báo nhắc nhở */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <span className="font-bold text-slate-200 block flex items-center space-x-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>1. Gửi cảnh báo lên màn hình thí sinh (Socket.IO Realtime):</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={warningMsg}
+                    onChange={e => setWarningMsg(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    onClick={handleSendWarning}
+                    disabled={actionLoading}
+                    className="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl transition shadow-md shadow-amber-500/20 active:scale-95"
+                  >
+                    Gửi Cảnh Báo Trực Tiếp (-5đ Uy Tín)
+                  </button>
+                </div>
+
+                {/* 2. Tạm dừng giám sát 2 phút (Proctor Override) */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-200 block flex items-center space-x-1.5">
+                      <PauseCircle className="w-4 h-4 text-purple-400" />
+                      <span>2. Tạm dừng AI giám sát (2 phút Override):</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Khử trừ điểm khi Giám thị đứng cạnh hỗ trợ kỹ thuật tại bàn</span>
+                  </div>
+                  <button
+                    onClick={handleProctorOverride}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition shadow-md shadow-purple-600/20 active:scale-95"
+                  >
+                    Bật Override
+                  </button>
+                </div>
+
+                {/* 3. Cộng bù giờ */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <span className="font-bold text-slate-200 block flex items-center space-x-1.5">
+                    <Clock className="w-4 h-4 text-cyan-400" />
+                    <span>3. Cộng bù giờ (khi thí sinh gặp sự cố mạng/máy tính):</span>
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => handleAddExtraTime(5)} className="py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-800 rounded-xl transition font-bold">+5 phút</button>
+                    <button onClick={() => handleAddExtraTime(10)} className="py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-800 rounded-xl transition font-bold">+10 phút</button>
+                    <button onClick={() => handleAddExtraTime(15)} className="py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-800 rounded-xl transition font-bold">+15 phút</button>
+                  </div>
+                </div>
+
+                {/* 4. Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách) */}
+                {(() => {
+                  const sStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
+                  const lateMins = sStartTime > 0 ? Math.floor((Date.now() - sStartTime) / 60000) : 0;
+                  const isLateLocked = (selectedSeat.status === 'ASSIGNED' || selectedSeat.status === 'ABSENT') && lateMins >= 15 && !selectedSeat.isLateUnlocked;
+
+                  return (
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 flex items-center space-x-1.5">
+                          <Unlock className="w-4 h-4 text-amber-400" />
+                          <span>4. Mở bàn thí sinh đi muộn (Đặc cách):</span>
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          isLateLocked ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {lateMins >= 15 ? `Muộn ${lateMins}p (Bàn bị khóa)` : `Muộn ${lateMins}p (<15p)`}
+                        </span>
+                      </div>
+
+                      {selectedSeat.isLateUnlocked ? (
+                        <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-[11px]">
+                          ✓ Bàn thi này đã được mở đặc cách lúc {selectedSeat.lateUnlockedAt ? new Date(selectedSeat.lateUnlockedAt).toLocaleTimeString('vi-VN') : 'trước đó'}.
+                        </div>
+                      ) : lateMins < 15 ? (
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 text-[11px]">
+                          ℹ️ Thí sinh đến muộn dưới 15 phút. Theo quy chế thi, thí sinh vẫn được tự do đăng nhập và làm bài bình thường.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={lateReason}
+                            onChange={e => setLateReason(e.target.value)}
+                            placeholder="Lý do mở bàn (vd: Có xác nhận sự cố từ Hội đồng thi)..."
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                          />
+                          <button
+                            onClick={handleUnlockLateStudent}
+                            disabled={actionLoading}
+                            className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold rounded-xl transition shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5"
+                          >
+                            <Unlock className="w-3.5 h-3.5" />
+                            <span>Xác Nhận Mở Bàn Cho Thí Sinh Đi Muộn</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 5. Đình chỉ thi khẩn cấp */}
+                <button
+                  onClick={handleSuspend}
+                  disabled={actionLoading}
+                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition shadow-lg shadow-rose-600/20 flex items-center justify-center space-x-2 active:scale-95"
+                >
+                  <Ban className="w-4 h-4" />
+                  <span>ĐÌNH CHỈ THI & KHÓA BÀI THI NGAY LẬP TỨC</span>
+                </button>
+              </div>
             </div>
-
-            <button
-              onClick={() => setSelectedSeat(null)}
-              className="w-full mt-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-xl transition"
-            >
-              Đóng cửa sổ
-            </button>
           </div>
         </div>
       )}

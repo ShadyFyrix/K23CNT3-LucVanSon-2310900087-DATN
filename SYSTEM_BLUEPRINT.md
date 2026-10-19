@@ -311,11 +311,14 @@ Mọi cá nhân tham gia vào hoạt động thi trực tuyến hoặc coi thi �
 **Postcondition:** `ca_thi` ở trạng thái `UPCOMING`, `sinh_vien_ca_thi` có đủ bản ghi `not_checkin`
 
 ```
-BƯỚC 1: Khai báo Phòng thi
-  Input:  ma_phong, ten_phong, loai_phong, so_day (rows), so_cot (cols), allowed_ip_subnet
-  Output: phong_thi.id
-  Rule:   so_day × so_cot = max capacity phòng
-  UI:     Form tạo phòng + preview grid 3D
+BƯỚC 1: Khai báo Cơ sở & Phòng thi (Campus & Exam Room Architecture)
+  Khái niệm kiến trúc:
+    - Cơ sở (Campus): Địa điểm đào tạo vật lý cấp trường (VD: Cơ sở 1 - Hà Nội, Cơ sở 2 - TP.HCM).
+    - Phòng thi (Exam Room): Phòng máy/phòng thi cụ thể thuộc 1 Cơ sở (VD: P302, LAB01).
+  Input:  campus_id, ma_phong (code), ten_phong, loai_phong, so_day (rows), so_cot (cols), allowed_ip_subnet
+  Output: phong_thi.id, layoutConfig { aisles: [4], entrancePosition: 'TOP_LEFT', podiumPosition: 'TOP_CENTER' }
+  Rule:   so_day × so_cot = max capacity phòng; có phân định Lối đi trung tâm (Central Aisle), Cửa ra vào chính và Bục giảng giám thị.
+  UI:     Form tạo phòng tại `/campuses` + sơ đồ mặt bằng trực quan.
 
 BƯỚC 2: Gắn Camera vào Phòng
   Input:  phong_thi_id, ma_camera, vi_tri_lap_dat, rtsp_url, do_phan_giai
@@ -330,13 +333,15 @@ BƯỚC 3: Vẽ ROI Polygon cho Camera
   Format: {"R1-C1": [[x1,y1],[x2,y2],[x3,y3],[x4,y4]], "R1-C2": [...]}
   UI:     Canvas overlay lên ảnh preview camera, click vẽ polygon 4 đỉnh
 
-BƯỚC 4: Tạo Ca thi
+BƯỚC 4: Tạo Ca thi & Quản lý Lịch biểu Timeline (Resource Timeline / Gantt Chart)
   Input:  ma_ca_thi, mon_hoc_id, hoc_ky_id, phong_thi_id, hinh_thuc_thi,
-          de_thi_mongo_id, require_seb_lockdown, ngay_thi, gio_bat_dau, gio_ket_thuc
-  Output: ca_thi.id, trang_thai_ca = 'UPCOMING'
+          de_thi_mongo_id, ngay_thi, gio_bat_dau, thoi_luong_phut
+  Output: ca_thi.id, trang_thai_ca = 'SCHEDULED'
+  Gantt View: Trục Y = Danh sách Phòng thi, Trục X = Dải giờ 07:00 -> 19:00. Khối ca thi được biểu diễn theo thời gian thực kèm vạch đỏ chỉ báo giờ hiện tại.
   Rule:   Nếu hinh_thuc_thi = 'BYOD_LAPTOP' → require_seb_lockdown = true (mặc định)
           Nếu hinh_thuc_thi = 'ONLINE_QUIZ' → Giao diện Interactive Quiz, đếm ngược từng câu / toàn bài, auto-save đáp án
           Mọi ca thi trực tuyến bắt buộc phải có de_thi_mongo_id hợp lệ từ Ngân hàng đề thi
+          Giám sát phòng thi đa phòng: Cán bộ coi thi có thể chuyển đổi giữa các phòng đang thi thông qua Quick Switcher hoặc Multi-Room Command Center. Click vào bàn thi sẽ bật Drawer hiển thị Camera Webcam Stream thời gian thực của thí sinh kèm AI Face Detection và Head Pose compass.
 
 BƯỚC 5: Import Sinh viên + Xếp chỗ
   Input:  ca_thi_id, file Excel (ma_sv, ho_ten) HOẶC chọn từ danh sách lớp

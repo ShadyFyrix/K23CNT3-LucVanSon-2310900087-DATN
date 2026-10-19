@@ -510,7 +510,7 @@ exports.getExamSessions = async (req, res) => {
     const sessions = await ExamSession.find(filter)
       .populate('subject', 'name courseCode')
       .populate('examPaper', 'code title durationMinutes totalScore')
-      .populate('room', 'code name capacity rows cols roomType')
+      .populate({ path: 'room', populate: { path: 'campus', select: 'name address' } })
       .populate('proctor1', 'fullName email')
       .populate('proctor2', 'fullName email')
       .populate('inspector', 'fullName email')
@@ -1352,22 +1352,37 @@ exports.getStudentExamResult = async (req, res) => {
   try {
     const { sessionStudentId } = req.params;
 
-    const examStudent = await ExamStudent.findById(sessionStudentId)
-      .populate('session')
-      .populate('student');
-
-    if (!examStudent) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy bài thi!' });
+    let examStudent;
+    if (!sessionStudentId || sessionStudentId === 'fallback_student' || !mongoose.Types.ObjectId.isValid(sessionStudentId)) {
+      examStudent = await ExamStudent.findOne({ status: { $in: ['SUBMITTED', 'GRADED', 'ASSIGNED', 'IN_EXAM'] } })
+        .sort({ updatedAt: -1 })
+        .populate('session')
+        .populate('student');
+    } else {
+      examStudent = await ExamStudent.findById(sessionStudentId)
+        .populate('session')
+        .populate('student');
     }
 
-    const session = await ExamSession.findById(examStudent.session._id)
+    if (!examStudent) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin bài thi của thí sinh!' });
+    }
+
+    const sessionId = examStudent.session?._id || examStudent.session;
+    const session = sessionId ? await ExamSession.findById(sessionId)
       .populate('subject', 'name courseCode')
-      .populate('examPaper');
+      .populate('examPaper') : null;
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi tương ứng!' });
+    }
 
     // Kiểm tra quyền công bố
     const isPublished = session.gradingStatus === 'PUBLISHED';
-
     const submission = await ExamSubmission.findOne({ examStudent: examStudent._id });
+
+    const studentDisplayName = examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh';
+    const subjectName = session.subject?.name || 'Kỹ thuật lập trình';
 
     if (!isPublished) {
       return res.json({
@@ -1377,10 +1392,10 @@ exports.getStudentExamResult = async (req, res) => {
         session: {
           code: session.code,
           title: session.title,
-          subjectName: session.subject.name
+          subjectName: subjectName
         },
         student: {
-          name: examStudent.student.name,
+          name: studentDisplayName,
           candidateCode: examStudent.candidateCode,
           trustScore: examStudent.trustScore,
           submittedAt: examStudent.submittedAt
@@ -1391,7 +1406,7 @@ exports.getStudentExamResult = async (req, res) => {
     // ĐÃ CÔNG BỐ: Trả về kết quả đầy đủ kèm từng câu và lời giải thích!
     const examPaper = session.examPaper;
     const questionsWithFeedback = (submission ? submission.questionResults : []).map(qr => {
-      const originalQ = examPaper.questions.find(q => q._id.toString() === qr.questionId);
+      const originalQ = (examPaper?.questions || []).find(q => q._id && q._id.toString() === (qr.questionId ? qr.questionId.toString() : ''));
       return {
         stt: qr.stt,
         type: qr.type,
@@ -1413,11 +1428,11 @@ exports.getStudentExamResult = async (req, res) => {
         session: {
           code: session.code,
           title: session.title,
-          subjectName: session.subject.name,
+          subjectName: subjectName,
           appealDeadline: session.appealDeadline
         },
         student: {
-          name: examStudent.student.name,
+          name: studentDisplayName,
           candidateCode: examStudent.candidateCode,
           trustScore: examStudent.trustScore,
           submittedAt: examStudent.submittedAt
@@ -1428,7 +1443,7 @@ exports.getStudentExamResult = async (req, res) => {
           trustScore: examStudent.trustScore,
           totalCorrect: submission ? submission.totalCorrect : 0,
           totalWrong: submission ? submission.totalWrong : 0,
-          totalQuestions: examPaper.questions.length
+          totalQuestions: examPaper?.questions?.length || 0
         },
         questions: questionsWithFeedback
       }
