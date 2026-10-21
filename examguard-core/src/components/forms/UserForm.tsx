@@ -203,7 +203,7 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-1">
       {/* SECTION UPLOAD AVATAR */}
-      <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-5">
+      <div className="bg-slate-50/80 dark:bg-slate-950/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-5">
         <input
           type="file"
           ref={fileInputRef}
@@ -213,11 +213,11 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
         />
 
         <div className="relative group shrink-0">
-          <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center overflow-hidden border-2 border-slate-200 shadow-sm relative group">
+          <div className="w-24 h-24 rounded-2xl bg-white dark:bg-slate-850 flex items-center justify-center overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-sm relative group">
             {isUploading ? (
               <div className="flex flex-col items-center justify-center gap-1">
-                <Loader2 className="w-7 h-7 animate-spin text-indigo-600" />
-                <span className="text-[10px] text-slate-500 font-bold">Đang tải...</span>
+                <Loader2 className="w-7 h-7 animate-spin text-blue-600 dark:text-blue-400" />
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">Đang tải...</span>
               </div>
             ) : formData.avatar && !imgError ? (
               <img
@@ -227,8 +227,8 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
                 onError={() => setImgError(true)}
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-50/60 text-slate-400">
-                <User className="w-10 h-10 text-indigo-300" />
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50/60 dark:from-slate-900 dark:to-slate-800 text-slate-400">
+                <User className="w-10 h-10 text-blue-400" />
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Mặc định</span>
               </div>
             )}
@@ -239,7 +239,7 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
             type="button"
             disabled={isUploading}
             onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-2 -right-2 p-2 bg-indigo-600 text-white rounded-xl shadow-md hover:bg-indigo-700 transition-all cursor-pointer disabled:opacity-50"
+            className="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50"
             title="Tải ảnh lên"
           >
             <Camera className="w-4 h-4" />
@@ -248,8 +248,8 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
 
         <div className="flex-1 text-center sm:text-left space-y-2">
           <div>
-            <h4 className="text-sm font-black text-slate-800">Ảnh đại diện nhân sự</h4>
-            <p className="text-xs text-slate-400">Hỗ trợ định dạng JPG, PNG, WEBP (Tối đa 5MB). Nếu chưa có, hệ thống hiển thị icon mặc định.</p>
+            <h4 className="text-sm font-black text-slate-800 dark:text-white">Ảnh đại diện nhân sự</h4>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Hỗ trợ định dạng JPG, PNG, WEBP (Tối đa 5MB). Nếu chưa có, hệ thống hiển thị icon mặc định.</p>
           </div>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
@@ -257,7 +257,7 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
               type="button"
               disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-lg border border-blue-200 dark:border-blue-900/40 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               {formData.avatar ? 'Đổi ảnh khác' : 'Chọn ảnh từ máy'}
@@ -267,7 +267,7 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
               type="button"
               disabled={isUploading}
               onClick={handlePromptUrl}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
             >
               <LinkIcon className="w-3.5 h-3.5 text-slate-400" />
               Nhập link ảnh
@@ -278,7 +278,7 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
                 type="button"
                 disabled={isUploading}
                 onClick={handleRemoveAvatar}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-lg border border-rose-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Xóa ảnh
@@ -289,27 +289,27 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <User className="w-3.5 h-3.5" /> Họ và tên nhân viên
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <User className="w-3.5 h-3.5 text-blue-500" /> Họ và tên nhân viên
           </label>
           <input
             required
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.fullName}
             onChange={e => setFormData({ ...formData, fullName: e.target.value })}
             placeholder="Nguyễn Văn A"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Mail className="w-3.5 h-3.5" /> Email đăng nhập
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Mail className="w-3.5 h-3.5 text-blue-500" /> Email đăng nhập
           </label>
           <input
             required
             type="email"
             disabled={isEdit}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none disabled:opacity-50 font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none disabled:opacity-50 font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.email}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
             placeholder="canbo@examguard.edu.vn"
@@ -318,23 +318,23 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Phone className="w-3.5 h-3.5" /> Số điện thoại
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Phone className="w-3.5 h-3.5 text-teal-500" /> Số điện thoại
           </label>
           <input
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.phone}
             onChange={e => setFormData({ ...formData, phone: e.target.value })}
             placeholder="0912345678"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5" /> Quê quán / Địa chỉ
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-teal-500" /> Quê quán / Địa chỉ
           </label>
           <input
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.hometown}
             onChange={e => setFormData({ ...formData, hometown: e.target.value })}
             placeholder="Hà Nội, Nam Định..."
@@ -343,24 +343,24 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5" /> Năm sinh
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Calendar className="w-3.5 h-3.5 text-amber-500" /> Năm sinh
           </label>
           <input
             type="number"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.yearOfBirth}
             onChange={e => setFormData({ ...formData, yearOfBirth: e.target.value })}
             placeholder="199x"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Users className="w-3.5 h-3.5" /> Giới tính
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Users className="w-3.5 h-3.5 text-amber-500" /> Giới tính
           </label>
           <select
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-slate-100"
             value={formData.gender}
             onChange={e => setFormData({ ...formData, gender: e.target.value })}
           >
@@ -373,23 +373,23 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <CreditCard className="w-3.5 h-3.5" /> Ngân hàng
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <CreditCard className="w-3.5 h-3.5 text-blue-500" /> Ngân hàng
           </label>
           <input
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.bankName}
             onChange={e => setFormData({ ...formData, bankName: e.target.value })}
             placeholder="Vietcombank, Techcombank..."
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <CreditCard className="w-3.5 h-3.5" /> Số tài khoản
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <CreditCard className="w-3.5 h-3.5 text-blue-500" /> Số tài khoản
           </label>
           <input
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             value={formData.bankAccountNumber}
             onChange={e => setFormData({ ...formData, bankAccountNumber: e.target.value })}
             placeholder="0123456789"
@@ -397,14 +397,14 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
         </div>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-          <Lock className="w-3.5 h-3.5" /> {isEdit ? "Mật khẩu mới (Để trống nếu không đổi)" : "Mật khẩu khởi tạo"}
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+          <Lock className="w-3.5 h-3.5 text-blue-500" /> {isEdit ? "Mật khẩu mới (Để trống nếu không đổi)" : "Mật khẩu khởi tạo"}
         </label>
         <input
           required={!isEdit}
           type="password"
-          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none"
+          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
           value={formData.password}
           onChange={e => setFormData({ ...formData, password: e.target.value })}
           placeholder="••••••••"
@@ -412,12 +412,12 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Briefcase className="w-3.5 h-3.5" /> Phòng ban hạch toán
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Briefcase className="w-3.5 h-3.5 text-teal-500" /> Phòng ban hạch toán
           </label>
           <select
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-slate-100"
             value={formData.department}
             onChange={e => setFormData({ ...formData, department: e.target.value })}
           >
@@ -432,12 +432,12 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
             <option value="sinh_vien">Khối Sinh viên / Thí sinh</option>
           </select>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <Info className="w-3.5 h-3.5" /> Trạng thái tài khoản
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <Info className="w-3.5 h-3.5 text-teal-500" /> Trạng thái tài khoản
           </label>
           <select
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-slate-100"
             value={formData.status}
             onChange={e => setFormData({ ...formData, status: e.target.value })}
           >
@@ -450,10 +450,10 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
       {/* MULTI-ROLE SELECTION */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Chọn Các Vai trò (Hỗ trợ 1 người có nhiều vai trò)
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Chọn Các Vai trò (Hỗ trợ 1 người có nhiều vai trò)
           </label>
-          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-lg border border-blue-200 dark:border-blue-900/40">
             {selectedRoleIds.length} vai trò được chọn
           </span>
         </div>
@@ -465,15 +465,15 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
               <div
                 key={role._id}
                 onClick={() => toggleRole(role._id)}
-                className={`cursor-pointer flex items-center justify-between px-3.5 py-3 rounded-xl transition-all border-2 select-none ${
+                className={`cursor-pointer flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all border-2 select-none ${
                   isSelected
-                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                    : 'bg-slate-50 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
                 <span className="text-[11px] font-black uppercase truncate pr-1">{role.name}</span>
                 <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${
-                  isSelected ? 'bg-white text-indigo-600 border-white' : 'border-slate-300 bg-white'
+                  isSelected ? 'bg-white text-blue-600 border-white' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
                 }`}>
                   {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
@@ -484,18 +484,18 @@ export function UserForm({ initialData, roles, onSuccess, onCancel }: UserFormPr
         {roles.length === 0 && <p className="text-[10px] text-rose-500 italic">Hệ thống chưa có vai trò nào. Hãy cấu hình ở mục Phân quyền.</p>}
       </div>
 
-      <div className="flex gap-3 pt-4 border-t">
+      <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+          className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-wider cursor-pointer"
         >
           Hủy bỏ
         </button>
         <button
           type="submit"
           disabled={isUploading}
-          className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          className="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
         >
           {isUploading ? (
             <>

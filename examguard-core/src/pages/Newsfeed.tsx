@@ -187,20 +187,20 @@ export default function Newsfeed() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16 font-sans">
       {/* Header Banner */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-8 rounded-3xl shadow-xl border border-slate-800 relative overflow-hidden">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 text-white p-8 rounded-3xl shadow-xl border border-blue-500/20 dark:border-slate-800 relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2">
+          <div className="flex items-center gap-2 text-emerald-300 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2">
             <Sparkles className="w-4 h-4 animate-pulse" /> Truyền thông Nội bộ & Tin tức
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Bản Tin Doanh Nghiệp</h1>
-          <p className="text-slate-300 text-sm mt-1 max-w-xl">
+          <p className="text-blue-100 dark:text-slate-300 text-sm mt-1 max-w-xl">
             Cập nhật những hoạt động, thông báo chính thức và định hướng chiến lược của công ty.
           </p>
         </div>
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="relative z-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 shrink-0 hover:scale-105"
+          className="relative z-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 shrink-0 hover:scale-105 cursor-pointer"
         >
           <Plus className="w-5 h-5 stroke-[3]" /> Đăng Bản Tin Mới
         </button>
@@ -255,12 +255,12 @@ export default function Newsfeed() {
       )}
 
       {/* FILTER TABS & SEARCH */}
-      <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
           <button
             onClick={() => setActiveCategory('all')}
             className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all ${
-              activeCategory === 'all' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'
+              activeCategory === 'all' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             Tất cả bài viết ({posts.length})
@@ -272,7 +272,7 @@ export default function Newsfeed() {
                 key={key}
                 onClick={() => setActiveCategory(key)}
                 className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-2 ${
-                  activeCategory === key ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'
+                  activeCategory === key ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -283,13 +283,13 @@ export default function Newsfeed() {
         </div>
 
         <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Tìm kiếm bản tin..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
         </div>
       </div>

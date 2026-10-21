@@ -52,69 +52,69 @@ export function CourseForm({ initialData, onSuccess, onCancel }: any) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="col-span-2 space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Book className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="col-span-2 space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Book className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Tên học phần / Môn thi <span className="text-rose-500">*</span>
           </label>
           <input
             required
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             placeholder="VD: Kỹ thuật lập trình C/C++"
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Hash className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Hash className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Mã học phần <span className="text-rose-500">*</span>
           </label>
           <input
             required
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 uppercase"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase transition-all"
             placeholder="VD: IT201"
             value={formData.courseCode}
             onChange={e => setFormData({ ...formData, courseCode: e.target.value.toUpperCase() })}
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Award className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Số tín chỉ
           </label>
           <input
             type="number"
             min={1}
             max={10}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             value={formData.credits}
             onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })}
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Thời lượng giảng dạy
           </label>
           <input
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             placeholder="VD: 45 tiết (30 lý thuyết + 15 thực hành)"
             value={formData.duration}
             onChange={e => setFormData({ ...formData, duration: e.target.value })}
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Khoa phụ trách chuyên môn
           </label>
           <select
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             value={formData.category}
             onChange={e => setFormData({ ...formData, category: e.target.value })}
           >
@@ -126,14 +126,14 @@ export function CourseForm({ initialData, onSuccess, onCancel }: any) {
           </select>
         </div>
 
-        <div className="col-span-2 space-y-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="col-span-2 space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Mô tả học phần & Đề cương tóm tắt
           </label>
           <textarea
             rows={3}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all"
             placeholder="Nhập mục tiêu học phần, kiến thức chuẩn đầu ra hoặc quy định thi cử..."
             value={formData.description}
             onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -141,17 +141,17 @@ export function CourseForm({ initialData, onSuccess, onCancel }: any) {
         </div>
       </div>
 
-      <div className="flex gap-3 pt-4 border-t border-slate-100">
+      <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+          className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
         >
           Hủy bỏ
         </button>
         <button
           type="submit"
-          className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-200 cursor-pointer"
+          className="flex-[2] py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 cursor-pointer"
         >
           {initialData?._id ? "Cập nhật học phần" : "Lưu học phần"}
         </button>

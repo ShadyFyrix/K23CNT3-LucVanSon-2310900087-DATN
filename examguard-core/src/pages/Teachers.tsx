@@ -77,26 +77,30 @@ export default function Teachers() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Đội ngũ Giảng viên</h1>
-          <p className="text-slate-500">Quản lý chuyên môn, hợp đồng và chất lượng đào tạo.</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Đội ngũ Giảng viên</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">
+            Quản lý danh sách giảng viên, chuyên môn, hợp đồng đào tạo và định danh sinh trắc học Coi thi.
+          </p>
         </div>
         <button
           onClick={() => { setEditingTeacher(null); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
-          <Plus className="w-5 h-5" /> Thêm giảng viên
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-600/20 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" /> Thêm giảng viên
         </button>
       </header>
 
-      <div className="bg-white p-4 rounded-xs shadow-sm border border-slate-100 flex gap-4">
+      <div className="bg-white dark:bg-slate-900/90 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex gap-4 backdrop-blur-md">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Tìm theo tên, mã giảng viên hoặc chuyên môn..."
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            style={{ paddingLeft: '2.6rem' }}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
@@ -104,116 +108,125 @@ export default function Teachers() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teachers.map((teacher) => (
-            <div key={teacher._id} className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all group relative">
-              {/* Header Card */}
-              <div className="h-24 bg-slate-900 relative">
-                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setEditingTeacher(teacher); setIsModalOpen(true); }} className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-md"><Edit2 className="w-4 h-4" /></button>
-                  <button onClick={() => handleDelete(teacher._id)} className="p-2 bg-rose-500/20 hover:bg-rose-500 text-white rounded-lg backdrop-blur-md"><Trash2 className="w-4 h-4" /></button>
+            <div key={teacher._id} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden hover:shadow-xl dark:hover:border-slate-700 transition-all group relative flex flex-col justify-between">
+              <div>
+                {/* Header Card Banner */}
+                <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 dark:from-slate-900 dark:via-blue-950 dark:to-slate-900 relative border-b border-blue-500/20 dark:border-slate-800/80">
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setEditingTeacher(teacher); setIsModalOpen(true); }} className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer" title="Chỉnh sửa"><Edit2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(teacher._id)} className="p-2 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+
+                <div className="px-6 pb-6">
+                  <div className="relative -mt-10 mb-4 flex justify-between items-end">
+                    <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 p-1 shadow-xl border border-slate-200 dark:border-slate-700">
+                      <div className="w-full h-full rounded-xl bg-blue-600 flex items-center justify-center text-white text-2xl font-black overflow-hidden shadow-inner">
+                        {teacher.avatar ? (
+                          <img src={teacher.avatar} alt={teacher.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                          teacher.fullName.charAt(0)
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800/40">
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                      <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{teacher.rating || '5.0'}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 mb-3">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{teacher.fullName}</h3>
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{teacher.teacherCode || 'GV_COITHI'}</p>
+                  </div>
+
+                  {/* Chuyên môn Tags */}
+                  <div className="flex flex-wrap gap-1.5 mb-4 min-h-[24px]">
+                    {teacher.specialization?.map((s: string) => (
+                      <span key={s} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 rounded-md text-[10px] font-bold uppercase">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-0.5 flex items-center gap-1">
+                        <Briefcase className="w-3 h-3 text-blue-500" /> Kinh nghiệm
+                      </p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{teacher.experience || 0} năm</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-0.5 flex items-center gap-1">
+                        <Award className="w-3 h-3 text-teal-500" /> Bằng cấp
+                      </p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{teacher.degree || 'Thạc sĩ'}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="px-6 pb-6">
-                <div className="relative -mt-12 mb-4 flex justify-between items-end">
-                  <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-xl">
-                    <div className="w-full h-full rounded-xl bg-indigo-600 flex items-center justify-center text-white text-3xl font-black overflow-hidden">
-                      {teacher.avatar ? (
-                        <img src={teacher.avatar} alt={teacher.fullName} className="w-full h-full object-cover" />
-                      ) : (
-                        teacher.fullName.charAt(0)
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
-                    <span className="text-xs font-bold text-amber-700">{teacher.rating}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1 mb-4">
-                  <h3 className="text-xl font-bold text-slate-900 leading-tight">{teacher.fullName}</h3>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{teacher.teacherCode || 'FREELANCE'}</p>
-                </div>
-
-                {/* Chuyên môn Tags */}
-                <div className="flex flex-wrap gap-1.5 mb-6">
-                  {teacher.specialization?.map((s: string) => (
-                    <span key={s} className="px-2 py-0.5 bg-slate-50 text-slate-600 border border-slate-100 rounded-md text-[10px] font-bold uppercase">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
-                      <Briefcase className="w-3 h-3" /> Kinh nghiệm
-                    </p>
-                    <p className="text-sm font-bold text-slate-700">{teacher.experience} năm</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
-                      <Award className="w-3 h-3" /> Bằng cấp
-                    </p>
-                    <p className="text-sm font-bold text-slate-700 truncate">{teacher.degree || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-4 border-t border-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <a href={`tel:${teacher.phone}`} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all"><Phone className="w-4 h-4" /></a>
-                      <a href={`mailto:${teacher.email}`} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><Mail className="w-4 h-4" /></a>
-                    </div>
-                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${teacher.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                      {teacher.status === 'active' ? 'Sẵn sàng' : 'Nghỉ phép'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    {teacher.isFaceKyc || teacher.userId?.isFaceRegistered || (Array.isArray(teacher.faceEmbedding) && teacher.faceEmbedding.length > 0) ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                        <CheckCircle className="w-3 h-3 text-emerald-600" /> Đã KYC Coi thi
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                        <AlertCircle className="w-3 h-3 text-amber-500" /> Chưa KYC
-                      </span>
+              <div className="px-6 pb-6 pt-0 space-y-3">
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    {teacher.phone && (
+                      <a href={`tel:${teacher.phone}`} className="p-2 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800/50 rounded-xl hover:bg-teal-600 hover:text-white transition-all"><Phone className="w-3.5 h-3.5" /></a>
                     )}
-
-                    <button
-                      onClick={() => {
-                        setSelectedTeacherForFace({
-                          _id: teacher._id,
-                          fullName: teacher.fullName,
-                          email: teacher.email,
-                          department: teacher.department?.name || 'Giảng viên',
-                          code: teacher.teacherCode
-                        });
-                        setIsFaceModalOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer"
-                    >
-                      <ScanFace className="w-3 h-3" />
-                      <span>{teacher.isFaceKyc || teacher.userId?.isFaceRegistered ? 'Đổi Face' : 'Đăng ký Face'}</span>
-                    </button>
+                    {teacher.email && (
+                      <a href={`mailto:${teacher.email}`} className="p-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><Mail className="w-3.5 h-3.5" /></a>
+                    )}
                   </div>
+                  <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase border ${
+                    teacher.status === 'active' 
+                      ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/50' 
+                      : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/50'
+                  }`}>
+                    {teacher.status === 'active' ? 'Sẵn sàng' : 'Nghỉ phép'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  {teacher.isFaceKyc || teacher.userId?.isFaceRegistered || (Array.isArray(teacher.faceEmbedding) && teacher.faceEmbedding.length > 0) ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 rounded-xl border border-teal-200 dark:border-teal-800/50">
+                      <CheckCircle className="w-3 h-3 text-teal-600 dark:text-teal-400" /> Đã KYC Coi thi
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-1 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                      <AlertCircle className="w-3 h-3 text-amber-500" /> Chưa KYC
+                    </span>
+                  )}
 
                   <button
                     onClick={() => {
-                      setSelectedForUser({ fullName: teacher.fullName, email: teacher.email, department: 'training', role: roles.find(r => r.name.toLowerCase() === 'teacher')?._id });
-                      setIsUserModalOpen(true);
+                      setSelectedTeacherForFace({
+                        _id: teacher._id,
+                        fullName: teacher.fullName,
+                        email: teacher.email,
+                        department: teacher.department?.name || 'Giảng viên',
+                        code: teacher.teacherCode
+                      });
+                      setIsFaceModalOpen(true);
                     }}
-                    className="w-full py-2.5 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold rounded-xl transition shadow-sm cursor-pointer"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" /> Kích hoạt tài khoản hệ thống
+                    <ScanFace className="w-3 h-3" />
+                    <span>{teacher.isFaceKyc || teacher.userId?.isFaceRegistered ? 'Đổi Face' : 'Đăng ký Face'}</span>
                   </button>
                 </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedForUser({ fullName: teacher.fullName, email: teacher.email, department: 'training', role: roles.find(r => r.name.toLowerCase() === 'teacher')?._id });
+                    setIsUserModalOpen(true);
+                  }}
+                  className="w-full py-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/40 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" /> Kích hoạt tài khoản hệ thống
+                </button>
               </div>
             </div>
           ))}

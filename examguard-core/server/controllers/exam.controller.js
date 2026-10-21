@@ -8,6 +8,7 @@ const Student = require('../models/student.model');
 const Course = require('../models/course.model');
 const User = require('../models/user.model');
 const { parseExamFile } = require('../utils/examFileParser');
+const examService = require('../services/exam.service');
 
 // Helper sinh mã ngẫu nhiên
 function generateCode(prefix = 'PHACH', len = 6) {
@@ -820,6 +821,30 @@ exports.addStudentToSession = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Sinh viên này đã có trong danh sách ca thi!' });
     }
 
+    // Kiểm tra chống trùng lịch thi: Không cho phép 1 sinh viên thi 2 môn cùng một thời điểm
+    const sessionStart = new Date(session.startTime).getTime();
+    const sessionDurationMs = (session.durationMinutes || 60) * 60000;
+    const sessionEnd = session.endTime ? new Date(session.endTime).getTime() : (sessionStart + sessionDurationMs);
+
+    const studentOtherSessions = await ExamStudent.find({ student: studentId }).populate('session');
+    for (const es of studentOtherSessions) {
+      if (es.session && es.session._id.toString() !== sessionId.toString() && es.session.status !== 'CANCELLED') {
+        const oStart = new Date(es.session.startTime).getTime();
+        const oDurationMs = (es.session.durationMinutes || 60) * 60000;
+        const oEnd = es.session.endTime ? new Date(es.session.endTime).getTime() : (oStart + oDurationMs);
+
+        // Hai ca thi trùng khung giờ khi: (sessionStart < oEnd && sessionEnd > oStart)
+        if (sessionStart < oEnd && sessionEnd > oStart) {
+          const oStartStr = new Date(oStart).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          const oEndStr = new Date(oEnd).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          return res.status(400).json({
+            success: false,
+            message: `Xung đột lịch thi! Thí sinh đã được xếp ca thi "${es.session.title}" (${oStartStr} - ${oEndStr}) trùng khung giờ này. Quy chế khảo thí chỉ cho phép sinh viên thi 1 bài trong cùng một khoảng thời gian!`
+          });
+        }
+      }
+    }
+
     // Tự tìm bàn trống nếu chưa có seatRow/seatCol
     let row = seatRow ? Number(seatRow) : 1;
     let col = seatCol ? Number(seatCol) : 1;
@@ -891,10 +916,45 @@ exports.bulkAddStudentsToSession = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Tất cả sinh viên được chọn đều đã có mặt trong ca thi này!' });
     }
 
-    if (existingStudents.length + newStudentIds.length > maxCapacity) {
+    // Kiểm tra xung đột lịch thi: Lọc và cảnh báo sinh viên bị trùng giờ thi với môn khác
+    const sessionStart = new Date(session.startTime).getTime();
+    const sessionDurationMs = (session.durationMinutes || 60) * 60000;
+    const sessionEnd = session.endTime ? new Date(session.endTime).getTime() : (sessionStart + sessionDurationMs);
+
+    const validStudentIds = [];
+    const conflictStudentNames = [];
+
+    for (const sId of newStudentIds) {
+      const otherSessions = await ExamStudent.find({ student: sId }).populate('session').populate('student');
+      let hasConflict = false;
+      for (const es of otherSessions) {
+        if (es.session && es.session._id.toString() !== sessionId.toString() && es.session.status !== 'CANCELLED') {
+          const oStart = new Date(es.session.startTime).getTime();
+          const oDurationMs = (es.session.durationMinutes || 60) * 60000;
+          const oEnd = es.session.endTime ? new Date(es.session.endTime).getTime() : (oStart + oDurationMs);
+          if (sessionStart < oEnd && sessionEnd > oStart) {
+            hasConflict = true;
+            conflictStudentNames.push(`${es.student?.fullName || sId} (trùng với ca "${es.session.title}")`);
+            break;
+          }
+        }
+      }
+      if (!hasConflict) {
+        validStudentIds.push(sId);
+      }
+    }
+
+    if (validStudentIds.length === 0 && conflictStudentNames.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Phòng ${session.room?.code || 'thi'} chỉ còn ${maxCapacity - existingStudents.length} chỗ trống, không đủ cho ${newStudentIds.length} sinh viên mới!`
+        message: `Không thể xếp lịch! Tất cả sinh viên được chọn đều bị trùng giờ thi với môn khác: ${conflictStudentNames.join(', ')}`
+      });
+    }
+
+    if (existingStudents.length + validStudentIds.length > maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Phòng ${session.room?.code || 'thi'} chỉ còn ${maxCapacity - existingStudents.length} chỗ trống, không đủ cho ${validStudentIds.length} sinh viên mới!`
       });
     }
 
@@ -911,8 +971,8 @@ exports.bulkAddStudentsToSession = async (req, res) => {
     let currentCount = existingStudents.length;
     const addedList = [];
 
-    for (let i = 0; i < newStudentIds.length; i++) {
-      const sId = newStudentIds[i];
+    for (let i = 0; i < validStudentIds.length; i++) {
+      const sId = validStudentIds[i];
       const seat = freeSeats[i] || { row: 1, col: 1 };
       currentCount++;
       const candidateCode = `${session.code}-${String(currentCount).padStart(3, '0')}`;
@@ -966,6 +1026,7 @@ exports.removeStudentFromSession = async (req, res) => {
 exports.getSanitizedQuestions = async (req, res) => {
   try {
     const { sessionStudentId } = req.params;
+    const now = new Date();
 
     let examStudent = null;
     if (mongoose.Types.ObjectId.isValid(sessionStudentId)) {
@@ -973,10 +1034,52 @@ exports.getSanitizedQuestions = async (req, res) => {
         .populate('session')
         .populate({ path: 'student', populate: { path: 'class' } });
     } else {
-      examStudent = await ExamStudent.findOne()
-        .sort({ createdAt: -1 })
+      // Khi không truyền sessionStudentId cụ thể (truy cập /exam/take)
+      // Tìm sinh viên theo User đăng nhập (nếu có)
+      let studentFilter = {};
+      if (req.user && req.user.email) {
+        const Student = mongoose.model('Student');
+        const st = await Student.findOne({ email: req.user.email });
+        if (st) studentFilter = { student: st._id };
+      }
+
+      // Lấy toàn bộ các ca thi của thí sinh
+      const candidates = await ExamStudent.find(studentFilter)
         .populate('session')
         .populate({ path: 'student', populate: { path: 'class' } });
+
+      // Ưu tiên 1: Ca thi ĐANG DIỄN RA (chưa nộp bài và now nằm trong thời gian thi)
+      const happeningCandidate = candidates.find(c => {
+        if (!c.session || c.session.status === 'COMPLETED' || c.session.status === 'CANCELLED') return false;
+        if (c.status === 'SUBMITTED') return false;
+        const sStart = new Date(c.session.startTime);
+        const sEnd = c.session.endTime ? new Date(c.session.endTime) : new Date(sStart.getTime() + (c.session.durationMinutes || 60) * 60000);
+        return now.getTime() <= sEnd.getTime();
+      });
+
+      if (happeningCandidate) {
+        examStudent = happeningCandidate;
+      } else {
+        // Ưu tiên 2: Ca thi SẮP DIỄN RA tiếp theo (UPCOMING)
+        const upcomingCandidate = candidates
+          .filter(c => {
+            if (!c.session || c.session.status === 'COMPLETED' || c.session.status === 'CANCELLED') return false;
+            if (c.status === 'SUBMITTED') return false;
+            const sStart = new Date(c.session.startTime);
+            return now.getTime() < sStart.getTime();
+          })
+          .sort((a, b) => new Date(a.session.startTime).getTime() - new Date(b.session.startTime).getTime())[0];
+
+        if (upcomingCandidate) {
+          examStudent = upcomingCandidate;
+        } else {
+          // Fallback: Lấy ca thi cập nhật gần nhất
+          examStudent = await ExamStudent.findOne(studentFilter)
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .populate('session')
+            .populate({ path: 'student', populate: { path: 'class' } });
+        }
+      }
     }
 
     if (!examStudent) {
@@ -992,11 +1095,57 @@ exports.getSanitizedQuestions = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đề thi của ca này!' });
     }
 
-    const now = new Date();
     const startTime = session.startTime ? new Date(session.startTime) : new Date();
     const durationMinutes = (session.durationMinutes || 60) + (examStudent.extraTimeMinutes || 0);
     const durationMs = durationMinutes * 60 * 1000;
     const endTime = session.endTime ? new Date(session.endTime) : new Date(startTime.getTime() + durationMs);
+
+    // TÍNH TOÁN DANH SÁCH TẤT CẢ CA THI CỦA THÍ SINH ĐỂ HỖ TRỢ XỬ LÝ 2 MÔN LIÊN TIẾP & SẢNH CHỜ
+    const studentId = examStudent.student?._id || examStudent.student;
+    const allStudentExams = await ExamStudent.find({ student: studentId })
+      .populate({ path: 'session', populate: { path: 'room subject' } });
+
+    const todaySessions = allStudentExams.map(item => {
+      const s = item.session;
+      if (!s) return null;
+      const sStart = s.startTime ? new Date(s.startTime) : new Date();
+      const sEnd = s.endTime ? new Date(s.endTime) : new Date(sStart.getTime() + (s.durationMinutes || 60) * 60000);
+      const isEnded = s.status === 'COMPLETED' || now.getTime() > sEnd.getTime() || item.status === 'SUBMITTED';
+      const isUpcoming = now.getTime() < sStart.getTime() && item.status !== 'SUBMITTED';
+      const isHappening = !isEnded && !isUpcoming && item.status !== 'SUBMITTED';
+
+      return {
+        id: item._id,
+        candidateCode: item.candidateCode,
+        seatRow: item.seatRow,
+        seatCol: item.seatCol,
+        seatPin: item.seatPin,
+        status: item.status,
+        trustScore: item.trustScore,
+        session: {
+          id: s._id,
+          code: s.code,
+          title: s.title,
+          subjectName: s.subject?.name || s.title,
+          roomName: s.room?.name || 'Phòng P302',
+          startTime: sStart.toISOString(),
+          endTime: sEnd.toISOString(),
+          durationMinutes: s.durationMinutes || 60,
+          status: s.status,
+          gradingStatus: s.gradingStatus
+        },
+        isEnded,
+        isUpcoming,
+        isHappening,
+        countdownSeconds: isUpcoming ? Math.max(0, Math.floor((sStart.getTime() - now.getTime()) / 1000)) : 0
+      };
+    }).filter(Boolean).sort((a, b) => new Date(a.session.startTime).getTime() - new Date(b.session.startTime).getTime());
+
+    // Tìm môn thi kế tiếp
+    const nextSession = todaySessions.find(ts => 
+      ts.id.toString() !== examStudent._id.toString() && !ts.isEnded
+    ) || null;
+    const hasActiveExamNow = todaySessions.some(ts => ts.isHappening);
 
     // 0. KIỂM TRA CA THI ĐÃ KẾT THÚC / ĐÓNG BUỒNG THI (session.status === 'COMPLETED' hoặc now > endTime)
     const isSessionEnded = session.status === 'COMPLETED' || (now.getTime() > endTime.getTime());
@@ -1012,6 +1161,9 @@ exports.getSanitizedQuestions = async (req, res) => {
         success: true,
         data: {
           isSessionEnded: true,
+          hasActiveExamNow,
+          todaySessions,
+          nextSession,
           endedAt: (session.endTime || endTime).toISOString(),
           serverTime: now.toISOString(),
           startTime: startTime.toISOString(),
@@ -1060,6 +1212,9 @@ exports.getSanitizedQuestions = async (req, res) => {
         success: true,
         data: {
           isPreExamWaiting: true,
+          todaySessions,
+          nextSession,
+          hasActiveExamNow,
           countdownSeconds,
           serverTime: now.toISOString(),
           startTime: startTime.toISOString(),
@@ -1192,6 +1347,9 @@ exports.getSanitizedQuestions = async (req, res) => {
     return res.json({
       success: true,
       data: {
+        todaySessions,
+        nextSession,
+        hasActiveExamNow,
         examStudent: {
           id: examStudent._id,
           candidateCode: examStudent.candidateCode,
@@ -1279,153 +1437,15 @@ exports.saveProgress = async (req, res) => {
   }
 };
 
-// Nộp bài thi & Kích hoạt Chấm Tự Động Trắc Nghiệm Tức Thì
+// Nộp bài thi & Kích hoạt Chấm Tự Động Trắc Nghiệm Tức Thì (Ủy quyền cho ExamService - SRP & Strategy Pattern)
 exports.submitExam = async (req, res) => {
   try {
     const { sessionStudentId, answers } = req.body;
-
-    const examStudent = await ExamStudent.findById(sessionStudentId).populate('session');
-    if (!examStudent) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy thí sinh!' });
-    }
-
-    if (examStudent.status === 'SUBMITTED') {
-      return res.json({ success: true, message: 'Bài thi đã được nộp trước đó!' });
-    }
-
-    const session = await ExamSession.findById(examStudent.session._id);
-    const examPaper = await ExamPaper.findById(session.examPaper);
-
-    const submittedAnswers = answers || {};
-
-    // 1. Chấm điểm trắc nghiệm tự động (Auto-Grading Engine)
-    let autoGradeTotal = 0;
-    let totalCorrect = 0;
-    let totalWrong = 0;
-    let totalSkipped = 0;
-    const questionResults = [];
-
-    for (let i = 0; i < examPaper.questions.length; i++) {
-      const q = examPaper.questions[i];
-      const qKey = q._id.toString();
-      const studentChoice = submittedAnswers[qKey] !== undefined 
-        ? submittedAnswers[qKey] 
-        : submittedAnswers[i];
-
-      if (q.type === 'MULTIPLE_CHOICE') {
-        let isCorrect = false;
-        if (studentChoice !== undefined && studentChoice !== null && studentChoice !== '') {
-          // So khớp đáp án (hỗ trợ số index hoặc mảng chấp nhận nhiều đáp án)
-          if (q.correctAnswer === 'ALL_CORRECT') {
-            isCorrect = true;
-          } else if (Array.isArray(q.correctAnswer)) {
-            if (Array.isArray(studentChoice)) {
-              isCorrect = JSON.stringify([...q.correctAnswer].sort()) === JSON.stringify([...studentChoice].sort());
-            } else {
-              // Nếu đề có nhiều đáp án chấp nhận (VD: GV công nhận cả B và C), thí sinh chọn 1 trong các đáp án đó là đạt điểm
-              isCorrect = q.correctAnswer.map(Number).includes(Number(studentChoice));
-            }
-          } else {
-            isCorrect = Number(studentChoice) === Number(q.correctAnswer);
-          }
-        }
-
-        const scoreEarned = isCorrect ? q.score : 0;
-        if (studentChoice === undefined || studentChoice === null || studentChoice === '') {
-          totalSkipped++;
-        } else if (isCorrect) {
-          totalCorrect++;
-        } else {
-          totalWrong++;
-        }
-
-        autoGradeTotal += scoreEarned;
-
-        questionResults.push({
-          stt: q.stt,
-          questionId: q._id.toString(),
-          type: q.type,
-          studentAnswer: studentChoice,
-          correctAnswer: q.correctAnswer,
-          isCorrect,
-          scoreEarned,
-          maxScore: q.score,
-          explanation: q.explanation || ''
-        });
-      } else {
-        // Tự luận hoặc Coding: Chờ giảng viên chấm
-        questionResults.push({
-          stt: q.stt,
-          questionId: q._id.toString(),
-          type: q.type,
-          studentAnswer: studentChoice || '',
-          correctAnswer: null,
-          isCorrect: null,
-          scoreEarned: 0,
-          maxScore: q.score,
-          explanation: q.gradingGuide || ''
-        });
-      }
-    }
-
-    // Làm tròn 2 chữ số thập phân
-    autoGradeTotal = Math.round(autoGradeTotal * 100) / 100;
-
-    // 2. Lưu hoặc Cập nhật Bài nộp trong MongoDB
-    let submission = await ExamSubmission.findOne({ examStudent: examStudent._id });
-    if (!submission) {
-      submission = new ExamSubmission({
-        examStudent: examStudent._id,
-        session: session._id,
-        student: examStudent.student,
-        answers: submittedAnswers,
-        autoGradeTotal,
-        totalCorrect,
-        totalWrong,
-        totalSkipped,
-        questionResults,
-        submittedAt: new Date()
-      });
-    } else {
-      submission.answers = submittedAnswers;
-      submission.autoGradeTotal = autoGradeTotal;
-      submission.totalCorrect = totalCorrect;
-      submission.totalWrong = totalWrong;
-      submission.totalSkipped = totalSkipped;
-      submission.questionResults = questionResults;
-      submission.submittedAt = new Date();
-    }
-    await submission.save();
-
-    // 3. Cập nhật trạng thái Thí sinh trong ca thi
-    examStudent.status = 'SUBMITTED';
-    examStudent.submittedAt = new Date();
-    examStudent.autoGradeScore = autoGradeTotal;
-    examStudent.adjustedScore = autoGradeTotal; // Khởi tạo bằng điểm tự động
-    await examStudent.save();
-
-    // Cập nhật trạng thái ca thi sang AUTO_GRADED nếu chưa
-    if (session.gradingStatus === 'NOT_GRADED') {
-      session.gradingStatus = 'AUTO_GRADED';
-      await session.save();
-    }
-
-    return res.json({
-      success: true,
-      message: 'Nộp bài thi thành công! Hệ thống đã tự động chấm bài của bạn.',
-      data: {
-        candidateCode: examStudent.candidateCode,
-        submittedAt: examStudent.submittedAt,
-        trustScore: examStudent.trustScore,
-        autoGradeTotal,
-        totalCorrect,
-        totalWrong,
-        totalSkipped
-      }
-    });
+    const result = await examService.submitExam(sessionStudentId, answers);
+    return res.json(result);
   } catch (error) {
     console.error('Lỗi submitExam:', error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -1459,17 +1479,20 @@ exports.getStudentExamResult = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy ca thi tương ứng!' });
     }
 
-    // Kiểm tra quyền công bố
+    // Kiểm tra quyền công bố hoặc quyền Giảng viên xem trước
     const isPublished = session.gradingStatus === 'PUBLISHED';
+    const asLecturer = req.query.asLecturer === 'true' || (req.user && ['teacher', 'admin', 'superadmin', 'giảng viên', 'quản trị viên'].includes((req.user.role?.name || req.user.role || '').toLowerCase()));
     const submission = await ExamSubmission.findOne({ examStudent: examStudent._id });
 
     const studentDisplayName = examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh';
     const subjectName = session.subject?.name || 'Kỹ thuật lập trình';
 
-    if (!isPublished) {
+    // Nếu là sinh viên thông thường và ca thi chưa công bố -> Chặn xem chi tiết
+    if (!isPublished && !asLecturer) {
       return res.json({
         success: true,
         isPublished: false,
+        asLecturer: false,
         message: 'Điểm số của ca thi đang trong giai đoạn rà soát và đối soát bảo mật. Vui lòng quay lại sau khi Ban Khảo thí công bố!',
         session: {
           code: session.code,
@@ -1485,23 +1508,59 @@ exports.getStudentExamResult = async (req, res) => {
       });
     }
 
-    // ĐÃ CÔNG BỐ: Trả về kết quả đầy đủ kèm từng câu và lời giải thích!
+    // ĐÃ CÔNG BỐ HOẶC GIẢNG VIÊN XEM TRƯỚC: Trả về kết quả đầy đủ kèm từng câu và lời giải thích!
     const examPaper = session.examPaper;
-    const questionsWithFeedback = (submission ? submission.questionResults : []).map(qr => {
-      const originalQ = (examPaper?.questions || []).find(q => q._id && q._id.toString() === (qr.questionId ? qr.questionId.toString() : ''));
-      return {
-        stt: qr.stt,
-        type: qr.type,
-        content: originalQ ? originalQ.content : '',
-        options: originalQ ? originalQ.options : [],
-        studentAnswer: qr.studentAnswer,
-        correctAnswer: qr.correctAnswer,
-        isCorrect: qr.isCorrect,
-        scoreEarned: qr.scoreEarned,
-        maxScore: qr.maxScore,
-        explanation: qr.explanation || (originalQ ? originalQ.explanation : '')
-      };
-    });
+    let questionsWithFeedback = [];
+
+    if (submission && submission.questionResults && submission.questionResults.length > 0) {
+      questionsWithFeedback = submission.questionResults.map(qr => {
+        const originalQ = (examPaper?.questions || []).find(q => q._id && q._id.toString() === (qr.questionId ? qr.questionId.toString() : ''));
+        return {
+          stt: qr.stt,
+          questionId: qr.questionId || (originalQ?._id ? originalQ._id.toString() : ''),
+          type: qr.type,
+          content: originalQ ? originalQ.content : '',
+          options: originalQ ? originalQ.options : [],
+          studentAnswer: qr.studentAnswer,
+          correctAnswer: qr.correctAnswer,
+          isCorrect: qr.isCorrect,
+          scoreEarned: qr.scoreEarned,
+          maxScore: qr.maxScore,
+          explanation: qr.explanation || (originalQ ? originalQ.explanation : '')
+        };
+      });
+    } else if (examPaper && examPaper.questions && examPaper.questions.length > 0) {
+      // Fallback: Tự động đối chiếu từ câu hỏi đề thi và mảng answers của thí sinh
+      const subAnswers = submission?.answers || {};
+      questionsWithFeedback = examPaper.questions.map((q, idx) => {
+        const qId = q._id.toString();
+        const studentChoice = subAnswers[qId] ?? subAnswers[idx.toString()] ?? subAnswers[(q.stt || idx + 1).toString()];
+        let isCorrect = false;
+        let scoreEarned = 0;
+        if (q.type === 'MULTIPLE_CHOICE') {
+          if (Array.isArray(q.correctAnswer)) {
+            isCorrect = q.correctAnswer.includes(Number(studentChoice));
+          } else {
+            isCorrect = studentChoice !== undefined && studentChoice !== null && Number(studentChoice) === Number(q.correctAnswer);
+          }
+          scoreEarned = isCorrect ? (q.score || 0.25) : 0;
+        }
+
+        return {
+          stt: q.stt || idx + 1,
+          questionId: qId,
+          type: q.type,
+          content: q.content,
+          options: q.options || [],
+          studentAnswer: studentChoice,
+          correctAnswer: q.correctAnswer,
+          isCorrect,
+          scoreEarned,
+          maxScore: q.score || 0.25,
+          explanation: q.explanation || ''
+        };
+      });
+    }
 
     return res.json({
       success: true,
@@ -1534,3 +1593,77 @@ exports.getStudentExamResult = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 8. Lấy toàn bộ lịch thi & tiến độ các môn thi của thí sinh (Hỗ trợ Sảnh thi & 2 môn liên tiếp)
+exports.getStudentExamSchedule = async (req, res) => {
+  try {
+    const now = new Date();
+    let studentId = req.query.studentId;
+
+    if (!studentId && req.user && req.user.email) {
+      const Student = mongoose.model('Student');
+      const st = await Student.findOne({ email: req.user.email });
+      if (st) studentId = st._id;
+    }
+
+    let filter = {};
+    if (studentId && mongoose.Types.ObjectId.isValid(studentId)) {
+      filter = { student: studentId };
+    }
+
+    const candidateExams = await ExamStudent.find(filter)
+      .populate({ path: 'session', populate: { path: 'room subject examPaper' } })
+      .populate('student');
+
+    const formattedSessions = candidateExams.map(item => {
+      const s = item.session;
+      if (!s) return null;
+      const sStart = s.startTime ? new Date(s.startTime) : new Date();
+      const sEnd = s.endTime ? new Date(s.endTime) : new Date(sStart.getTime() + (s.durationMinutes || 60) * 60000);
+      const isEnded = s.status === 'COMPLETED' || now.getTime() > sEnd.getTime() || item.status === 'SUBMITTED';
+      const isUpcoming = now.getTime() < sStart.getTime() && item.status !== 'SUBMITTED';
+      const isHappening = !isEnded && !isUpcoming && item.status !== 'SUBMITTED';
+
+      return {
+        id: item._id,
+        candidateCode: item.candidateCode,
+        seatRow: item.seatRow,
+        seatCol: item.seatCol,
+        seatPin: item.seatPin,
+        status: item.status,
+        trustScore: item.trustScore,
+        officialScore: item.officialScore !== null ? item.officialScore : item.adjustedScore,
+        session: {
+          id: s._id,
+          code: s.code,
+          title: s.title,
+          subjectName: s.subject?.name || s.title,
+          roomName: s.room?.name || 'Phòng P302',
+          startTime: sStart.toISOString(),
+          endTime: sEnd.toISOString(),
+          durationMinutes: s.durationMinutes || 60,
+          status: s.status,
+          gradingStatus: s.gradingStatus
+        },
+        isEnded,
+        isUpcoming,
+        isHappening,
+        countdownSeconds: isUpcoming ? Math.max(0, Math.floor((sStart.getTime() - now.getTime()) / 1000)) : 0
+      };
+    }).filter(Boolean).sort((a, b) => new Date(a.session.startTime).getTime() - new Date(b.session.startTime).getTime());
+
+    const activeSession = formattedSessions.find(s => s.isHappening) || null;
+    const nextUpcomingSession = formattedSessions.find(s => s.isUpcoming) || null;
+
+    return res.json({
+      success: true,
+      activeSession,
+      nextUpcomingSession,
+      sessions: formattedSessions
+    });
+  } catch (error) {
+    console.error('Lỗi getStudentExamSchedule:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

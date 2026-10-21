@@ -220,11 +220,12 @@ export default function ExamResult() {
     try {
       setStudentLoading(true);
       const targetId = customStudentId || previewStudentInfo?.id || sessionStudentId || 'fallback_student';
-      const res = await apiClient.get(`/api/exam/results/${targetId}`);
+      const isLecturerView = !!previewStudentInfo || !isStudentRole;
+      const res = await apiClient.get(`/api/exam/results/${targetId}?asLecturer=${isLecturerView}`);
       if (res.data) {
         const published = res.data.isPublished === true;
         setIsPublished(published);
-        if (published && res.data.data) {
+        if (res.data.data) {
           setStudentResult(res.data.data);
         } else {
           setStudentResult(res.data as any);
@@ -309,6 +310,73 @@ export default function ExamResult() {
     toast.success('Đã gửi đơn phúc khảo thành công đến Hội đồng Chấm thi!');
     setShowAppealModal(false);
     setAppealReason('');
+  };
+
+  // State và hàm can thiệp sửa kết quả của Giảng viên
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideScoreInput, setOverrideScoreInput] = useState('');
+  const [overrideScoreReason, setOverrideScoreReason] = useState('');
+  const [isOverridingScore, setIsOverridingScore] = useState(false);
+
+  // Giảng viên sửa kết quả Đúng/Sai của 1 câu hỏi cụ thể
+  const handleOverrideQuestion = async (questionId: string | number, isCorrect: boolean) => {
+    const targetId = previewStudentInfo?.id || sessionStudentId;
+    if (!targetId) return;
+
+    try {
+      const res = await apiClient.post('/api/grading/override-student-score', {
+        sessionStudentId: targetId,
+        questionId,
+        isCorrect,
+        reason: `Giảng viên can thiệp sửa câu ${questionId} sang ${isCorrect ? 'ĐÚNG' : 'SAI'}`
+      });
+
+      if (res.data && res.data.success) {
+        toast.success(res.data.message);
+        await fetchStudentResult(targetId);
+        if (selectedSessionId) {
+          fetchLecturerWorkspace(selectedSessionId);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi sửa kết quả câu hỏi');
+    }
+  };
+
+  // Giảng viên sửa trực tiếp tổng điểm chính thức của thí sinh
+  const handleConfirmOverrideTotalScore = async () => {
+    const targetId = previewStudentInfo?.id || sessionStudentId;
+    if (!targetId) return;
+
+    const num = parseFloat(overrideScoreInput);
+    if (isNaN(num) || num < 0 || num > 10) {
+      toast.error('Vui lòng nhập điểm số hợp lệ từ 0 đến 10!');
+      return;
+    }
+
+    try {
+      setIsOverridingScore(true);
+      const res = await apiClient.post('/api/grading/override-student-score', {
+        sessionStudentId: targetId,
+        officialScore: num,
+        reason: overrideScoreReason || 'Giảng viên duyệt sửa điểm phúc khảo'
+      });
+
+      if (res.data && res.data.success) {
+        toast.success(res.data.message);
+        setShowOverrideModal(false);
+        setOverrideScoreInput('');
+        setOverrideScoreReason('');
+        await fetchStudentResult(targetId);
+        if (selectedSessionId) {
+          fetchLecturerWorkspace(selectedSessionId);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi điều chỉnh điểm');
+    } finally {
+      setIsOverridingScore(false);
+    }
   };
 
   // Lọc danh sách sinh viên theo từ khóa tìm kiếm
@@ -763,7 +831,7 @@ export default function ExamResult() {
                 <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-xs font-medium">Đang nạp dữ liệu bài thi...</p>
               </div>
-            ) : !isPublished ? (
+            ) : (!isPublished && !previewStudentInfo) ? (
               /* TRƯỜNG HỢP 1: CHƯA CÔNG BỐ ĐIỂM (BẢO MẬT KHẢO THÍ) */
               <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl">
                 <div className="relative w-20 h-20 mx-auto mb-5">
@@ -900,6 +968,22 @@ export default function ExamResult() {
                         </div>
                         <span className="text-[10px] text-emerald-400 font-semibold mt-1 block">XUẤT SẮC</span>
                       </div>
+
+                      {previewStudentInfo && (
+                        <div className="flex flex-col justify-center">
+                          <button
+                            onClick={() => {
+                              setOverrideScoreInput(String(studentResult.scores.officialScore ?? 0));
+                              setShowOverrideModal(true);
+                            }}
+                            className="px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl text-xs font-bold shadow-xl shadow-purple-600/30 transition flex items-center space-x-2"
+                            title="Giảng viên duyệt phúc khảo điều chỉnh điểm chính thức"
+                          >
+                            <SlidersHorizontal className="w-4 h-4" />
+                            <span>Sửa Điểm Thí Sinh</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -970,7 +1054,40 @@ export default function ExamResult() {
                             )}
                           </div>
 
-                          <span className="text-[11px] text-slate-500 uppercase tracking-wider">{q.type}</span>
+                          <div className="flex items-center space-x-2">
+                            {previewStudentInfo && (
+                              <div className="flex items-center space-x-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
+                                <span className="text-[10px] text-slate-400 font-medium">GV sửa:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOverrideQuestion(q.stt, true)}
+                                  title="Chấm câu này thành ĐÚNG"
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
+                                    isCorrect
+                                      ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 cursor-default'
+                                      : 'bg-emerald-950/50 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20'
+                                  }`}
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>Đúng</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOverrideQuestion(q.stt, false)}
+                                  title="Chấm câu này thành SAI"
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
+                                    isCorrect === false
+                                      ? 'bg-red-600/30 text-red-300 border border-red-500/40 cursor-default'
+                                      : 'bg-red-950/50 hover:bg-red-600/30 text-red-400 border border-red-500/20'
+                                  }`}
+                                >
+                                  <X className="w-3 h-3" />
+                                  <span>Sai</span>
+                                </button>
+                              </div>
+                            )}
+                            <span className="text-[11px] text-slate-500 uppercase tracking-wider">{q.type}</span>
+                          </div>
                         </div>
 
                         <p className="text-sm text-slate-200 font-medium leading-relaxed mb-4 whitespace-pre-line">
@@ -1001,7 +1118,7 @@ export default function ExamResult() {
                                   <span className="flex-1 truncate">{opt}</span>
                                   {isUserPicked && (
                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                      Lựa chọn của bạn
+                                      {previewStudentInfo ? 'Thí sinh chọn' : 'Lựa chọn của bạn'}
                                     </span>
                                   )}
                                   {isActualCorrect && (
@@ -1015,7 +1132,7 @@ export default function ExamResult() {
 
                         <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1.5 border border-slate-800/60 mt-3">
                           <div className="flex justify-between">
-                            <span className="text-slate-400">Lựa chọn của bạn:</span>
+                            <span className="text-slate-400">{previewStudentInfo ? 'Lựa chọn của thí sinh:' : 'Lựa chọn của bạn:'}</span>
                             <span className={`font-bold ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
                               {letterStudent}
                             </span>
@@ -1073,6 +1190,81 @@ export default function ExamResult() {
                   className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition"
                 >
                   Gửi đơn phúc khảo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL ĐIỀU CHỈNH ĐIỂM CHÍNH THỨC DÀNH CHO GIẢNG VIÊN ── */}
+        {showOverrideModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Điều chỉnh Điểm Thí Sinh</h3>
+                    <p className="text-[11px] text-slate-400">Can thiệp điểm tổng kết của Giảng viên</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowOverrideModal(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4 my-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Điểm số chính thức mới (Thang 10):
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="10"
+                    value={overrideScoreInput}
+                    onChange={e => setOverrideScoreInput(e.target.value)}
+                    placeholder="VD: 8.5"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-cyan-400 font-bold focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Lý do điều chỉnh điểm:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={overrideScoreReason}
+                    onChange={e => setOverrideScoreReason(e.target.value)}
+                    placeholder="VD: Chấp nhận phúc khảo câu 14 do tài liệu tham khảo đúng; hoặc cộng 0.5 điểm chuyên cần..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowOverrideModal(false)}
+                  disabled={isOverridingScore}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmOverrideTotalScore}
+                  disabled={isOverridingScore}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
+                >
+                  {isOverridingScore ? 'Đang lưu...' : 'Lưu Điểm Mới'}
                 </button>
               </div>
             </div>

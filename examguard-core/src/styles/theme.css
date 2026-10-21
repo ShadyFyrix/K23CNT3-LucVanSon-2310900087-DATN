@@ -1,0 +1,81 @@
+/* ==============================================================================
+ * EXAMGUARD AI — HỆ THỐNG CSS THEME TẬP TRUNG (GLOBAL UI STYLES)
+ * ==============================================================================
+ * Bạn có thể điều chỉnh màu sắc giao diện Light / Dark toàn hệ thống tại đây!
+ * ============================================================================== */
+
+/* ── 1. BIẾN TOÀN CỤC CHUẨN (CSS VARIABLES) ── */
+:root {
+  --ui-bg-page: #f8fafc;
+  --ui-bg-card: #ffffff;
+  --ui-bg-subcard: #f8fafc;
+  --ui-border-card: rgba(226, 232, 240, 0.8);
+  --ui-border-subcard: rgba(226, 232, 240, 0.6);
+  --ui-text-primary: #0f172a;
+  --ui-text-secondary: #475569;
+  --ui-text-muted: #64748b;
+  --ui-banner-from: #1d4ed8;
+  --ui-banner-via: #4338ca;
+  --ui-banner-to: #1e40af;
+}
+
+.dark {
+  --ui-bg-page: #0B0F19;
+  --ui-bg-card: #0f172a;
+  --ui-bg-subcard: rgba(2, 6, 23, 0.6);
+  --ui-border-card: #1e293b;
+  --ui-border-subcard: rgba(30, 41, 59, 0.8);
+  --ui-text-primary: #ffffff;
+  --ui-text-secondary: #cbd5e1;
+  --ui-text-muted: #94a3b8;
+  --ui-banner-from: #020617;
+  --ui-banner-via: #0c1222;
+  --ui-banner-to: #0f172a;
+}
+
+/* ── 2. CÁC CLASS UI TẬP TRUNG DÙNG CHUNG ── */
+.ui-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: linear-gradient(to right, var(--ui-banner-from), var(--ui-banner-via), var(--ui-banner-to));
+  color: #ffffff;
+  padding: 1.5rem 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.ui-card {
+  background-color: var(--ui-bg-card);
+  border: 1px solid var(--ui-border-card);
+  color: var(--ui-text-primary);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.ui-card-sub {
+  background-color: var(--ui-bg-subcard);
+  border: 1px solid var(--ui-border-subcard);
+  color: var(--ui-text-secondary);
+  border-radius: 0.75rem;
+}
+
+.ui-toolbar {
+  background-color: var(--ui-bg-card);
+  border: 1px solid var(--ui-border-card);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* ── 3. BỘ ĐỒNG BỘ HÓA TỰ ĐỘNG (GLOBAL THEME HARMONIZER) ──
+ * Triệt tiêu hoàn toàn các hộp đen cứng còn sót lại khi ở Chế độ Sáng
+ * mà không cần phải can thiệp thủ công vào từng thẻ nhỏ. */
+html:not(.dark) main .min-h-screen.bg-slate-950,
+html:not(.dark) main .min-h-screen.bg-slate-900 {
+  background-color: transparent !important;
+  color: var(--ui-text-primary) !important;
+  min-height: auto !important;
+  padding: 0 !important;
+}

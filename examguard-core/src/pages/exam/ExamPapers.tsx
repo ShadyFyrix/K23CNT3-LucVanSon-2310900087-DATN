@@ -45,6 +45,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
+import { useTheme } from '../../context/ThemeContext';
+import { EduTechExamBuilder } from './components/EduTechExamBuilder';
 
 interface ConfiguredQuestion {
   stt: number;
@@ -89,6 +91,45 @@ export default function ExamPapers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaperItem | null>(null);
+  const { isDark } = useTheme();
+  const [builderMode, setBuilderMode] = useState<'EDUTECH' | 'DUAL_VIEW'>('EDUTECH');
+
+  const handleSaveEduTechPaper = async (paperData: any) => {
+    try {
+      const payload = {
+        title: paperData.title,
+        code: paperData.code,
+        durationMinutes: paperData.duration,
+        totalScore: paperData.totalScore,
+        courseId: paperData.courseId || selectedCourseId || (courses[0]?._id),
+        paperType: 'STRUCTURED_QUIZ',
+        submissionMode: 'ONLINE_ONLY',
+        structureType: 'HYBRID',
+        totalQuestions: paperData.questions.length,
+        questions: paperData.questions.map((q: any, i: number) => ({
+          stt: i + 1,
+          type: q.type,
+          score: q.score,
+          options: q.options,
+          correctAnswers: q.correctAnswers,
+          selectionMode: q.selectionMode,
+          content: q.prompt,
+          explanation: q.explanation,
+          image: q.image
+        }))
+      };
+
+      const res = await apiClient.post('/exam-papers', payload);
+      if (res.data?.success || res.status === 200 || res.status === 201) {
+        toast.success('Đã tạo đề thi EduTech thành công!');
+        setShowCreateModal(false);
+        fetchPapers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Lỗi khi lưu đề thi');
+      throw err;
+    }
+  };
 
   // Danh sách môn học & môn được chọn
   const [courses, setCourses] = useState<Array<{ _id: string; name: string; courseCode: string }>>([]);
@@ -803,19 +844,23 @@ export default function ExamPapers() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
+    <div className={`min-h-screen p-6 font-sans transition-colors ${
+      isDark ? 'bg-[#0B0F19] text-slate-100' : 'bg-slate-50 text-slate-800'
+    }`}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
+          isDark ? 'border-slate-800' : 'border-slate-200'
+        }`}>
           <div>
             <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
-              <span className="text-cyan-400 font-semibold">ExamGuard AI</span>
+              <span className="text-teal-600 dark:text-teal-400 font-semibold">ExamGuard AI</span>
               <span>•</span>
               <span>Ngân Hàng Khảo Thí & Đề Thi</span>
             </div>
-            <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
+            <h1 className={`text-2xl font-bold flex items-center space-x-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
               <span>QUẢN LÝ ĐỀ THI TRẮC NGHIỆM & TỰ LUẬN</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 {papers.length} ĐỀ
               </span>
             </h1>
@@ -823,25 +868,32 @@ export default function ExamPapers() {
 
           <div className="flex items-center space-x-3">
             <button
-              onClick={handleOpenCreateModal}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95"
+              onClick={() => {
+                setBuilderMode('EDUTECH');
+                handleOpenCreateModal();
+              }}
+              className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>SOẠN ĐỀ THI MỚI</span>
+              <span>SOẠN ĐỀ THI MỚI (EDUTECH)</span>
             </button>
           </div>
         </div>
 
         {/* Toolbar Search */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+        <div className={`border rounded-2xl p-4 flex items-center justify-between ${
+          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+        }`}>
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Tìm kiếm mã đề, tiêu đề đề thi..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className={`w-full border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                isDark ? 'bg-slate-950 border-slate-800 text-slate-200 placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+              }`}
             />
           </div>
         </div>
@@ -849,7 +901,7 @@ export default function ExamPapers() {
         {/* Danh sách đề thi */}
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <Loader2 className="w-8 h-8 mx-auto mb-2 text-cyan-400 animate-spin" />
+            <Loader2 className="w-8 h-8 mx-auto mb-2 text-teal-500 animate-spin" />
             <p className="text-xs">Đang nạp ngân hàng đề thi...</p>
           </div>
         ) : (
@@ -861,45 +913,45 @@ export default function ExamPapers() {
               return (
                 <div
                   key={paper._id}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all group"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/80 dark:hover:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-xl dark:shadow-none flex flex-col justify-between transition-all group"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                        <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20">
                           {paper.code}
                         </span>
                         {isHybrid ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 font-bold">
                             ⚡ HỖN HỢP (MCQ + TL)
                           </span>
                         ) : isFileAttached ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 font-bold">
                             📄 FILE ĐỀ THI
                           </span>
                         ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold">
                             ⚡ QUIZ SỐ
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-transparent">
                         ĐÃ DUYỆT
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors line-clamp-2">
                       {paper.title}
                     </h3>
 
-                    <div className="space-y-1.5 text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
                       <div className="flex justify-between">
                         <span className="text-slate-500">Môn học:</span>
-                        <span className="text-slate-200 font-medium">{paper.subjectName || 'Kỹ thuật lập trình'}</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-medium">{paper.subjectName || 'Kỹ thuật lập trình'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Cơ cấu câu hỏi:</span>
-                        <span className="text-cyan-400 font-bold">
+                        <span className="text-cyan-700 dark:text-cyan-400 font-bold">
                           {paper.totalQuestions || paper.questions?.length || 0} câu 
                           {paper.mcqCount ? ` (${paper.mcqCount} Trắc nghiệm` : ''}
                           {paper.essayCount ? `, ${paper.essayCount} Tự luận)` : paper.mcqCount ? ')' : ''}
@@ -907,11 +959,11 @@ export default function ExamPapers() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Thời gian làm bài:</span>
-                        <span className="text-slate-200">{paper.durationMinutes} phút</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-semibold">{paper.durationMinutes} phút</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Phương thức nộp:</span>
-                        <span className="text-slate-200 font-medium">
+                        <span className="text-slate-800 dark:text-slate-200 font-medium">
                           {paper.submissionMode === 'HYBRID'
                             ? 'Phiếu OMR + Hộp Tự luận'
                             : paper.submissionMode === 'OMR_BUBBLE_SHEET'
@@ -922,13 +974,13 @@ export default function ExamPapers() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800/80 mt-4 space-y-2">
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 space-y-2">
                     {paper.fileUrl && (
                       <a
                         href={paper.fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                        className="w-full py-2 bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         <span>Xem File Đề Thi Gốc ({paper.fileName || 'PDF'})</span>
@@ -936,9 +988,9 @@ export default function ExamPapers() {
                     )}
                     <button
                       onClick={() => setSelectedPaper(paper)}
-                      className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5 cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                      <Eye className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                       <span>Xem Ma Trận & Đáp Án</span>
                     </button>
                   </div>
@@ -1059,11 +1111,18 @@ export default function ExamPapers() {
 
       {/* ── MODAL SOẠN ĐỀ THI MỚI (CHUYÊN NGHIỆP: HỖ TRỢ TRẮC NGHIỆM, TỰ LUẬN & ĐA ĐÁP ÁN) ── */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-          <form
-            onSubmit={handleCreatePaper}
-            className="bg-slate-900 border border-slate-800 rounded-3xl w-[98vw] max-w-[1720px] h-[95vh] flex flex-col p-4 sm:p-5 shadow-2xl animate-in zoom-in-95"
-          >
+        builderMode === 'EDUTECH' ? (
+          <EduTechExamBuilder
+            onClose={() => setShowCreateModal(false)}
+            onSave={handleSaveEduTechPaper}
+            courses={courses}
+          />
+        ) : (
+          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+            <form
+              onSubmit={handleCreatePaper}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-[98vw] max-w-[1720px] h-[95vh] flex flex-col p-4 sm:p-5 shadow-2xl animate-in zoom-in-95"
+            >
             {/* Header: Title & Studio Badges */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div className="flex items-center space-x-3">
@@ -2247,7 +2306,7 @@ export default function ExamPapers() {
             </div>
           </form>
         </div>
-      )}
+      ))}
 
       {/* ── MODAL CẮT ẢNH TỪ TÀI LIỆU ĐỀ THI (SNIPPING & CROP TOOL) ── */}
       {showCropModal && (

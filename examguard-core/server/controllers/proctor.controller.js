@@ -18,56 +18,15 @@ const socketService = require('../services/socket.service');
  * =========================================================================
  */
 
+const proctorService = require('../services/proctor.service');
+
 // 1. Lấy trạng thái Realtime Phòng thi (Sơ đồ bàn, thí sinh & vi phạm)
 exports.getLiveRoomState = async (req, res) => {
   try {
-    const { sessionId } = req.params;
-
-    let session = null;
-    if (sessionId && mongoose.Types.ObjectId.isValid(sessionId)) {
-      session = await ExamSession.findById(sessionId)
-        .populate('room')
-        .populate('subject', 'name courseCode')
-        .populate('proctor1', 'fullName email')
-        .populate('proctor2', 'fullName email')
-        .populate('inspector', 'fullName email');
-    }
-    if (!session) {
-      session = await ExamSession.findOne()
-        .sort({ createdAt: -1 })
-        .populate('room')
-        .populate('subject', 'name courseCode')
-        .populate('proctor1', 'fullName email')
-        .populate('proctor2', 'fullName email')
-        .populate('inspector', 'fullName email');
-    }
-
-    if (!session) {
-      return res.status(404).json({ success: false, message: 'Chưa có ca thi nào trên hệ thống!' });
-    }
-
-    const realSessionId = session._id;
-    const students = await ExamStudent.find({ session: realSessionId })
-      .populate('student', 'fullName name studentCode email phone faceImage')
-      .sort({ seatRow: 1, seatCol: 1 });
-
-    const recentViolations = await ExamViolation.find({ session: realSessionId })
-      .populate('examStudent', 'candidateCode seatRow seatCol')
-      .populate('student', 'fullName name studentCode')
-      .sort({ createdAt: -1 })
-      .limit(30);
-
-    return res.json({
-      success: true,
-      data: {
-        session,
-        room: session.room,
-        students,
-        recentViolations
-      }
-    });
+    const data = await proctorService.getLiveRoomState(req.params.sessionId);
+    return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -502,182 +461,10 @@ exports.suspendCandidate = async (req, res) => {
 exports.logAntiCheatEvent = async (req, res) => {
   try {
     const { sessionStudentId, eventType, details } = req.body;
-
-    const examStudent = await ExamStudent.findById(sessionStudentId)
-      .populate('session')
-      .populate('student');
-
-    if (!examStudent) {
-      return res.status(404).json({ success: false, message: 'Thí sinh không tồn tại!' });
-    }
-
-    // Chỉ chặn nếu thí sinh ĐÃ NỘP BÀI hoặc ĐÃ BỊ ĐÌNH CHỈ
-    if (examStudent.status === 'SUBMITTED' || examStudent.status === 'SUSPENDED') {
-      return res.json({ 
-        success: false, 
-        message: 'Thí sinh đã nộp bài hoặc bị đình chỉ thi.',
-        trustScore: examStudent.trustScore,
-        penalty: 0
-      });
-    }
-
-    // Bảng quy chuẩn vi phạm chống gian lận & mức trừ điểm uy tín chuẩn xác
-    const ANTI_CHEAT_RULES = {
-      'DEVTOOLS_OPEN': {
-        severity: 'CRITICAL',
-        penalty: 30,
-        title: 'Mở công cụ lập trình Developer Tools (F12/Inspect)',
-        message: 'Phát hiện hành vi mở F12 hoặc kiểm tra mã nguồn trang thi'
-      },
-      'TAB_SWITCH': {
-        severity: 'MEDIUM',
-        penalty: 10,
-        title: 'Rời màn hình làm bài / Chuyển Tab',
-        message: 'Thí sinh chuyển sang tab hoặc ứng dụng khác ngoài phòng thi'
-      },
-      'COPY_PASTE': {
-        severity: 'MEDIUM',
-        penalty: 10,
-        title: 'Sao chép / Dán dữ liệu trái phép',
-        message: 'Phát hiện thao tác Copy / Paste trong thời gian làm bài'
-      },
-      'FULLSCREEN_EXIT': {
-        severity: 'MEDIUM',
-        penalty: 10,
-        title: 'Thoát chế độ toàn màn hình',
-        message: 'Thí sinh thoát khỏi giao diện thi bảo mật'
-      },
-      'RIGHT_CLICK': {
-        severity: 'LOW',
-        penalty: 5,
-        title: 'Chuột phải bị chặn',
-        message: 'Thao tác menu ngữ cảnh bị vô hiệu hóa theo quy chế'
-      },
-      'LOOK_AWAY': {
-        severity: 'LOW',
-        penalty: 5,
-        title: 'Nhìn lệch khỏi màn hình quá lâu',
-        message: 'Camera AI phát hiện thí sinh liếc nhìn ra ngoài màn hình'
-      },
-      'NO_FACE': {
-        severity: 'MEDIUM',
-        penalty: 10,
-        title: 'Rời khỏi vị trí ngồi thi',
-        message: 'Không phát hiện khuôn mặt thí sinh trước webcam'
-      },
-      'MULTI_FACE': {
-        severity: 'HIGH',
-        penalty: 15,
-        title: 'Phát hiện nhiều người trước camera',
-        message: 'Có người lạ xuất hiện trong khu vực làm bài của thí sinh'
-      },
-      'PHONE_DETECTED': {
-        severity: 'HIGH',
-        penalty: 20,
-        title: 'Phát hiện sử dụng điện thoại di động',
-        message: 'Camera AI phát hiện vật thể nghi vấn điện thoại trong phòng thi'
-      },
-      'IMPERSONATION_DETECTED': {
-        severity: 'CRITICAL',
-        penalty: 50,
-        title: 'Nghi vấn tráo người thi hộ',
-        message: 'Khuôn mặt trước camera không khớp với Vector Căn cước Gốc'
-      }
-    };
-
-    const rule = ANTI_CHEAT_RULES[eventType] || {
-      severity: 'LOW',
-      penalty: 5,
-      title: 'Hành vi bất thường trên máy thi',
-      message: 'Hệ thống AI ghi nhận thao tác không hợp lệ'
-    };
-
-    // Debounce check 6s cho cùng loại sự kiện để tránh spam lặp lại trong 1 giây
-    const sixSecAgo = new Date(Date.now() - 6 * 1000);
-    const recentEvent = await ExamViolation.findOne({
-      examStudent: examStudent._id,
-      type: eventType,
-      createdAt: { $gte: sixSecAgo }
-    });
-
-    if (recentEvent) {
-      return res.json({
-        success: true,
-        debounced: true,
-        penalty: 0,
-        title: rule.title,
-        message: `Hành vi "${rule.title}" đã được ghi nhận. Vui lòng tập trung làm bài!`,
-        trustScore: examStudent.trustScore
-      });
-    }
-
-    let severity = rule.severity;
-    let penalty = rule.penalty;
-    let message = rule.message;
-
-    // Tính toán điểm uy tín mới
-    const currentScore = examStudent.trustScore !== undefined ? examStudent.trustScore : 100;
-    const newScore = Math.max(0, currentScore - penalty);
-    examStudent.trustScore = newScore;
-
-    // Tự động chuyển trạng thái nếu điểm uy tín tụt quá thấp
-    if (newScore === 0) {
-      examStudent.status = 'SUSPENDED';
-    } else if (newScore < 50 && examStudent.status !== 'SUSPENDED') {
-      examStudent.status = 'SUSPICIOUS';
-    }
-
-    await examStudent.save();
-
-    const violation = await ExamViolation.create({
-      session: examStudent.session._id,
-      examStudent: examStudent._id,
-      student: examStudent.student._id,
-      type: eventType,
-      severity,
-      penalty,
-      metadata: details || {},
-      timestamp: new Date()
-    });
-
-    const violationPayload = {
-      violationId: violation._id,
-      examStudentId: examStudent._id,
-      studentId: examStudent.student._id,
-      candidateCode: examStudent.candidateCode,
-      studentName: examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh',
-      seatRow: examStudent.seatRow,
-      seatCol: examStudent.seatCol,
-      type: eventType,
-      severity,
-      penalty,
-      newTrustScore: newScore,
-      title: rule.title,
-      message,
-      createdAt: violation.createdAt
-    };
-
-    socketService.emitViolation(examStudent.session._id, violationPayload);
-    socketService.emitStudentUpdate(examStudent.session._id, {
-      examStudentId: examStudent._id,
-      candidateCode: examStudent.candidateCode,
-      trustScore: newScore,
-      status: examStudent.status
-    });
-
-    return res.json({
-      success: true,
-      debounced: false,
-      violationId: violation._id,
-      eventType,
-      severity,
-      penalty,
-      trustScore: newScore,
-      title: rule.title,
-      message
-    });
+    const result = await proctorService.logAntiCheatEvent({ sessionStudentId, eventType, details });
+    return res.json(result);
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -879,3 +666,30 @@ exports.unlockLateStudent = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 10. Quét & Xác thực Khuôn mặt Thí sinh lúc Check-in vào phòng thi (Face Check-In Gate)
+exports.verifyCheckIn = async (req, res) => {
+  try {
+    const { sessionStudentId } = req.body;
+    let imageBuffer = null;
+
+    if (req.file && req.file.buffer) {
+      imageBuffer = req.file.buffer;
+    } else if (req.body && (req.body.image_base64 || req.body.image)) {
+      let b64 = req.body.image_base64 || req.body.image;
+      if (b64.includes(',')) b64 = b64.split(',')[1];
+      imageBuffer = Buffer.from(b64, 'base64');
+    }
+
+    const result = await proctorService.verifyCheckIn({ sessionStudentId, imageBuffer });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      success: false,
+      verified: error.verified ?? false,
+      similarity: error.similarity ?? 0,
+      message: error.message
+    });
+  }
+};
+

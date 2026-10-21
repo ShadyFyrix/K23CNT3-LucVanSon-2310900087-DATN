@@ -154,19 +154,19 @@ export default function ExamSessions() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
+    <div className="space-y-6 font-sans">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
           <div>
-            <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
-              <span className="text-cyan-400 font-semibold">ExamGuard AI</span>
+            <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span className="text-cyan-600 dark:text-cyan-400 font-semibold">ExamGuard AI</span>
               <span>•</span>
               <span>Khảo thí & Thi Trực Tuyến</span>
             </div>
-            <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center space-x-3">
               <span>QUẢN LÝ LỊCH THI & CA THI QUIZ</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
                 {sessions.length} CA THI
               </span>
             </h1>
@@ -179,37 +179,37 @@ export default function ExamSessions() {
                 setCreatePresetStartTime(undefined);
                 setIsCreateModalOpen(true);
               }}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition active:scale-95"
+              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Thêm Ca Thi Mới</span>
             </button>
             <button
               onClick={() => navigate('/take-exam')}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95"
+              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-white" />
               <span>Vào Làm Bài Quiz</span>
             </button>
             <button
               onClick={() => navigate('/exam-papers')}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition"
+              className="flex items-center space-x-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
-              <FileText className="w-4 h-4 text-cyan-400" />
+              <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               <span>Ngân Hàng Đề Thi</span>
             </button>
           </div>
         </div>
 
         {/* Toolbar điều khiển & lọc */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center space-x-3 flex-1">
             {/* Chuyển đổi giao diện: Timeline Gantt vs Thẻ Ca Thi */}
-            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
               <button
                 onClick={() => setViewMode('TIMELINE')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
-                  viewMode === 'TIMELINE' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                  viewMode === 'TIMELINE' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <CalendarRange className="w-3.5 h-3.5" />
@@ -217,8 +217,8 @@ export default function ExamSessions() {
               </button>
               <button
                 onClick={() => setViewMode('CARDS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
-                  viewMode === 'CARDS' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                  viewMode === 'CARDS' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -227,48 +227,48 @@ export default function ExamSessions() {
             </div>
 
             <div className="relative flex-1 max-w-sm hidden sm:block">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3" />
               <input
                 type="text"
                 placeholder="Tìm ca thi, môn học..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Bộ lọc loại thi */}
-            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
               <button
                 onClick={() => setTypeFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                  typeFilter === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  typeFilter === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Mọi hình thức
               </button>
               <button
                 onClick={() => setTypeFilter('ONLINE_QUIZ')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center space-x-1 ${
-                  typeFilter === 'ONLINE_QUIZ' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center space-x-1 cursor-pointer ${
+                  typeFilter === 'ONLINE_QUIZ' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <span>⚡ Quiz</span>
               </button>
               <button
                 onClick={() => setTypeFilter('LAB_PC')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                  typeFilter === 'LAB_PC' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  typeFilter === 'LAB_PC' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Máy Lab
               </button>
               <button
                 onClick={() => setTypeFilter('BYOD_LAPTOP')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                  typeFilter === 'BYOD_LAPTOP' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  typeFilter === 'BYOD_LAPTOP' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 BYOD
@@ -276,7 +276,7 @@ export default function ExamSessions() {
             </div>
 
             {/* Bộ lọc trạng thái */}
-            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
               {[
                 { id: 'ALL', label: 'Tất cả' },
                 { id: 'IN_PROGRESS', label: 'Đang thi' },
@@ -286,8 +286,8 @@ export default function ExamSessions() {
                 <button
                   key={st.id}
                   onClick={() => setStatusFilter(st.id)}
-                  className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
-                    statusFilter === st.id ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                    statusFilter === st.id ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   {st.label}
@@ -316,13 +316,13 @@ export default function ExamSessions() {
         {/* Danh sách ca thi Cards */}
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <Loader2 className="w-8 h-8 mx-auto mb-2 text-cyan-400 animate-spin" />
+            <Loader2 className="w-8 h-8 mx-auto mb-2 text-cyan-500 animate-spin" />
             <p className="text-xs">Đang tải danh sách ca thi...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center bg-slate-900 border border-slate-800 rounded-2xl p-8">
-            <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-600" />
-            <h3 className="text-sm font-bold text-slate-300">Không có ca thi nào phù hợp</h3>
+          <div className="py-20 text-center bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 shadow-sm">
+            <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-400" />
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300">Không có ca thi nào phù hợp</h3>
             <p className="text-xs text-slate-500 mt-1">Vui lòng thay đổi từ khóa hoặc bộ lọc tìm kiếm.</p>
           </div>
         ) : (
@@ -332,20 +332,20 @@ export default function ExamSessions() {
               return (
                 <div
                   key={s._id}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all group"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/80 dark:hover:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-xl dark:shadow-none flex flex-col justify-between transition-all group"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                        <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20">
                           {s.code}
                         </span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           s.examType === 'ONLINE_QUIZ'
-                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
                             : s.examType === 'BYOD_LAPTOP'
-                            ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
-                            : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/30'
+                            ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30'
+                            : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
                         }`}>
                           {s.examType === 'ONLINE_QUIZ' ? '⚡ QUIZ' : s.examType === 'BYOD_LAPTOP' ? '💻 BYOD' : '🖥️ LAB'}
                         </span>
@@ -356,61 +356,61 @@ export default function ExamSessions() {
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors line-clamp-1">
                       {s.title}
                     </h3>
 
                     {/* Dải thông tin Lịch làm bài thi chi tiết */}
-                    <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300 bg-cyan-950/40 border border-cyan-800/40 px-3 py-2 rounded-xl">
-                      <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span className="truncate">{formatTimeRange(s.startTime, s.endTime)}</span>
+                    <div className="flex items-center space-x-2 text-xs font-mono text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 px-3 py-2 rounded-xl">
+                      <Clock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                      <span className="truncate font-semibold">{formatTimeRange(s.startTime, s.endTime)}</span>
                     </div>
 
-                    <div className="space-y-1.5 text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Môn học:</span>
-                        <span className="text-slate-200 font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
+                        <span className="text-slate-400 dark:text-slate-500">Môn học:</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Phòng thi:</span>
-                        <span className="text-slate-200 font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
+                        <span className="text-slate-400 dark:text-slate-500">Phòng thi:</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Thời lượng:</span>
-                        <span className="text-slate-200">{s.durationMinutes} phút</span>
+                        <span className="text-slate-400 dark:text-slate-500">Thời lượng:</span>
+                        <span className="text-slate-800 dark:text-slate-200">{s.durationMinutes} phút</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Thí sinh đã xếp:</span>
-                        <span className="text-cyan-400 font-bold">{s.studentCount !== undefined ? s.studentCount : '—'} thí sinh</span>
+                        <span className="text-slate-400 dark:text-slate-500">Thí sinh đã xếp:</span>
+                        <span className="text-cyan-700 dark:text-cyan-400 font-bold">{s.studentCount !== undefined ? s.studentCount : '—'} thí sinh</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Cán bộ coi thi:</span>
-                        <span className="text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
+                        <span className="text-slate-400 dark:text-slate-500">Cán bộ coi thi:</span>
+                        <span className="text-slate-800 dark:text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Nút nghiệp vụ & Điều khiển ca thi */}
-                  <div className="space-y-2 pt-4 border-t border-slate-800/80 mt-4 text-xs font-semibold">
+                  <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 text-xs font-semibold">
                     {/* Nút Quản lý Thí sinh & SBD */}
                     <button
                       onClick={() => setSelectedSessionForCandidates(s)}
-                      className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400/60 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm"
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5 text-cyan-400" />
+                      <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                       <span>Quản Lý Thí Sinh & Số Báo Danh ({s.studentCount !== undefined ? s.studentCount : '—'})</span>
                     </button>
 
                     {/* Nút Vào Làm Bài hoặc Thông báo Buồng thi đã đóng */}
                     {statusInfo.isEnded ? (
-                      <div className="w-full py-2 bg-slate-950/80 border border-slate-800 text-slate-400 rounded-xl flex items-center justify-center space-x-1.5 text-center">
-                        <Lock className="w-3.5 h-3.5 text-slate-500" />
+                      <div className="w-full py-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-xl flex items-center justify-center space-x-1.5 text-center">
+                        <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span>Buồng Thi Đã Đóng (Đã Thu Bài)</span>
                       </div>
                     ) : (
                       <button
                         onClick={() => navigate('/take-exam')}
-                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20 active:scale-95"
+                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20 active:scale-95 cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-white" />
                         <span>Làm Bài Thi Quiz</span>
@@ -422,12 +422,12 @@ export default function ExamSessions() {
                       <button
                         onClick={() => handleEndSession(s)}
                         disabled={closingSessionId === s._id}
-                        className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-500/50 rounded-xl transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50"
+                        className="w-full py-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
                       >
                         {closingSessionId === s._id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Lock className="w-3.5 h-3.5 text-rose-400" />
+                          <Lock className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                         )}
                         <span>Kết Thúc Ca Thi & Đóng Buồng Thi</span>
                       </button>
@@ -436,7 +436,7 @@ export default function ExamSessions() {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => navigate(`/live-proctor/${s._id}`)}
-                        className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl transition flex items-center justify-center space-x-1"
+                        className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-cyan-700 dark:text-cyan-400 rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Phòng 3D Live</span>
@@ -444,10 +444,10 @@ export default function ExamSessions() {
 
                       <button
                         onClick={() => navigate(`/grading-review/${s._id}`)}
-                        className={`p-2 rounded-xl transition flex items-center justify-center space-x-1 ${
+                        className={`p-2 rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer ${
                           statusInfo.isEnded
                             ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-md shadow-indigo-600/30'
-                            : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
                         }`}
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />

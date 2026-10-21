@@ -299,43 +299,43 @@ export default function Classes() {
     <div className="space-y-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Quản lý Lớp học</h1>
-          <p className="text-slate-500 text-sm">Hệ thống quản lý lộ trình và tự động hóa lịch giảng dạy chi tiết.</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Quản lý Lớp học</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">Hệ thống quản lý lộ trình và tự động hóa lịch giảng dạy chi tiết.</p>
         </div>
-        <button onClick={handleOpenCreate} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-lg">
-          <Plus className="w-5 h-5" /> Mở lớp học mới
+        <button onClick={handleOpenCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/20 text-xs uppercase tracking-wider transition-all cursor-pointer active:scale-95">
+          <Plus className="w-4 h-4 stroke-[3]" /> Mở lớp học mới
         </button>
       </header>
-
 
       {loading ? (
         /* TRẠNG THÁI ĐANG TẢI DỮ LIỆU */
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="animate-spin text-indigo-500 w-12 h-12" />
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Đang đồng bộ danh sách lớp học...</p>
+          <Loader2 className="animate-spin text-blue-500 w-12 h-12" />
+          <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">Đang đồng bộ danh sách lớp học...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {classes.map((cls) => (
-            <div key={cls._id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all overflow-hidden group border-b-4 border-b-transparent hover:border-b-indigo-500">
+            <div key={cls._id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl dark:hover:border-slate-700 transition-all overflow-hidden group border-b-4 border-b-transparent hover:border-b-blue-600 flex flex-col justify-between">
               <div className="p-7">
                 {/* 1. HEADER: TRẠNG THÁI & TÊN LỚP */}
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className={cn(
-                        "px-3 py-1 text-[10px] font-black rounded-lg uppercase border shadow-sm",
-                        cls.status === 'Open' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          cls.status === 'Running' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-400'
+                        "px-3 py-1 text-[10px] font-black rounded-lg uppercase border shadow-2xs",
+                        cls.status === 'Open' ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/50' :
+                          cls.status === 'Running' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/50' : 
+                          'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       )}>
                         {cls.status === 'Open' ? 'Đang tuyển sinh' : cls.status === 'Running' ? 'Đang giảng dạy' : 'Đã kết thúc'}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">ID: {cls._id?.slice(-6)}</span>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">ID: {cls._id?.slice(-6)}</span>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {cls.name}
                     </h3>
-                    <p className="text-xs text-indigo-500 font-bold uppercase mt-1 tracking-wide">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase mt-1 tracking-wide">
                       {cls.course?.name || 'Chưa gán khóa học'}
                     </p>
                   </div>
@@ -344,46 +344,46 @@ export default function Classes() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditClick(cls)}
-                      className="p-3 bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all shadow-sm"
+                      className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 rounded-2xl transition-all shadow-xs cursor-pointer"
                       title="Chỉnh sửa lớp học"
                     >
-                      <Edit2 className="w-5 h-5" />
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDeleteClass(cls._id, cls.name)} className="p-2 text-slate-400 hover:text-rose-600 bg-slate-50 rounded-xl"><Trash2 className="w-5 h-5" /></button>
+                    <button onClick={() => handleDeleteClass(cls._id, cls.name)} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all shadow-xs cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
 
                 {/* 2. GRID THÔNG TIN CHI TIẾT */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Giảng viên */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4 border border-transparent hover:border-slate-200 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-400 group-hover:text-indigo-500">
-                      <User className="w-5 h-5" />
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                      <User className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Giảng viên chính</p>
-                      <p className="text-sm font-bold text-slate-700 truncate">{cls.teacher?.fullName || 'Chưa gán'}</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">Giảng viên chính</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{cls.teacher?.fullName || 'Chưa gán'}</p>
                     </div>
                   </div>
 
                   {/* Sĩ số thực tế (Cảnh báo nếu đầy) */}
                   <div className={cn(
-                    "p-4 rounded-2xl flex items-center gap-4 border transition-all shadow-sm",
+                    "p-3.5 rounded-2xl flex items-center gap-3.5 border transition-all shadow-xs",
                     (cls.studentCount >= cls.capacity)
-                      ? "bg-rose-50 border-rose-100 ring-2 ring-rose-100"
-                      : "bg-slate-50 border-transparent hover:border-slate-200"
+                      ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/40 ring-1 ring-rose-200 dark:ring-rose-800/40"
+                      : "bg-slate-50 dark:bg-slate-950/60 border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                   )}>
                     <div className={cn(
-                      "w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm",
-                      (cls.studentCount >= cls.capacity) ? "text-rose-500" : "text-slate-400"
+                      "w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs shrink-0",
+                      (cls.studentCount >= cls.capacity) ? "text-rose-500" : "text-teal-600 dark:text-teal-400"
                     )}>
-                      <Users className="w-5 h-5" />
+                      <Users className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Sĩ số thực tế</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">Sĩ số thực tế</p>
                       <p className={cn(
-                        "text-sm font-black",
-                        (cls.studentCount >= cls.capacity) ? "text-rose-600" : "text-slate-700"
+                        "text-xs font-black",
+                        (cls.studentCount >= cls.capacity) ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-200"
                       )}>
                         {cls.studentCount || 0} / {cls.capacity}
                       </p>
@@ -391,39 +391,39 @@ export default function Classes() {
                   </div>
 
                   {/* Cơ sở / Địa điểm */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4 border border-transparent hover:border-slate-200 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-400 group-hover:text-indigo-500">
-                      <Building2 className="w-5 h-5" />
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                      <Building2 className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Cơ sở & Phòng</p>
-                      <p className="text-sm font-bold text-slate-700 truncate">
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">Cơ sở & Phòng</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                         {cls.campus?.name || 'N/A'} - {cls.room?.name || '---'}
                       </p>
                     </div>
                   </div>
 
                   {/* Tiến độ học tập */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4 border border-transparent hover:border-slate-200 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-400 group-hover:text-indigo-500">
-                      <ListChecks className="w-5 h-5" />
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-teal-600 dark:text-teal-400 shrink-0">
+                      <ListChecks className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Tiến độ buổi học</p>
-                      <p className="text-sm font-bold text-slate-700">
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">Tiến độ buổi học</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         {cls.completedSessions || 0} / {cls.course?.totalSessions || '--'} buổi
                       </p>
                     </div>
                   </div>
 
                   {/* Ngày khai giảng */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4 border border-transparent hover:border-slate-200 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-400 group-hover:text-indigo-500">
-                      <Calendar className="w-5 h-5" />
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all col-span-full md:col-span-1">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-amber-500 shrink-0">
+                      <Calendar className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Ngày bắt đầu</p>
-                      <p className="text-sm font-bold text-slate-700">
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">Ngày bắt đầu</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         {cls.startDate ? new Date(cls.startDate).toLocaleDateString('vi-VN') : 'Chưa định ngày'}
                       </p>
                     </div>
@@ -431,24 +431,24 @@ export default function Classes() {
                 </div>
 
                 {/* 3. LỊCH HỌC CỐ ĐỊNH TRONG TUẦN */}
-                <div className="mt-6 p-5 bg-indigo-50/50 rounded-[2rem] border border-indigo-100 flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm text-indigo-500 shrink-0">
-                    <Clock className="w-5 h-5" />
+                <div className="mt-5 p-4 bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40 flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                    <Clock className="w-4 h-4" />
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Lịch học hàng tuần</p>
+                  <div className="flex-1 space-y-1.5">
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em]">Lịch học hàng tuần</p>
                     <div className="flex flex-wrap gap-2">
                       {cls.schedule && cls.schedule.length > 0 ? (
                         cls.schedule.map((s: any, i: number) => (
-                          <div key={i} className="bg-white px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm flex items-center gap-2">
-                            <span className="text-xs font-black text-indigo-600">
+                          <div key={i} className="bg-white dark:bg-slate-800 px-3 py-1 rounded-xl border border-blue-100 dark:border-slate-700 shadow-2xs flex items-center gap-1.5 text-xs">
+                            <span className="font-black text-blue-600 dark:text-blue-400">
                               {dayNames.find(d => d.value === s.day)?.label || 'Thứ ?'}:
                             </span>
-                            <span className="text-xs font-bold text-slate-600">{s.startTime} - {s.endTime}</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{s.startTime} - {s.endTime}</span>
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-slate-400 italic">Chưa thiết lập lịch tuần cụ thể</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">Chưa thiết lập lịch tuần cụ thể</p>
                       )}
                     </div>
                   </div>
@@ -456,30 +456,30 @@ export default function Classes() {
               </div>
 
               {/* 4. FOOTER: NHÓM HỌC VIÊN & LINK CHI TIẾT */}
-              <div className="px-8 py-5 bg-slate-50/80 border-t border-slate-100 flex justify-between items-center group/footer">
+              <div className="px-7 py-4 bg-slate-50/80 dark:bg-slate-950/70 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center group/footer">
                 <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2.5 overflow-hidden">
+                  <div className="flex -space-x-2 overflow-hidden">
                     {Array.from({ length: Math.min(cls.studentCount || 0, 4) }).map((_, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-indigo-200 flex items-center justify-center text-[10px] font-black text-indigo-600 shadow-sm">
+                      <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-[10px] font-black text-blue-700 dark:text-blue-300 shadow-xs">
                         {String.fromCharCode(65 + i)}
                       </div>
                     ))}
                     {(cls.studentCount > 4) && (
-                      <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                      <div className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-slate-800 dark:bg-slate-700 flex items-center justify-center text-[10px] font-black text-white shadow-xs">
                         +{cls.studentCount - 4}
                       </div>
                     )}
                   </div>
                   {cls.studentCount > 0 ? (
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Học viên đang theo học</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">Học viên đang theo học</p>
                   ) : (
-                    <p className="text-[10px] font-bold text-slate-300 uppercase italic">Lớp chưa có học viên</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase italic">Lớp chưa có học viên</p>
                   )}
                 </div>
 
                 <button
                   onClick={() => handleViewMembers(cls)}
-                  className="flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-widest hover:text-indigo-800 hover:gap-3 transition-all"
+                  className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-wider hover:text-blue-700 dark:hover:text-blue-300 hover:gap-2 transition-all cursor-pointer"
                 >
                   Danh sách học viên
                   <ChevronRight className="w-4 h-4" />
@@ -501,13 +501,13 @@ export default function Classes() {
         <form onSubmit={handleSaveClass} className="space-y-6 max-h-[85vh] overflow-y-auto pr-2 custom-scrollbar">
           {/* 1. THÔNG TIN CƠ BẢN */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="col-span-full space-y-1">
-              <label className="text-sm font-bold text-slate-700">Tên lớp học</label>
-              <input required className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:border-indigo-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="VD: Lớp Web Fullstack J24" />
+            <div className="col-span-full space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tên lớp học</label>
+              <input required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 text-sm font-semibold transition-all" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="VD: Lớp Web Fullstack J24" />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Khóa học</label>
-              <select required className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" value={formData.course} onChange={(e) => {
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Khóa học</label>
+              <select required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={formData.course} onChange={(e) => {
                 const course = courses.find(c => c._id === e.target.value);
                 setSelectedCourse(course);
                 setFormData({ ...formData, course: e.target.value });
@@ -517,9 +517,9 @@ export default function Classes() {
                 {courses.map(c => <option key={c._id} value={c._id}>{c.name} ({c.totalSessions} buổi)</option>)}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Giảng viên</label>
-              <select required className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Giảng viên</label>
+              <select required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })}>
                 <option value="">-- Chọn giảng viên --</option>
                 {teachers.map(t => <option key={t._id} value={t._id}>{t.fullName}</option>)}
               </select>
@@ -527,10 +527,10 @@ export default function Classes() {
           </div>
 
           {/* 2. ĐỊA ĐIỂM */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xs border border-slate-200">
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-slate-400" /> Cơ sở đào tạo</label>
-              <select required className="w-full px-4 py-2.5 bg-white border rounded-xl outline-none" value={selectedCampusId} onChange={(e) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> Cơ sở đào tạo</label>
+              <select required className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={selectedCampusId} onChange={(e) => {
                 setSelectedCampusId(e.target.value);
                 setFormData({ ...formData, campus: e.target.value, room: '' });
               }}>
@@ -538,9 +538,9 @@ export default function Classes() {
                 {campuses.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><DoorOpen className="w-4 h-4 text-slate-400" /> Phòng học</label>
-              <select required disabled={!selectedCampusId} className="w-full px-4 py-2.5 bg-white border rounded-xl disabled:bg-slate-100 outline-none" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2"><DoorOpen className="w-4 h-4 text-teal-500" /> Phòng học</label>
+              <select required disabled={!selectedCampusId} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl disabled:opacity-50 outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })}>
                 <option value="">-- Chọn phòng --</option>
                 {rooms.filter(r => (r.campus?._id || r.campus) === selectedCampusId).map(r => (
                   <option key={r._id} value={r._id}>{r.name} (Sức chứa: {r.capacity})</option>
@@ -552,26 +552,28 @@ export default function Classes() {
           {/* 3. TÙY CHỌN RESET LỊCH (CHỈ HIỆN KHI EDIT) */}
           {editingClass && (
             <div className={cn(
-              "p-4 rounded-2xl border-2 transition-all",
-              shouldRegenerate ? "bg-rose-50 border-rose-200" : "bg-indigo-50 border-indigo-100"
+              "p-4 rounded-2xl border transition-all",
+              shouldRegenerate 
+                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/40" 
+                : "bg-blue-50/60 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900/40"
             )}>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   checked={shouldRegenerate}
                   onChange={(e) => setShouldRegenerate(e.target.checked)}
                 />
                 <div>
-                  <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <RefreshCcw className={cn("w-4 h-4", shouldRegenerate && "animate-spin")} />
+                  <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <RefreshCcw className={cn("w-4 h-4 text-blue-500", shouldRegenerate && "animate-spin text-rose-500")} />
                     Thiết lập lại toàn bộ lịch dạy cho lớp
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                     Tích chọn nếu bạn muốn xóa lịch cũ và tạo lại {selectedCourse?.totalSessions} buổi học mới dựa trên lịch tuần bên dưới.
                   </p>
                   {shouldRegenerate && (
-                    <div className="mt-2 flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase animate-pulse">
+                    <div className="mt-2 flex items-center gap-2 text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase animate-pulse">
                       <AlertTriangle className="w-3 h-3" /> Cảnh báo: Toàn bộ dữ liệu ĐIỂM DANH của lớp này sẽ bị XÓA VĨNH VIỄN.
                     </div>
                   )}
@@ -582,12 +584,12 @@ export default function Classes() {
 
           {/* 4. BUILDER LỊCH HỌC (ARRAY BASED) */}
           <div className={cn(
-            "p-5 rounded-xs text-white space-y-4 shadow-2xl transition-all duration-300",
-            (shouldRegenerate || !editingClass) ? "bg-slate-900 opacity-100" : "bg-slate-700 opacity-40 grayscale pointer-events-none"
+            "p-5 rounded-2xl text-white space-y-4 shadow-xl transition-all duration-300",
+            (shouldRegenerate || !editingClass) ? "bg-slate-900 dark:bg-slate-950 border border-slate-800 opacity-100" : "bg-slate-800 opacity-40 grayscale pointer-events-none"
           )}>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-amber-400">
-                <Sparkles className="w-4 h-4" /> {editingClass ? "Lịch tuần mới" : "Lịch tuần"}
+              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-teal-400">
+                <Sparkles className="w-4 h-4 text-teal-400" /> {editingClass ? "Lịch tuần mới" : "Lịch tuần"}
               </div>
               <div className="flex gap-1">
                 {dayNames.map(day => (
@@ -599,7 +601,7 @@ export default function Classes() {
                     const totalMin = h * 60 + m + (hours * 60);
                     const endTime = `${String(Math.floor(totalMin / 60) % 24).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
                     setWeeklySchedule([...weeklySchedule, { day: day.value, startTime, endTime }]);
-                  }} className="w-8 h-8 rounded-lg bg-slate-800 text-[10px] font-bold hover:bg-emerald-500 transition-all">
+                  }} className="w-8 h-8 rounded-lg bg-slate-800 text-[10px] font-bold hover:bg-teal-600 transition-all cursor-pointer">
                     {day.label.replace('Thứ ', 'T')}
                   </button>
                 ))}
@@ -607,8 +609,8 @@ export default function Classes() {
             </div>
             <div className="space-y-2">
               {weeklySchedule.map((item, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-slate-800 rounded-2xl animate-in zoom-in-95">
-                  <span className="text-xs font-bold text-emerald-400 w-16">{dayNames.find(d => d.value === item.day)?.label}</span>
+                <div key={index} className="flex items-center gap-3 p-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
+                  <span className="text-xs font-bold text-teal-400 w-16">{dayNames.find(d => d.value === item.day)?.label}</span>
                   <div className="flex-1 flex items-center gap-2">
                     <input type="time" value={item.startTime} onChange={(e) => {
                       const start = e.target.value;
@@ -619,11 +621,11 @@ export default function Classes() {
                       const temp = [...weeklySchedule];
                       temp[index] = { ...temp[index], startTime: start, endTime: end };
                       setWeeklySchedule(temp);
-                    }} className="bg-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-emerald-500" />
+                    }} className="bg-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-teal-500" />
                     <span className="text-xs text-slate-400">đến</span>
                     <span className="text-xs font-bold text-slate-300">{item.endTime}</span>
                   </div>
-                  <button type="button" onClick={() => setWeeklySchedule(weeklySchedule.filter((_, i) => i !== index))} className="text-rose-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setWeeklySchedule(weeklySchedule.filter((_, i) => i !== index))} className="text-rose-400 hover:text-rose-500 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
               {weeklySchedule.length === 0 && <p className="text-[10px] text-slate-500 italic text-center py-2">Bấm các Thứ phía trên để thiết lập lịch học</p>}
@@ -632,23 +634,23 @@ export default function Classes() {
 
           {/* 5. PHẦN CHÂN FORM */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Ngày khai giảng</label>
-              <input required type="date" className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Ngày khai giảng</label>
+              <input required type="date" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Sĩ số tối đa</label>
-              <input type="number" className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: Number(e.target.value) })} />
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Sĩ số tối đa</label>
+              <input type="number" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-900 dark:text-slate-100 text-sm font-semibold transition-all" value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: Number(e.target.value) })} />
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 sticky bottom-0 bg-white border-t py-4">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">Hủy</button>
+          <div className="flex gap-3 pt-4 sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 py-4">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer">Hủy</button>
             <button
               type="submit"
               className={cn(
-                "flex-[2] py-3 text-white rounded-2xl font-black shadow-xl transition-all uppercase tracking-widest text-xs",
-                shouldRegenerate ? "bg-rose-600 hover:bg-rose-700" : "bg-indigo-600 hover:bg-indigo-700"
+                "flex-[2] py-3 text-white rounded-2xl font-black shadow-xl transition-all uppercase tracking-widest text-xs cursor-pointer active:scale-95",
+                shouldRegenerate ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20" : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
               )}
             >
               {editingClass
@@ -663,24 +665,24 @@ export default function Classes() {
       <Modal isOpen={isScheduleViewOpen} onClose={() => setIsScheduleViewOpen(false)} title={`Lịch dạy: ${editingClass?.name}`}>
         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           {currentClassSchedules.map((s) => (
-            <div key={s._id} className="flex gap-4 items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
-              <div className="w-10 h-10 bg-white rounded-xl flex flex-col items-center justify-center border shadow-sm">
-                <span className="text-[8px] font-black text-slate-400 uppercase leading-none">B.</span>
-                <span className="text-sm font-black text-indigo-600">{s.sessionNumber}</span>
+            <div key={s._id} className="flex gap-4 items-center p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700 transition-all">
+              <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700 shadow-xs">
+                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase leading-none">B.</span>
+                <span className="text-sm font-black text-blue-600 dark:text-blue-400">{s.sessionNumber}</span>
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900 text-xs">
+                <h4 className="font-bold text-slate-900 dark:text-white text-xs">
                   {new Date(s.startTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </h4>
-                <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium mt-0.5">
-                  <Clock className="w-3 h-3" /> {new Date(s.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(s.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mt-0.5">
+                  <Clock className="w-3 h-3 text-teal-500" /> {new Date(s.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(s.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               <div className="text-right">
-                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${s.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border ${s.status === 'Scheduled' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' : 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800/40'}`}>
                   {s.status === 'Scheduled' ? 'Sắp dạy' : 'Đã dạy'}
                 </span>
-                <p className="text-[9px] text-slate-400 font-bold mt-1 flex items-center justify-end gap-1 uppercase">
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-1 flex items-center justify-end gap-1 uppercase">
                   <MapPin className="w-2.5 h-2.5" /> {s.room}
                 </p>
               </div>
@@ -688,13 +690,12 @@ export default function Classes() {
           ))}
           {currentClassSchedules.length === 0 && (
             <div className="py-20 text-center">
-              <Info className="w-12 h-12 text-slate-200 mx-auto mb-2" />
-              <p className="text-slate-400 italic">Chưa có lịch dạy chi tiết cho lớp học này.</p>
+              <Info className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
+              <p className="text-slate-400 dark:text-slate-500 italic">Chưa có lịch dạy chi tiết cho lớp học này.</p>
             </div>
           )}
         </div>
       </Modal>
-
 
       <Modal
         isOpen={isMembersModalOpen}
@@ -703,13 +704,13 @@ export default function Classes() {
       >
         <div className="space-y-6">
           {/* Khu vực tìm kiếm & thêm học viên */}
-          <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-            <label className="text-[10px] font-black uppercase text-indigo-400 mb-2 block">Thêm học viên mới</label>
+          <div className="bg-blue-50/60 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+            <label className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 mb-2 block">Thêm học viên mới</label>
             <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-indigo-300" />
+              <Search className="absolute left-3 top-3 w-4 h-4 text-blue-400 pointer-events-none" />
               <input
                 placeholder="Tìm tên hoặc email học viên..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-indigo-200 outline-none text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none text-sm placeholder-slate-400"
                 value={searchStudent}
                 onChange={(e) => setSearchStudent(e.target.value)}
               />
@@ -717,14 +718,14 @@ export default function Classes() {
 
             {/* Dropdown kết quả tìm kiếm */}
             {searchStudent && (
-              <div className="mt-2 bg-white rounded-xl shadow-lg border border-slate-100 max-h-40 overflow-y-auto">
+              <div className="mt-2 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 max-h-40 overflow-y-auto">
                 {allStudents
                   .filter(s => s.fullName.toLowerCase().includes(searchStudent.toLowerCase()))
                   .map(s => (
                     <button
                       key={s._id}
                       onClick={() => addStudentToClass(s._id)}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 transition-colors border-b last:border-0"
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 cursor-pointer text-slate-800 dark:text-slate-200"
                     >
                       {s.fullName} - <span className="text-slate-400 text-xs">{s.email}</span>
                     </button>
@@ -737,7 +738,7 @@ export default function Classes() {
           {/* Danh sách học viên hiện tại */}
           <div className="max-h-[40vh] overflow-y-auto custom-scrollbar pr-2 space-y-2">
             {classMembers.map((student: any) => (
-              <div key={student._id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl">
+              <div key={student._id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold">
                     {student.fullName?.charAt(0)}

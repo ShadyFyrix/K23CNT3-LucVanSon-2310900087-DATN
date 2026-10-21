@@ -68,4 +68,7 @@ router.post('/unlock-late-student', proctorController.unlockLateStudent);
 // Tra cứu kết quả kèm đáp án & lời giải thích
 router.get('/results/:sessionStudentId', examController.getStudentExamResult);
 
+// Lịch thi và tiến độ các môn thi của thí sinh (Hỗ trợ Sảnh thi & 2 môn liên tiếp)
+router.get('/student-schedule', examController.getStudentExamSchedule);
+
 module.exports = router;

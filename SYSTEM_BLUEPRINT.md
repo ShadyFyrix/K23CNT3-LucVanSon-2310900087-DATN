@@ -1,4 +1,4 @@
-# EXAMGUARD AI — SYSTEM BLUEPRINT v1.0
+# EXAMGUARD AI — SYSTEM BLUEPRINT v3.3
 ## Tài liệu Phân tích Nghiệp vụ & Kỹ thuật Toàn diện
 
 > **Mục đích:** Tài liệu này là nguồn tham chiếu duy nhất (Single Source of Truth) cho toàn bộ quá trình phát triển.  
@@ -75,14 +75,14 @@ ExamGuard AI thiết lập nguyên tắc kiến trúc **"Khuôn mặt là Căn c
    - Hồ sơ sinh viên trong hệ thống quản lý đào tạo phải có ảnh chân dung chuẩn KYC và vector ArcFace 512 chiều được duyệt (`face_status = 'APPROVED'`).
    - Đây là **Ground-Truth Baseline** đối chiếu danh tính xuyên suốt:
      + Khi xếp chỗ ca thi: Chỉ sinh viên có Face KYC hợp lệ mới được cấp Số báo danh (SBD) và gán vị trí bàn.
-     + Khi vào phòng thi: AI đối chiếu 1:1 giữa khuôn mặt trước camera và Vector Gốc (ngưỡng Cosine Similarity $\ge 0.75$) kèm kiểm tra Liveness.
-     + Trong suốt thời gian làm bài: AI thực hiện **Continuous Biometric Verification (Xác thực Sinh trắc học Liên tục)** định kỳ mỗi 15–20 giây. Nếu người ngồi thi khác với Vector Gốc $\rightarrow$ Báo động đỏ `IMPERSONATION_DETECTED` (Nghi ngờ tráo người/thi hộ giữa giờ), trừ ngay 50 điểm hoặc tự động đình chỉ thi.
+     + Khi vào phòng thi: AI đối chiếu 1:1 giữa khuôn mặt trước camera và Vector Gốc (ngưỡng Cosine Similarity $\rightarrow$\ge 0.75$\rightarrow$) kèm kiểm tra Liveness.
+     + Trong suốt thời gian làm bài: AI thực hiện **Continuous Biometric Verification (Xác thực Sinh trắc học Liên tục)** định kỳ mỗi 15–20 giây. Nếu người ngồi thi khác với Vector Gốc $\rightarrow$\rightarrow$ Báo động đỏ `IMPERSONATION_DETECTED` (Nghi ngờ tráo người/thi hộ giữa giờ), trừ ngay 50 điểm hoặc tự động đình chỉ thi.
 
 2. **Bắt buộc đối với Giảng viên (Mandatory Proctor Ground-Truth):**
    - Giảng viên tham gia hệ thống phải hoàn tất đăng ký khuôn mặt chuẩn KYC để kích hoạt tư cách Cán bộ Coi thi / Cán bộ Thanh tra.
    - Vector Gốc của Giảng viên được hệ thống tự động biên soạn thành **Staff Biometric Whitelist (Danh sách Cán bộ được phép xuất hiện)** nạp sẵn vào Redis/In-Memory Cache của ca thi:
-     + Khi Giảng viên đi lại quanh lớp hoặc đứng cạnh bàn thí sinh để kiểm tra máy/giấy tờ, camera AI phát hiện $\ge 2$ khuôn mặt (`MULTIPLE_FACES`) sẽ so khớp ngay với Staff Whitelist.
-     + Nếu khuôn mặt thứ hai trùng khớp với Giám thị ca thi $\rightarrow$ Kích hoạt cơ chế `STAFF_EXEMPTION` (**0 điểm trừ - Không phạt thí sinh**), hiển thị thông báo "Cán bộ coi thi đang kiểm tra bàn".
+     + Khi Giảng viên đi lại quanh lớp hoặc đứng cạnh bàn thí sinh để kiểm tra máy/giấy tờ, camera AI phát hiện $\rightarrow$\ge 2$\rightarrow$ khuôn mặt (`MULTIPLE_FACES`) sẽ so khớp ngay với Staff Whitelist.
+     + Nếu khuôn mặt thứ hai trùng khớp với Giám thị ca thi $\rightarrow$\rightarrow$ Kích hoạt cơ chế `STAFF_EXEMPTION` (**0 điểm trừ - Không phạt thí sinh**), hiển thị thông báo "Cán bộ coi thi đang kiểm tra bàn".
      + Giảng viên điểm danh nhận phòng thi và ký số xác nhận đóng ca thi bằng Face Verification.
 
 ---
@@ -125,7 +125,7 @@ Hệ thống ExamGuard AI áp dụng kết hợp **RBAC (Role-Based Access Contr
 | | Xếp chỗ sinh viên & cấp Số Báo Danh (SBD) | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ xếp chỗ SV đã KYC APPROVED** |
 | | Phân công Giám thị 1, Giám thị 2, Thanh tra | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ gán GV đã KYC APPROVED** |
 | | Xem lịch thi cá nhân, số báo danh, vị trí bàn | ✅ | ✅ *(Lịch coi thi)* | ✅ *(Lịch thi của mình)* | |
-| **D. Trong Ca thi (Realtime Proctoring)** | Check-in 1:1 khuôn mặt + Liveness detection | ❌ | ❌ | ✅ *(Chính mình)* | So khớp Cosine $\ge 0.75$ với Vector Gốc |
+| **D. Trong Ca thi (Realtime Proctoring)** | Check-in 1:1 khuôn mặt + Liveness detection | ❌ | ❌ | ✅ *(Chính mình)* | So khớp Cosine $\rightarrow$\ge 0.75$\rightarrow$ với Vector Gốc |
 | | Check-in thủ công (Override khi SV hỏng cam) | ✅ | ✅ *(Giám thị ca đó)* | ❌ | Ghi audit log danh tính người duyệt |
 | | Xem Dashboard Phòng thi 3D Realtime | ✅ *(Tất cả phòng)* | ✅ *(Chỉ phòng được gán)* | ❌ | Giám sát avatar, cone mắt, vi phạm |
 | | Nhận cảnh báo vi phạm AI (Webcam + CCTV) | ✅ | ✅ *(Chỉ phòng được gán)* | ❌ | Kèm ảnh snapshot bằng chứng |
@@ -288,17 +288,17 @@ Mọi cá nhân tham gia vào hoạt động thi trực tuyến hoặc coi thi �
 | **Tráo người thi hộ (`IMPERSONATION_DETECTED`)** | **-50** | **CRITICAL** | **So khớp webcam với Vector Gốc Cosine < 0.70 liên tục > 15s** |
 | Phát hiện máy ảo (`VM_DETECTED`) | -20 | CRITICAL | SEB / OS Agent phát hiện môi trường ảo hóa |
 | Mở Developer Tools (`DEVTOOLS_OPEN`) | -30 | CRITICAL | Bấm F12, Ctrl+Shift+I, inspect phần tử |
-| Cúi đầu nhìn điện thoại (`PHONE_LOOK_DOWN`) | -20 | HIGH | Pitch $\le -22^\circ$ gập mặt xem màn hình phụ |
+| Cúi đầu nhìn điện thoại (`PHONE_LOOK_DOWN`) | -20 | HIGH | Pitch $\rightarrow$\le -22^\circ$\rightarrow$ gập mặt xem màn hình phụ |
 | Phát hiện 2 người lạ (`MULTI_FACE_UNKNOWN`) | -15 | HIGH | Không khớp với Staff Proctor Whitelist |
 | Màn hình thứ 2 (`SECONDARY_MONITOR`) | -15 | HIGH | Phát hiện mở rộng desktop ra màn hình ngoài |
 | Chuyển Tab / Ẩn ứng dụng (`TAB_SWITCH`) | -10 | MEDIUM | Bắt sự kiện `visibilitychange` của trình duyệt |
 | Rời vị trí ngồi / Che webcam (`NO_FACE`) | -10 | MEDIUM | Mất dấu khuôn mặt quá 10 giây |
-| Liếc bài bên cạnh (`SUSPICIOUS_SIDE`) | -10 | MEDIUM | Góc quay ngang $\|Yaw\| \ge 30^\circ$ |
+| Liếc bài bên cạnh (`SUSPICIOUS_SIDE`) | -10 | MEDIUM | Góc quay ngang $\rightarrow$\|Yaw\| \ge 30^\circ$\rightarrow$ |
 | Xoay vai sang bên (`SHOULDER_TURN`) | -8 | MEDIUM | YOLOv8 Pose phát hiện xoay lệch người |
-| Quay đầu sang bên (`HEAD_TURN`) | -5 | LOW | Góc quay ngang $15^\circ \le \|Yaw\| < 30^\circ$ |
+| Quay đầu sang bên (`HEAD_TURN`) | -5 | LOW | Góc quay ngang $\rightarrow$15^\circ \le \|Yaw\| < 30^\circ$\rightarrow$ |
 | Liếc mắt rời màn hình (`GAZE_OFF`) | -3 | LOW | Mống mắt nhìn lệch khỏi màn hình > 4 giây |
 | Chuột phải / Copy-paste (`BROWSER_VIOLATION`) | -5 đến -10 | MEDIUM | Chặn các hành vi sao chép đề bài |
-| **Cán bộ coi thi ghé bàn (`STAFF_EXEMPTION`)** | **0** | **INFO** | **Trùng khớp ArcFace với Staff Whitelist $\rightarrow$ Miễn trừ phạt** |
+| **Cán bộ coi thi ghé bàn (`STAFF_EXEMPTION`)** | **0** | **INFO** | **Trùng khớp ArcFace với Staff Whitelist $\rightarrow$\rightarrow$ Miễn trừ phạt** |
 
 ---
 
@@ -1148,19 +1148,19 @@ CREATE TABLE sinh_vien_ca_thi (
   - Vector Gốc của Giảng viên được tự động nạp vào **Staff Proctor Whitelist Cache** của ca thi trước giờ G 15 phút.
 
 - **BR-KYC-03: Ngưỡng So khớp Vector Gốc (Ground-Truth Cosine Thresholds)**:
-  - **Check-in 1:1 ban đầu:** Cosine Similarity $\ge 0.75$ VÀ Liveness Score $\ge 0.90$.
-  - **Xác thực Liên tục giữa giờ (Continuous Verification):** Cosine Similarity $\ge 0.70$.
-  - **Nhận diện Cán bộ Coi thi (Staff Exemption):** Cosine Similarity $\ge 0.75$ với bất kỳ cán bộ nào trong Staff Whitelist.
+  - **Check-in 1:1 ban đầu:** Cosine Similarity $\rightarrow$\ge 0.75$\rightarrow$ VÀ Liveness Score $\rightarrow$\ge 0.90$\rightarrow$.
+  - **Xác thực Liên tục giữa giờ (Continuous Verification):** Cosine Similarity $\rightarrow$\ge 0.70$\rightarrow$.
+  - **Nhận diện Cán bộ Coi thi (Staff Exemption):** Cosine Similarity $\rightarrow$\ge 0.75$\rightarrow$ với bất kỳ cán bộ nào trong Staff Whitelist.
 
 - **BR-KYC-04: Xử lý Vi phạm Tráo người Thi hộ (Continuous Impersonation Detection)**:
-  - Nếu AI phát hiện khuôn mặt ngồi thi có Cosine Similarity $< 0.70$ so với Vector Gốc kéo dài quá 15 giây (hoặc 3 chu kỳ camera liên tiếp):
+  - Nếu AI phát hiện khuôn mặt ngồi thi có Cosine Similarity $\rightarrow$< 0.70$\rightarrow$ so với Vector Gốc kéo dài quá 15 giây (hoặc 3 chu kỳ camera liên tiếp):
     + Bật cờ `impersonation_flag = true`.
     + Ghi nhận vi phạm `IMPERSONATION_DETECTED` (Mức độ: `CRITICAL`, Trừ 50 điểm uy tín).
     + Bắn còi cảnh báo đỏ khẩn cấp tới màn hình Giám thị kèm ảnh chụp đối chiếu (Ảnh gốc KYC vs Ảnh camera hiện tại).
     + Tự động khóa giao diện làm bài thi của thí sinh (`suspended`).
 
 - **BR-KYC-05: Miễn trừ Cán bộ Coi thi Ghé bàn (Staff Exemption Protocol)**:
-  - Khi camera phát hiện $\ge 2$ khuôn mặt (`MULTIPLE_FACES`), AI lập tức trích xuất vector khuôn mặt phụ và so khớp với Staff Proctor Whitelist.
+  - Khi camera phát hiện $\rightarrow$\ge 2$\rightarrow$ khuôn mặt (`MULTIPLE_FACES`), AI lập tức trích xuất vector khuôn mặt phụ và so khớp với Staff Proctor Whitelist.
   - Nếu trùng khớp với Giám thị / Thanh tra ca thi:
     + Ghi nhận sự kiện `STAFF_EXEMPTION` (Trừ 0 điểm).
     + Bàn thi trên màn hình Giám thị chuyển sang icon Cán bộ màu tím an tâm.
@@ -2105,7 +2105,7 @@ BR-MULTIFACE-05: Notification cho SV
 }
 ```
 
-> **Tối ưu hiệu năng:** Vì số lượng giám thị và thanh tra trong mỗi ca thi rất ít ($N \in [2, 4]$), phép so khớp $1:N$ Cosine Similarity trên CPU chỉ tốn **dưới 0.5 millisecond**, hoàn toàn không gây trễ hệ thống realtime.
+> **Tối ưu hiệu năng:** Vì số lượng giám thị và thanh tra trong mỗi ca thi rất ít ($\rightarrow$N \in [2, 4]$\rightarrow$), phép so khớp $\rightarrow$1:N$\rightarrow$ Cosine Similarity trên CPU chỉ tốn **dưới 0.5 millisecond**, hoàn toàn không gây trễ hệ thống realtime.
 
 #### 13.7.3 Chi tiết Nhật ký Hoạt động (Audit Log Schema) khi Giám thị xuất hiện
 
@@ -2823,10 +2823,10 @@ Response 200:
 - **Cơ chế kiểm soát thời gian thực**:
   1. Trong mỗi chu kỳ Camera Thích ứng, ngoài việc phân tích góc cúi/nghiêng đầu (Head Pose), AI trích xuất vector khuôn mặt hiện tại từ frame webcam.
   2. Tính Cosine Similarity giữa khuôn mặt trước camera và Vector Gốc của thí sinh đang dự thi:
-     $$\text{Similarity} = \frac{\mathbf{u}_{\text{live}} \cdot \mathbf{v}_{\text{ground\_truth}}}{\|\mathbf{u}_{\text{live}}\| \|\mathbf{v}_{\text{ground\_truth}}\|}$$
+     $\rightarrow$$\rightarrow$\text{Similarity} = \frac{\mathbf{u}_{\text{live}} \cdot \mathbf{v}_{\text{ground\_truth}}}{\|\mathbf{u}_{\text{live}}\| \|\mathbf{v}_{\text{ground\_truth}}\|}$\rightarrow$$\rightarrow$
   3. **Ngưỡng quyết định & Phản ứng tự động**:
-     - $\text{Similarity} \ge 0.75$: Danh tính hợp lệ (`IDENTITY_VERIFIED`), không can thiệp.
-     - $\text{Similarity} < 0.70$ kéo dài liên tiếp $\ge 15$ giây (3 frame):
+     - $\rightarrow$\text{Similarity} \ge 0.75$\rightarrow$: Danh tính hợp lệ (`IDENTITY_VERIFIED`), không can thiệp.
+     - $\rightarrow$\text{Similarity} < 0.70$\rightarrow$ kéo dài liên tiếp $\rightarrow$\ge 15$\rightarrow$ giây (3 frame):
        + Kích hoạt vi phạm `IMPERSONATION_DETECTED` (Trừ 50đ uy tín, Mức độ: `CRITICAL`).
        + Phát còi báo động khẩn cấp tới Giám thị kèm Popup ảnh đối chiếu kép: **[Ảnh Gốc KYC]** vs **[Ảnh Frame Hiện Tại]**.
        + Server tự động gửi lệnh Socket.IO `student:suspended` khóa ngay lập tức giao diện làm bài thi của thí sinh.
@@ -2838,11 +2838,11 @@ Response 200:
 ### 18.1. Kiến trúc Đề thi Hỗn hợp (Hybrid Exam Paper: MCQ + Essay / Coding)
 Trong khảo thí đại học, kỳ thi thường không chỉ thuần túy trắc nghiệm mà kết hợp giữa đánh giá kiến thức diện rộng (Trắc nghiệm) và đánh giá tư duy chiều sâu / kỹ năng giải quyết vấn đề (Tự luận / Lập trình). ExamGuard AI thiết kế kiến trúc hỗ trợ 3 cấu trúc đề thi:
 1. **100% Trắc nghiệm khách quan (`PURE_MCQ`)**:
-   - Gồm $N$ câu trắc nghiệm (ví dụ 40 hoặc 50 câu).
-   - Hệ thống tự động chấm điểm $100\%$ ngay khi nộp bài.
+   - Gồm $\rightarrow$N$\rightarrow$ câu trắc nghiệm (ví dụ 40 hoặc 50 câu).
+   - Hệ thống tự động chấm điểm $\rightarrow$100\%$\rightarrow$ ngay khi nộp bài.
 2. **Đề thi Hỗn hợp (`HYBRID`)**:
-   - **Phần I — Trắc nghiệm khách quan (Objective MCQs)**: Câu $1 \dots M$. Thí sinh tô đáp án trên Phiếu OMR điện tử. Hệ thống tự động chấm điểm tức thì.
-   - **Phần II — Tự luận / Giải bài tập / Viết Code (Subjective Essay / Coding)**: Câu $M+1 \dots N$. Thí sinh làm bài trực tiếp trong hộp soạn thảo văn bản, hỗ trợ định dạng, đếm từ, trình biên tập code hoặc nộp file ảnh/PDF bài làm viết tay.
+   - **Phần I — Trắc nghiệm khách quan (Objective MCQs)**: Câu $\rightarrow$1 \dots M$\rightarrow$. Thí sinh tô đáp án trên Phiếu OMR điện tử. Hệ thống tự động chấm điểm tức thì.
+   - **Phần II — Tự luận / Giải bài tập / Viết Code (Subjective Essay / Coding)**: Câu $\rightarrow$M+1 \dots N$\rightarrow$. Thí sinh làm bài trực tiếp trong hộp soạn thảo văn bản, hỗ trợ định dạng, đếm từ, trình biên tập code hoặc nộp file ảnh/PDF bài làm viết tay.
    - **Cơ chế Chấm điểm**: Điểm tổng kết = Điểm Trắc nghiệm (Auto-Graded) + Điểm Tự luận (Giảng viên chấm thủ công / Trợ lý AI Rubric).
 3. **100% Tự luận (`PURE_ESSAY`)**:
    - Dành cho các môn thi chuyên đề, đồ án, tiểu luận hoặc viết code thuật toán. Toàn bộ câu hỏi do Giảng viên trực tiếp chấm.
@@ -2870,9 +2870,9 @@ graph TD
 
 | Chế độ Đáp án (`selectionMode`) | Cơ chế Hiển thị UI Thí sinh | Quy tắc Chấm điểm (`scoringMode`) | Ứng dụng Thực tiễn |
 |:---|:---|:---|:---|
-| **Chọn 1 đáp án duy nhất (`SINGLE`)** | Nút tròn Radio `[A] [B] [C] [D]` | So khớp chính xác: Thí sinh chọn đúng duy nhất phương án được định nghĩa $\rightarrow$ Đạt điểm câu. | Câu hỏi trắc nghiệm truyền thống (1 đáp án đúng). |
-| **Chọn nhiều đáp án đúng (`MULTIPLE`)** | Hộp chọn Checkbox đa phương án `[A] [B] [C] [D]` (cho phép chọn nhiều nút) | 1. **Đúng toàn bộ (`ALL_OR_NOTHING`)**: Phải chọn đúng đủ toàn bộ tập hợp đáp án đúng và không chọn thừa đáp án sai mới đạt $100\%$ điểm câu.<br>2. **Điểm thành phần (`PARTIAL_CREDIT`)**: Điểm = $(\text{Số đáp án đúng chọn được} - \text{Số đáp án sai chọn nhầm}) \times \frac{\text{Điểm câu}}{\text{Tổng đáp án đúng}}$. | Câu hỏi trắc nghiệm phức hợp (ví dụ: "Những phát biểu nào sau đây đúng? -> A và C đúng"). |
-| **Chấp nhận nhiều đáp án tương đương (`ALTERNATIVE`)** | Nút chọn linh hoạt | Thí sinh chọn **bất kỳ đáp án nào** nằm trong danh mục đáp án chấp nhận $\rightarrow$ Đều được tính trọn vẹn điểm câu. | Áp dụng khi đề thi có câu hỏi mà 2 phương án đều đúng, hoặc sau phúc khảo Hội đồng khảo thí công nhận thêm đáp án đúng. |
+| **Chọn 1 đáp án duy nhất (`SINGLE`)** | Nút tròn Radio `[A] [B] [C] [D]` | So khớp chính xác: Thí sinh chọn đúng duy nhất phương án được định nghĩa $\rightarrow$\rightarrow$ Đạt điểm câu. | Câu hỏi trắc nghiệm truyền thống (1 đáp án đúng). |
+| **Chọn nhiều đáp án đúng (`MULTIPLE`)** | Hộp chọn Checkbox đa phương án `[A] [B] [C] [D]` (cho phép chọn nhiều nút) | 1. **Đúng toàn bộ (`ALL_OR_NOTHING`)**: Phải chọn đúng đủ toàn bộ tập hợp đáp án đúng và không chọn thừa đáp án sai mới đạt $\rightarrow$100\%$\rightarrow$ điểm câu.<br>2. **Điểm thành phần (`PARTIAL_CREDIT`)**: Điểm = $\rightarrow$(\text{Số đáp án đúng chọn được} - \text{Số đáp án sai chọn nhầm}) \times \frac{\text{Điểm câu}}{\text{Tổng đáp án đúng}}$\rightarrow$. | Câu hỏi trắc nghiệm phức hợp (ví dụ: "Những phát biểu nào sau đây đúng? -> A và C đúng"). |
+| **Chấp nhận nhiều đáp án tương đương (`ALTERNATIVE`)** | Nút chọn linh hoạt | Thí sinh chọn **bất kỳ đáp án nào** nằm trong danh mục đáp án chấp nhận $\rightarrow$\rightarrow$ Đều được tính trọn vẹn điểm câu. | Áp dụng khi đề thi có câu hỏi mà 2 phương án đều đúng, hoặc sau phúc khảo Hội đồng khảo thí công nhận thêm đáp án đúng. |
 
 ---
 
@@ -2905,8 +2905,8 @@ Khi Giảng viên tải lên tệp đề thi (Microsoft Word `.docx`, `.doc`, Ac
 
 Đối với các môn học đặc thù như **Toán rời rạc, Kỹ thuật số, Mạch điện tử, Lý thuyết đồ thị, Cấu trúc dữ liệu & Thuật toán**, bài thi thường có:
 - **Câu hỏi kèm hình ảnh sơ đồ phức tạp:** Ví dụ đề thi Toán rời rạc Câu 3: *"Tìm đầu ra của các mạch tổ hợp sau"* kèm hình vẽ mạch gồm các cổng **NAND, NOT, AND, OR**.
-- Công thức toán học phức tạp: $F(x,y,z) = \bar{x}\bar{z} + \bar{y}$
-- Bảng chân trị (Truth table) 8 dòng cho 3 biến $x, y, z$.
+- Công thức toán học phức tạp: $\rightarrow$F(x,y,z) = \bar{x}\bar{z} + \bar{y}$\rightarrow$
+- Bảng chân trị (Truth table) 8 dòng cho 3 biến $\rightarrow$x, y, z$\rightarrow$.
 
 #### A. Kiến trúc Hiển thị Đồ họa & Sơ đồ Mạch cho Thí sinh (Visual Diagram Delivery)
 Nếu hệ thống chỉ bóc tách văn bản thô (plain text) thì sinh viên sẽ không nhìn thấy hình ảnh sơ đồ mạch. ExamGuard AI giải quyết triệt để bằng 2 cơ chế:
@@ -2927,7 +2927,7 @@ Giảng viên được toàn quyền cấu hình phương thức làm bài riên
 | **1. Trắc nghiệm OMR (`MCQ_SELECT`)** | Bảng nút tròn Radio hoặc Checkbox tô đáp án A, B, C, D | Hệ thống tự động chấm tức thì theo ma trận đáp án chuẩn (`ALL_OR_NOTHING` hoặc `PARTIAL_CREDIT`). | Các câu hỏi lý thuyết, nhận biết, trắc nghiệm tính toán nhanh. |
 | **2. Soạn thảo Trực tiếp (`TEXT_EDITOR`)** | Ô nhập văn bản tích hợp thanh ký hiệu logic và bộ gõ công thức MathJax. | Chấm tự động qua bộ từ khóa (`suggestedKeywords`) kết hợp AI Rubric hoặc Giảng viên chấm tay. | Câu hỏi giải thích khái niệm, biểu thức rút gọn, phân tích logic ngắn. |
 | **3. Chụp ảnh Bài làm Giấy (`FILE_UPLOAD`)** | Chụp trực tiếp bằng **Webcam máy tính** (hoặc nộp tệp vẽ mạch / scan bài thi). | Hệ thống số hóa ảnh, so khớp nét chữ sinh trắc học và hiển thị song song cho Giảng viên chấm điểm chi tiết. | **Toán rời rạc (Vẽ sơ đồ mạch Câu 3), Lập bảng chân trị (Câu 2), Hình học, Đồ thị**. |
-| **4. Kết hợp Linh hoạt (`HYBRID_TEXT_FILE`)** | Vừa có khung nhập kết quả rút gọn ($F_{out} = \dots$), vừa chụp kèm bài giải chi tiết từng bước trên giấy thi. | Kiểm tra đối chiếu giữa kết quả tóm tắt và lời giải viết tay trong ảnh đính kèm. | Bài thi tính toán nhiều bước (Tìm khai triển tích các tổng + vẽ mạch). |
+| **4. Kết hợp Linh hoạt (`HYBRID_TEXT_FILE`)** | Vừa có khung nhập kết quả rút gọn ($\rightarrow$F_{out} = \dots$\rightarrow$), vừa chụp kèm bài giải chi tiết từng bước trên giấy thi. | Kiểm tra đối chiếu giữa kết quả tóm tắt và lời giải viết tay trong ảnh đính kèm. | Bài thi tính toán nhiều bước (Tìm khai triển tích các tổng + vẽ mạch). |
 
 ---
 
@@ -3027,7 +3027,7 @@ Dưới đây là danh mục chi tiết các thư viện backend trong [examguar
 | `xlsx` | `^0.18.5` | **Xử lý Bảng tính Excel**: Đọc danh sách sinh viên theo lớp từ file Excel, xuất bảng điểm tổng hợp ca thi và ma trận đáp án. |
 | `helmet` | `^8.1.0` | **Bảo mật HTTP Headers**: Thiết lập các header an toàn (Content-Security-Policy, X-Frame-Options, X-XSS-Protection) chống tấn công web. |
 | `express-rate-limit` | `^8.3.1` | **Giới hạn Tần suất Truy cập (Rate Limiting)**: Chặn tấn công từ chối dịch vụ (DDoS) và brute-force mật khẩu tại các endpoint nhạy cảm. |
-| `express-mongo-sanitize`| `^2.2.0` | **Chống NoSQL Injection**: Làm sạch và loại bỏ các ký tự đặc biệt (`$`, `.`) trong body/query params gửi lên MongoDB. |
+| `express-mongo-sanitize`| `^2.2.0` | **Chống NoSQL Injection**: Làm sạch và loại bỏ các ký tự đặc biệt (`$\rightarrow$`, `.`) trong body/query params gửi lên MongoDB. |
 | `xss-clean` | `^0.1.4` | **Chống Tấn công XSS**: Làm sạch dữ liệu đầu vào của người dùng, loại bỏ mã script độc hại trong câu hỏi, bài làm tự luận. |
 | `cors` | `^2.8.6` | **Kiểm soát Truy cập Nguồn gốc Chéo**: Cho phép kết nối an toàn giữa Frontend Web (Port 3011) và các microservice liên quan. |
 | `cookie-parser` | `^1.4.7` | **Quản lý Cookie HTTP-Only**: Đọc và lưu trữ token phiên đăng nhập bảo mật trên trình duyệt, chống đánh cắp qua JavaScript. |
@@ -3091,7 +3091,7 @@ Dưới đây là danh mục chi tiết các thư viện trong [examguard-ai/req
 | `pydantic` | `>=2.6.0` | **Xác thực Dữ liệu AI**: Kiểm tra kiểu dữ liệu đầu vào của các vector khuôn mặt, tọa độ bounding box, thông số góc quay đầu 3D. |
 | `python-multipart` | `>=0.0.9` | **Tiếp nhận Dữ liệu Đa phần (Multipart Form)**: Hỗ trợ upload ảnh chụp khuôn mặt KYC, ảnh frame camera giám sát từ client. |
 | `numpy` | `>=1.24.0` | **Tính toán Ma trận & Đại số Tuyến tính**: Xử lý ma trận điểm mốc (landmarks), tính khoảng cách Cosine Distance so khớp vector 512-D, chuẩn hóa L2-norm. |
-| `pillow` (PIL) | `>=10.0.0` | **Xử lý Ảnh Số**: Đọc, nén, chuyển đổi không gian màu RGB/BGR, resize ảnh khuôn mặt về chuẩn $112 \times 112$ px trước khi đưa vào mạng nơ-ron. |
+| `pillow` (PIL) | `>=10.0.0` | **Xử lý Ảnh Số**: Đọc, nén, chuyển đổi không gian màu RGB/BGR, resize ảnh khuôn mặt về chuẩn $\rightarrow$112 \times 112$\rightarrow$ px trước khi đưa vào mạng nơ-ron. |
 | `opencv-python-headless` | `>=4.8.0` | **Thị giác Máy tính Toàn diện (OpenCV)**: Cắt cúp khuôn mặt (face crop), căn chỉnh 5 điểm mắt mũi miệng (face alignment), tính góc quay đầu 3D Pose (Pitch, Yaw, Roll). Phiên bản headless không phụ thuộc GUI X11, tối ưu cho môi trường server. |
 | `onnxruntime` | `>=1.16.0` | **Bộ Thực thi Mô hình Học sâu (Deep Learning Inference Engine)**: Chạy các mô hình ONNX tối ưu hóa phần cứng (ArcFace 512-D, MiniFASNet, YOLOv8) với tốc độ mili-giây trên CPU/GPU. |
 | `requests` | `>=2.31.0` | **HTTP Client**: Gửi webhook thông báo hoặc đồng bộ dữ liệu vi phạm sang các dịch vụ giám sát ngoại vi khi cần thiết. |
@@ -3106,22 +3106,22 @@ Dưới đây là danh mục chi tiết các thư viện trong [examguard-ai/req
 Các mô hình được đóng gói dưới định dạng chuẩn công nghiệp **ONNX (Open Neural Network Exchange)** và nạp trực tiếp qua `onnxruntime`:
 
 1. **ArcFace 512-D Embedding Model (`arcface_resnet50.onnx` / `mobileface_v2.onnx`):**
-   - *Đầu vào:* Ảnh khuôn mặt đã được căn chỉnh (Aligned Face) kích thước $112 \times 112 \times 3$.
-   - *Đầu ra:* Vector đặc trưng sinh trắc học 512 chiều được chuẩn hóa ($\|v\|_2 = 1$).
+   - *Đầu vào:* Ảnh khuôn mặt đã được căn chỉnh (Aligned Face) kích thước $\rightarrow$112 \times 112 \times 3$\rightarrow$.
+   - *Đầu ra:* Vector đặc trưng sinh trắc học 512 chiều được chuẩn hóa ($\rightarrow$\|v\|_2 = 1$\rightarrow$).
    - *Thuật toán so khớp:* Tính độ tương đồng Cosine Similarity:
-     $$\text{Similarity} = \frac{v_1 \cdot v_2}{\|v_1\|_2 \|v_2\|_2}$$
-   - *Ngưỡng định danh:* $\ge 0.75$ xác nhận cùng một người; $< 0.50$ kích hoạt cảnh báo tráo người (`IMPERSONATION_VIOLATION`).
+     $\rightarrow$$\rightarrow$\text{Similarity} = \frac{v_1 \cdot v_2}{\|v_1\|_2 \|v_2\|_2}$\rightarrow$$\rightarrow$
+   - *Ngưỡng định danh:* $\rightarrow$\ge 0.75$\rightarrow$ xác nhận cùng một người; $\rightarrow$< 0.50$\rightarrow$ kích hoạt cảnh báo tráo người (`IMPERSONATION_VIOLATION`).
 
 2. **MiniFASNet Liveness & Anti-Spoofing Model (`minifasnet_v2.onnx`):**
    - *Chức năng:* Phát hiện các cuộc tấn công giả mạo (Presentation Attack Detection - PAD) bằng màn hình điện thoại, ảnh in giấy hoặc mặt nạ silicon.
-   - *Đầu ra:* Xác suất Liveness Score $[0.0 \dots 1.0]$. Ngưỡng cho phép $\ge 0.85$.
+   - *Đầu ra:* Xác suất Liveness Score $\rightarrow$[0.0 \dots 1.0]$\rightarrow$. Ngưỡng cho phép $\rightarrow$\ge 0.85$\rightarrow$.
 
 3. **3D Head Pose & Facial Landmarks Estimation:**
    - *Chức năng:* Dự đoán hướng nhìn và tư thế đầu của thí sinh thông qua 68 điểm mốc khuôn mặt và thuật toán Perspective-n-Point (PnP).
    - *Ngưỡng phát hiện vi phạm:*
-     - Quay đầu trái/phải quá lớn: $|\text{Yaw}| > 35^\circ$
-     - Cúi đầu nhìn tài liệu dưới gầm bàn: $\text{Pitch} < -25^\circ$
-     - Nghiêng đầu trao đổi: $|\text{Roll}| > 30^\circ$
+     - Quay đầu trái/phải quá lớn: $\rightarrow$|\text{Yaw}| > 35^\circ$\rightarrow$
+     - Cúi đầu nhìn tài liệu dưới gầm bàn: $\rightarrow$\text{Pitch} < -25^\circ$\rightarrow$
+     - Nghiêng đầu trao đổi: $\rightarrow$|\text{Roll}| > 30^\circ$\rightarrow$
 
 4. **YOLOv8 Onnx Object Detection (`yolov8n.onnx`):**
    - *Chức năng:* Phát hiện sự xuất hiện của các vật thể bị cấm trong phòng thi (Điện thoại di động `cell phone`, Tai nghe `earphone`, Sách vở tài liệu `book`).
@@ -3170,7 +3170,7 @@ Nhằm khắc phục triệt để nguy cơ rò rỉ đề thi khi thí sinh m�
    - **Tuyệt đối không gửi mảng `questions`**: Payload trả về có `questions: []`. Thí sinh dù có kỹ năng can thiệp DevTools sâu cũng không thể xem trước nội dung đề.
 2. **Giao diện Phòng chờ thi Trực tuyến (Pre-Exam Waiting Room UI):**
    - **Đồng hồ số kỹ thuật số (Digital Flip Clock):** Hiển thị trực quan Giờ : Phút : Giây dạng thẻ neon cyan/indigo, đếm ngược từng giây theo thời gian thực.
-   - **Cảnh báo chuyển tiếp 10 giây cuối:** Khi đồng hồ đếm ngược $\le 10$ giây, hiệu ứng phát sáng chuyển sang màu hổ phách và chớp nháy nhịp nhàng.
+   - **Cảnh báo chuyển tiếp 10 giây cuối:** Khi đồng hồ đếm ngược $\rightarrow$\le 10$\rightarrow$ giây, hiệu ứng phát sáng chuyển sang màu hổ phách và chớp nháy nhịp nhàng.
    - **Cơ chế Auto-Reveal mượt mà:** Đúng thời khắc `00:00:00`, client tự động phát âm thanh chime thông báo, gọi lại API lấy đề thi chính thức và chuyển mượt mà vào không gian làm bài mà không cần thí sinh phải F5 hay thao tác thủ công.
    - **Kiểm tra thiết bị & Căn cước trước giờ thi:** Tích hợp luồng xem trước Webcam (Live Camera Preview Mirror) để thí sinh kiểm tra góc nhìn, ánh sáng và kiểm tra trạng thái AI Face Liveness. Hiển thị thẻ thí sinh 2 cột: Họ tên, MSSV, SBD, Lớp, Vị trí bàn thi (Dãy - Cột) và Mã PIN bàn.
 
@@ -3178,7 +3178,7 @@ Nhằm khắc phục triệt để nguy cơ rò rỉ đề thi khi thí sinh m�
 
 ### 20.2. Quy Chế Chặn Vào Phòng Thi Khi Đi Muộn (Late Arrival Room Blocking)
 Tuân thủ chuẩn mực **Điều 14 Quy chế coi thi và đánh giá kết quả học tập** của các Trường Đại học:
-- **Khung giờ tự do (Trong 15 phút đầu kể từ giờ phát đề):** Thí sinh đến muộn trong khoảng $\le 15$ phút vẫn được phép tự do đăng nhập và vào làm bài thi bình thường (không được cộng bù giờ).
+- **Khung giờ tự do (Trong 15 phút đầu kể từ giờ phát đề):** Thí sinh đến muộn trong khoảng $\rightarrow$\le 15$\rightarrow$ phút vẫn được phép tự do đăng nhập và vào làm bài thi bình thường (không được cộng bù giờ).
 - **Khung giờ cấm (Sau 15 phút kể từ giờ phát đề):**
   - Điều kiện kích hoạt khóa bàn: `Date.now() > startTime + 15 * 60 * 1000`, thí sinh chưa từng vào thi (`status === 'ASSIGNED' || status === 'ABSENT'`) và chưa được Giám thị mở bàn đặc cách (`isLateUnlocked === false`).
   - Phía Server: `getSanitizedQuestions` trả về `isLateBlocked: true`, `lateMinutes`, và thông báo chặn vi phạm quy chế.
@@ -3195,7 +3195,7 @@ Hệ thống trao quyền cho Cán bộ coi thi / Trưởng điểm thi mở bà
 
 1. **Điều kiện mở bàn đặc cách:** Thí sinh phải đến muộn từ 15 phút trở lên (`lateMinutes >= 15`). Nếu dưới 15 phút, hệ thống nhắc nhở Giám thị rằng thí sinh vẫn đang được quyền tự do vào thi bình thường.
 2. **Giao diện Giám thị (`LiveProctor.tsx`):**
-   - Trên sơ đồ bàn thi (Desk Map): Thí sinh chưa vào thi mà ca thi đã trôi qua $\ge 15$ phút tự động hiển thị viền hổ phách nhấp nháy kèm nhãn `🔒 Khóa (X phút)`.
+   - Trên sơ đồ bàn thi (Desk Map): Thí sinh chưa vào thi mà ca thi đã trôi qua $\rightarrow$\ge 15$\rightarrow$ phút tự động hiển thị viền hổ phách nhấp nháy kèm nhãn `🔒 Khóa (X phút)`.
    - Giám thị bấm vào bàn thi: Modal điều khiển hiển thị khối **"4. Mở Bàn Cho Thí Sinh Đi Muộn (Đặc cách)"**.
    - Form mở bàn:
      - Nhập lý do đặc cách (Lưu vết kiểm toán).
@@ -3282,9 +3282,523 @@ Khi ca thi chuyển sang `COMPLETED`:
 
 ---
 
-*Blueprint version 3.2 — Cập nhật: 2026-10-18*  
+
+
+---
+
+## 22. CHUẨN HÓA KIẾN TRÚC HỆ THỐNG THEO 5 NGUYÊN LÝ S.O.L.I.D & CLEAN ARCHITECTURE (v3.3)
+
+Nhằm nâng cao chất lượng mã nguồn, khả năng bảo trì và đáp ứng tiêu chuẩn phần mềm công nghiệp phục vụ bảo vệ Đồ án Tốt nghiệp Kỹ sư CNTT, hệ thống ExamGuard AI đã được tái cấu trúc toàn diện theo mô hình **Layered Clean Architecture** và tuân thủ chặt chẽ **5 nguyên lý thiết kế S.O.L.I.D**.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│               PRESENTATION LAYER (FRONTEND - REACT + TS)               │
+│  • TakeExam.tsx (Core Orchestrator)                                   │
+│  • useQuizSound (Web Audio API)      • useAntiCheat (Browser Security)│
+│  • FaceCheckInGate (Biometrics HUD)  • TopWarningBanner (Non-Intrusive)│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / WebSocket (Socket.IO)
+┌───────────────────────────────────▼────────────────────────────────────┐
+│              CONTROLLER LAYER (THIN HTTP REQUEST HANDLERS)             │
+│  • grading.controller.js  • proctor.controller.js  • exam.controller.js│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Dependency Inversion (DIP)
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                SERVICE LAYER (BUSINESS LOGIC CORE DOMAIN)              │
+│  • grading.service.js     • proctor.service.js     • exam.service.js   │
+│  • faceAi.service.js (HMAC SHA-256)                • user.service.js   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Strategy Pattern (OCP / LSP)
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                SCORING STRATEGY ENGINE (server/strategies/)            │
+│  • BaseScoringStrategy (Abstract Contract)                             │
+│  • MultipleChoiceScoringStrategy  • EssayScoringStrategy               │
+│  • CodingProblemScoringStrategy   • ScoringStrategyFactory             │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Mongoose ODM / Sequelize ORM
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                     DATA PERSISTENCE LAYER                             │
+│  • MongoDB (ExamSession, ExamPaper, ExamStudent, ExamSubmission)       │
+│  • MySQL (Students, Teachers, Classes, Courses, Departments)           │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 22.1. Phân Tích 5 Nguyên Lý S.O.L.I.D Đã Hiện Thực Hóa
+
+#### 1. S — Single Responsibility Principle (Đơn Trách Nhiệm)
+- **Tầng Backend:**
+  - Chuyển đổi mô hình "Fat Controller" sang "Thin Controller + Rich Service".
+  - `grading.controller.js`, `proctor.controller.js`, `exam.controller.js` chỉ chịu trách nhiệm nhận HTTP Request, trích xuất tham số và phản hồi HTTP Response (status code, JSON wrapper).
+  - Nghiệp vụ tính toán điểm rà soát, rà soát 1 lần, thẩm định Item Discrimination Index được quy hoạch độc lập trong `server/services/grading.service.js`.
+  - Nghiệp vụ kiểm soát phòng thi trực tiếp, xác thực khuôn mặt thí sinh với ghế ngồi và ghi log vi phạm được quy hoạch độc lập trong `server/services/proctor.service.js`.
+  - Nghiệp vụ quản lý đề thi, xáo đề, tạo ca thi, xếp chỗ và nộp bài được quy hoạch độc lập trong `server/services/exam.service.js`.
+- **Tầng Frontend:**
+  - Phân rã "God Component" `TakeExam.tsx` (~3.560 dòng):
+    + `useQuizSound.ts`: Chuyên trách tổng hợp tần số âm thanh (Web Audio API).
+    + `useAntiCheat.ts`: Chuyên trách giám sát phím tắt, DevTools, thoát toàn màn hình và chuyển tab.
+    + `FaceCheckInGate.tsx`: Chuyên trách giao diện quét khuôn mặt và đối chiếu vị trí chỗ ngồi trước khi mở đề.
+    + `TopWarningBanner.tsx`: Chuyên trách hiển thị thông báo kỷ luật trên mép trên màn hình.
+
+#### 2. O — Open/Closed Principle (Đóng với Sửa đổi, Mở với Mở rộng)
+- **Vấn đề trước đây:** Logic chấm điểm trong `exam.controller.js` và `grading.controller.js` phụ thuộc vào chuỗi `if-else` lồng nhau theo từng loại câu hỏi (`q.type === 'MULTIPLE_CHOICE'`, `q.type === 'ESSAY'`, `q.type === 'CODING_PROBLEM'`). Khi cần bổ sung dạng câu hỏi mới (ví dụ: Kéo thả - Drag & Drop, Điền khuyết - Fill in the Blanks, Sắp xếp thứ tự), bắt buộc phải sửa trực tiếp hàm chấm điểm lõi, tiềm ẩn rủi ro phát sinh lỗi hồi quy (regression bugs).
+- **Hiện thực hóa Strategy Pattern (`server/strategies/scoring.strategy.js`):**
+  - Định nghĩa giao thức chuẩn `BaseScoringStrategy.evaluate(question, studentAnswer, options)`.
+  - Các lớp cụ thể:
+    + `MultipleChoiceScoringStrategy`: Xử lý trắc nghiệm đơn, đa đáp án, alternative keys, chấm toàn bộ hoặc chấm điểm từng phần (Partial Credit).
+    + `EssayScoringStrategy`: Xử lý tự luận, đếm số từ tối thiểu (`minWords`), gán trạng thái chờ giáo viên chấm (`PENDING_REVIEW`).
+    + `CodingProblemScoringStrategy`: Xử lý chấm tự động qua tập test cases (Input / Output).
+  - `ScoringStrategyFactory`: Đăng ký chiến lược mới thông qua hàm `registerStrategy(type, strategyInstance)`. Việc thêm dạng câu hỏi mới hoàn toàn độc lập, không làm thay đổi bất kỳ dòng mã nào của Engine chấm thi.
+
+#### 22.3. L — Liskov Substitution Principle (Nguyên Lý Thay Thế Liskov)
+- Mọi Strategy kế thừa `BaseScoringStrategy` đều tuân thủ chặt chẽ chữ ký hàm đầu ra thống nhất (`ScoringResult`):
+  ```javascript
+  {
+    isCorrect: boolean | null,
+    scoreEarned: number,
+    feedback: string,
+    status: 'GRADED' | 'PENDING_REVIEW' | 'SKIPPED'
+  }
+  ```
+- `GradingService` và `ExamService` có thể gọi bất kỳ chiến lược nào được trả về từ Factory mà không cần kiểm tra kiểu dữ liệu đặc thù hay ép kiểu thủ công.
+
+#### 22.4. I — Interface Segregation Principle (Phân Tách Giao Diện)
+- Thay vì truyền toàn bộ state khổng lồ của bài thi vào các component con, các component và hook nhận các giao diện nhỏ, tập trung đúng nhu cầu:
+  - `TopWarningBannerProps`: Chỉ nhận dữ liệu cảnh báo và callback đóng (`securityAlert`, `directWarning`, `onDismissSecurityAlert`, `onDismissDirectWarning`).
+  - `FaceCheckInGateProps`: Chỉ nhận thông tin định danh sinh trắc học và vị trí bàn thi (`examData`, `bindVideoRef`, `cameraActive`, `isFaceCheckingIn`, `onFaceCheckIn`).
+  - `useAntiCheatOptions`: Chỉ nhận cờ `enabled`, callback `onViolation` và trạng thái toàn màn hình.
+
+#### 22.5. D — Dependency Inversion Principle (Đảo Ngược Phụ Thuộc)
+- Controller cấp cao không tương tác trực tiếp với Database Query chi tiết, mà giao tiếp thông qua Service Layer.
+- Service Layer không phụ thuộc vào từng thuật toán chấm điểm cụ thể, mà phụ thuộc vào trừu tượng `BaseScoringStrategy` và Factory.
+- Python Microservice Face AI được bọc qua `faceAi.service.js` với chứng thực HMAC SHA-256 an toàn tuyệt đối.
+
+---
+
+### 22.2. Trải Nghiệm Phòng Thi Đột Phá: Cổng Check-In Sinh Trắc Học & Cảnh Báo Top Màn Hình Không Cản Trở
+
+Nhằm đáp ứng yêu cầu phòng thi chuẩn khảo thí: **"Không làm kiểu scrolling page ở đây. Mọi thông tin chỉ được hiển thị 1 trang thông báo duy nhất, không cản trở sinh viên làm bài, hiển thị trên top màn hình"**:
+
+1. **Cổng Check-In Sinh Trắc Học Một Trang Duy Nhất (`FaceCheckInGate.tsx`):**
+   - Trước khi đề thi mở ra, thí sinh bắt buộc phải đi qua Cổng Check-In Sinh Trắc Học.
+   - Toàn bộ giao diện hiển thị vừa vặn trong màn hình (Viewport height 100vh), không có thanh cuộn (No scrollbar).
+   - Khung hình Camera tích hợp HUD Oval sinh trắc học và tia quét Laser.
+   - Thẻ vị trí bàn thi chỉ định rõ: **Dãy/Hàng (Row), Cột Bàn (Col), Mã PIN Chỗ Ngồi**.
+   - AI đối chiếu 1:1 với Vector Khuôn mặt Gốc (ngưỡng Cosine Similarity $\rightarrow$\ge 0.75$\rightarrow$). Khi khớp thành công, hệ thống mới mở đề thi.
+
+2. **Thanh Cảnh Báo Vi Phạm & Nhắc Nhở Trên Top Màn Hình (`TopWarningBanner.tsx`):**
+   - **Xóa bỏ triệt để Modal Popup chặn giữa màn hình:** Modal cũ bắt thí sinh phải tắt mới nhìn thấy câu hỏi, gây ức chế tâm lý và làm mất thời gian làm bài.
+   - **Cơ chế mới:** Khi phát hiện vi phạm (chuyển tab, thoát fullscreen, phát hiện người lạ) hoặc nhận nhắc nhở từ Giám thị:
+     + Một thanh trạng thái mỏng dạng kính mờ (Backdrop Blur Glassmorphism) trượt nhẹ từ mép trên cùng màn hình (`fixed top-3 left-1/2 -translate-x-1/2 z-[9999]`).
+     + Hiển thị trực tiếp: Nội dung vi phạm, số điểm uy tín bị trừ, điểm uy tín còn lại và nút "Đã hiểu".
+     + Thí sinh vừa đọc được cảnh báo vừa tiếp tục thao tác làm bài thi ở phần màn hình bên dưới mà không bị che khuất nội dung.
+     + Thanh tự động biến mất sau 8 giây nếu thí sinh không nhấn nút, tránh làm phân tâm bài làm.
+
+---
+
+
+
+---
+
+## 23. HỆ THỐNG MÀU CHỦ ĐẠO THIẾT KẾ & ĐỊNH KIỂU TYPESCRIPT (ENTERPRISE ACADEMIC PALETTE)
+
+Nhằm đảm bảo giao diện hệ thống ExamGuard AI đạt chuẩn **phần mềm khảo thí cấp đại học/quốc gia (Enterprise Academic & Defense Grade)**, hệ thống áp dụng nguyên tắc thiết kế **Ergonomic Authority — Không Loè Loẹt, Không Chói Mắt**:
+- Tuyệt đối bài trừ các dải màu neon rực rỡ, tím hồng chói (violet/fuchsia) hay vàng chanh gây mỏi mắt sinh viên trong ca thi kéo dài 60–180 phút.
+- Toàn bộ bảng màu được quy chuẩn thành **Biến TypeScript có định kiểu tĩnh nghiêm ngặt (Strictly-Typed Theme Tokens)** tại thư viện `src/theme/colors.ts` và đồng bộ trực tiếp với Tailwind CSS Variables tại `src/index.css`.
+
+### 23.1. Bảng Màu Chủ Đạo Quy Chuẩn (Standard Academic Palette)
+
+| Phân nhóm màu | Tên mã màu | Mã Hex chuẩn | Ý nghĩa ứng dụng trong ExamGuard AI |
+| :--- | :--- | :--- | :--- |
+| **Màu Chủ Đạo (Primary)** | **Deep Academic Navy** | `#1E40AF` (Blue-700) | Tượng trưng cho sự trang nghiêm, chính thống và đáng tin cậy của nền tảng khảo thí đại học. |
+| **Màu Tương Tác (Accent)** | **Royal Interactive Blue** | `#2563EB` (Blue-600) | Sử dụng cho nút bấm hành động chính (Bắt đầu thi, Nộp bài, Lưu đáp án), thanh tiến độ. |
+| **Nền Tối (Dark Surface)** | **Obsidian Metallic Slate** | `#0B0F19` | Nền buồng thi và phòng giám sát, triệt tiêu phản xạ ánh sáng xanh, chống mỏi mắt. |
+| **Khối Thẻ (Card Surface)** | **Midnight Slate Card** | `#131B2E` | Khung thẻ câu hỏi, thẻ thí sinh, bản đồ chỗ ngồi. Độ tương phản chuẩn WCAG AAA. |
+| **Đường Viền (Border)** | **Refined Slate Border** | `#1E293B` | Đường ngăn cách tinh tế giữa các phân vùng đề thi và phiếu trả lời OMR. |
+| **Thành Công (Success)** | **Subtle Emerald** | `#059669` (Emerald-600) | Xác thực sinh trắc học thành công, điểm danh đúng bàn, nộp bài hoàn tất. |
+| **Cảnh Báo (Warning)** | **Muted Amber** | `#D97706` (Amber-600) | Cảnh báo tư thế nghiêng đầu, nhắc nhở quy chế thi, rà soát đề sau thi. |
+| **Nguy Cấp (Danger)** | **Crimson Red** | `#DC2626` (Red-600) | Phát hiện tráo người thi hộ, chuyển tab, mở DevTools, đình chỉ thi. |
+| **Thông Tin (Info)** | **Slate Cyan** | `#0284C7` (Sky-600) | Hướng dẫn làm bài, đếm ngược ca thi, chỉ định vị trí chỗ ngồi. |
+
+### 23.2. Định Kiểu Tĩnh TypeScript (`src/constants/theme.constants.ts` & `src/theme/colors.ts`)
+
+```typescript
+/**
+ * EXAMGUARD AI — OFFICIAL COLOR SYSTEM & DESIGN TOKENS
+ * Phong cách: Academic Enterprise & Biometric Security (Trầm, nghiêm túc, dịu mắt)
+ * Đường dẫn: src/constants/theme.constants.ts
+ */
+
+export const EXAMGUARD_COLORS = {
+  /**
+   * 1. MÀU CHỦ ĐẠO (PRIMARY - DEEP ACADEMIC NAVY)
+   * Dùng cho Header, Sidebar chính, Nút bấm chính (Primary CTA), Tiêu đề thương hiệu
+   */
+  primary: {
+    50: '#EFF6FF',
+    100: '#DBEAFE',
+    200: '#BFDBFE',
+    300: '#93C5FD',
+    400: '#60A5FA',
+    500: '#2563EB',
+    600: '#1D4ED8', // Màu nút bấm chính & Active state
+    700: '#1E40AF', // Màu chủ đạo chuẩn (Brand Primary)
+    800: '#1E3A8A', // Màu Header / Khu vực điều hướng trọng tâm
+    900: '#172554', // Nền tối sâu
+    DEFAULT: '#1E40AF',
+  },
+
+  /**
+   * 2. MÀU ĐIỂM NHẤN SINH TRẮC HỌC AI (SECONDARY - MUTED BIOMETRIC TEAL)
+   * Dùng cho khung quét Face KYC 5 góc, đường lưới 3D Pose, chỉ báo Liveness
+   */
+  biometric: {
+    50: '#F0FDFA',
+    100: '#CCFBF1',
+    200: '#99F6E4',
+    400: '#2DD4BF',
+    500: '#14B8A6',
+    600: '#0D9488', // Màu chuẩn cho khung nhận diện AI (Dịu mắt, không chói)
+    700: '#0F766E',
+    800: '#115E59',
+    DEFAULT: '#0D9488',
+  },
+
+  /**
+   * 3. HỆ MÀU NỀN & BỀ MẶT TRUNG TÍNH (NEUTRAL SLATE)
+   * Tối ưu chống mỏi mắt cho thí sinh làm bài thi (65%-35% Split View) & Giám thị
+   */
+  slate: {
+    50: '#F8FAFC',  // Nền tổng thể giao diện làm bài (Light mode)
+    100: '#F1F5F9', // Nền khu vực đề thi / Khung phụ
+    200: '#E2E8F0', // Đường viền (Border) chuẩn
+    300: '#CBD5E1', // Nút/Ô câu hỏi chưa chọn
+    400: '#94A3B8', // Icon phụ / Placeholder
+    500: '#64748B', // Chữ mô tả phụ (Muted text)
+    600: '#475569', // Chữ nội dung đề thi (Secondary text)
+    700: '#334155', // Nền Card trong chế độ Giám sát tối
+    800: '#1E293B', // Nền Panel Giám thị (Proctor Surface)
+    900: '#0F172A', // Nền chính Dashboard Giám sát 3D / Phòng chờ
+    950: '#020617',
+  },
+
+  /**
+   * 4. MÀU NGỮ NGHĨA & TRẠNG THÁI HỆ THỐNG (SEMANTIC STATUS)
+   * Đã giảm độ chói để giữ sự điềm tĩnh trong phòng thi
+   */
+  status: {
+    success: {
+      light: '#ECFDF5',
+      border: '#A7F3D0',
+      main: '#059669', // Đã KYC APPROVED / Check-in hợp lệ / Đáp án đúng
+      dark: '#065F46',
+    },
+    warning: {
+      light: '#FFFBEB',
+      border: '#FDE68A',
+      main: '#D97706', // Nghi vấn (Suspicious) / Cờ xem lại câu hỏi / Đi muộn
+      dark: '#92400E',
+    },
+    danger: {
+      light: '#FEF2F2',
+      border: '#FECACA',
+      main: '#DC2626', // Vi phạm AI (Violation) / Tráo người (Impersonation)
+      dark: '#991B1B',
+    },
+    info: {
+      light: '#F0F9FF',
+      border: '#BAE6FD',
+      main: '#0284C7', // Đã nộp bài (Checkout) / Thông báo hệ thống
+      dark: '#075985',
+    },
+    proctorExemption: {
+      light: '#F5F3FF',
+      border: '#DDD6FE',
+      main: '#6D28D9', // Miễn trừ Giám thị ghé bàn (STAFF_EXEMPTION - 0đ trừ)
+      dark: '#4C1D95',
+    },
+  },
+
+  /**
+   * 5. MÀU TRẠNG THÁI BÀN THI 3D & MA TRẬN CÂU HỎI (DESK & QUESTION MATRIX)
+   * Ánh xạ trực tiếp với sinh_vien_ca_thi.trang_thai trong SYSTEM_BLUEPRINT
+   */
+  examDeskState: {
+    not_checkin: '#94A3B8',       // Xám đá: Chưa check-in
+    checkin: '#059669',           // Xanh ngọc trầm: Đang làm bài bình thường
+    suspicious: '#D97706',        // Vàng hổ phách: Điểm uy tín < 50 hoặc nghi vấn
+    suspended: '#EA580C',         // Cam trầm: Đình chỉ thi / Khóa bài làm
+    checkout: '#0284C7',          // Xanh dương dịu: Đã nộp bài hoàn tất
+    violation_blink: '#DC2626',   // Đỏ trầm: Phát hiện vi phạm mới
+    proctor_override: '#6D28D9',  // Tím nhã nhặn: Cán bộ coi thi đang kiểm tra tại bàn
+  },
+
+  /**
+   * 6. THANG MÀU ĐIỂM UY TÍN (REPUTATION / TRUST SCORE 0 - 100)
+   */
+  trustScore: {
+    excellent: '#059669', // 90 - 100 điểm (An toàn tuyệt đối - Chu kỳ cam 20s)
+    good: '#0D9488',      // 70 - 89 điểm (Ổn định - Chu kỳ cam 15s)
+    warning: '#D97706',   // 50 - 69 điểm (Cần lưu ý - Chu kỳ cam 10s)
+    critical: '#DC2626',  // < 50 điểm (Báo động đỏ / Nghi vấn cao)
+  },
+} as const;
+
+export type ExamGuardColorTheme = typeof EXAMGUARD_COLORS;
+export type DeskStatusKey = keyof typeof EXAMGUARD_COLORS.examDeskState;
+
+export const getTrustScoreColor = (score: number): string => {
+  if (score >= 90) return EXAMGUARD_COLORS.trustScore.excellent;
+  if (score >= 70) return EXAMGUARD_COLORS.trustScore.good;
+  if (score >= 50) return EXAMGUARD_COLORS.trustScore.warning;
+  return EXAMGUARD_COLORS.trustScore.critical;
+};
+```
+
+### 23.3. Tích Hợp Tailwind CSS v4 (`src/index.css`)
+
+```css
+@import "tailwindcss";
+
+@theme {
+  /* Màu chủ đạo thương hiệu ExamGuard AI (Academic Enterprise) */
+  --color-brand-primary: #1E40AF;
+  --color-brand-primary-hover: #1D4ED8;
+  --color-brand-navy: #1E3A8A;
+  --color-brand-dark: #0F172A;
+
+  /* Màu sinh trắc học AI (Khung quét mặt & Pose 3D) */
+  --color-biometric: #0D9488;
+  --color-biometric-light: #CCFBF1;
+
+  /* Màu nền dịu mắt cho phòng thi */
+  --color-exam-bg: #F8FAFC;
+  --color-exam-panel: #F1F5F9;
+  --color-proctor-bg: #0F172A;
+  --color-proctor-card: #1E293B;
+
+  /* Màu trạng thái chuẩn */
+  --color-status-safe: #059669;
+  --color-status-warn: #D97706;
+  --color-status-danger: #DC2626;
+  --color-status-proctor: #6D28D9;
+}
+```
+
+---
+
+## 24. ĐẶC TẢ CHI TIẾT 10 WORKFLOW TOÀN DIỆN CỦA TOÀN BỘ HỆ THỐNG (END-TO-END SYSTEM WORKFLOWS SPECIFICATION)
+
+Dưới đây là 10 luồng nghiệp vụ khép kín (End-to-End Workflows) vận hành toàn diện hệ sinh thái ExamGuard AI, từ khâu quản trị cơ sở đào tạo, đăng ký sinh trắc học căn cước số gốc, soạn thảo đề thi đến giám sát phòng thi, tự động thu bài và rà soát điểm số sau thi:
+
+```mermaid
+graph TD
+    W1[Workflow 1: Quản trị Phân cấp Cơ sở - Khoa - Lớp] --> W2[Workflow 2: KYC Sinh trắc học Căn cước Gốc]
+    W2 --> W3[Workflow 3: Quản lý Đề thi & Phân tích File Tự động]
+    W3 --> W4[Workflow 4: Lên Lịch Ca Thi & Xếp Sơ Đồ Chỗ Ngồi]
+    W4 --> W5[Workflow 5: Phòng Chờ Đếm Ngược & Mở Bàn Đặc Cách]
+    W5 --> W6[Workflow 6: Cổng Check-In Sinh Trắc Học Tại Bàn]
+    W6 --> W7[Workflow 7: Làm Bài Thi & Giám Sát Chống Gian Lận]
+    W7 --> W8[Workflow 8: Vòng Đời Ca Thi & Tự Động Thu Bài]
+    W8 --> W9[Workflow 9: Chấm Tự Động Strategy & Rà Soát 1 Lần]
+    W9 --> W10[Workflow 10: Công Bố Kết Quả & Tra Cứu Lời Giải]
+```
+
+---
+
+### Workflow 1: Quản Trị Tổ Chức Đào Tạo Phân Cấp (Hierarchical Academic Admin)
+1. **Mục tiêu:** Thiết lập cấu trúc dữ liệu cơ sở đào tạo chuẩn hóa phục vụ phân quyền và quản lý sinh viên.
+2. **Các bước tuần tự:**
+   - **Bước 1 (Cơ sở - Campus):** Admin tạo Cơ sở (ví dụ: Cơ sở Hà Nội - CS01).
+   - **Bước 2 (Khoa - Department):** Gắn Khoa vào Cơ sở (Khoa CNTT - FIT).
+   - **Bước 3 (Ngành & Khóa học - Course & Academic Batch):** Tạo Ngành Đào tạo (Kỹ thuật Phần mềm) và Khóa học (K23 - Niên khóa 2023–2027).
+   - **Bước 4 (Lớp học - Class):** Tạo Lớp sinh hoạt (K23CNT3) trực thuộc Khoa CNTT.
+   - **Bước 5 (Người dùng - Students & Teachers):** 
+     + Thêm Giảng viên (gán bộ môn, tài khoản đăng nhập).
+     + Import danh sách Sinh viên theo file Excel/CSV (MSSV, Họ tên, Email, Lớp).
+3. **Cơ chế dữ liệu:** Ràng buộc khóa ngoại nghiêm ngặt trên MySQL (`init_mysql.sql`) và đồng bộ Collections tương ứng trên MongoDB để truy vấn hiệu năng cao.
+
+---
+
+### Workflow 2: Thu Thập & Thẩm Định Sinh Trắc Học Căn Cước Số Gốc (Biometric Ground-Truth KYC)
+1. **Mục tiêu:** Thiết lập căn cước sinh trắc học gốc chuẩn xác làm thước đo đối chiếu duy nhất (Ground-Truth Baseline).
+2. **Các bước tuần tự:**
+   - **Bước 1:** Sinh viên / Giảng viên truy cập cổng `/face-kyc`.
+   - **Bước 2:** Hệ thống kích hoạt camera và yêu cầu quay 5 góc độ khuôn mặt theo hướng dẫn:
+     1. Nhìn thẳng (Straight)
+     2. Quay trái 30° (Turn Left)
+     3. Quay phải 30° (Turn Right)
+     4. Ngửa mặt 15° (Tilt Up)
+     5. Cúi mặt 15° (Tilt Down)
+   - **Bước 3:** Tại mỗi góc chụp, mô hình **MiniFASNet** chạy kiểm tra chống giả mạo (Anti-Spoofing Liveness). Từ chối 100% ảnh in trên giấy, ảnh hiển thị qua màn hình điện thoại hoặc video phát lại.
+   - **Bước 4:** Mô hình **ArcFace (ResNet-50 Backbone)** trích xuất Vector đặc trưng 512 chiều (Normalized L2-norm Vector).
+   - **Bước 5:** Lưu trữ an toàn trong DB (`faceDescriptor`, `faceAngles`, `facePhoto`). Admin kiểm tra và duyệt trạng thái `face_status = 'APPROVED'`.
+3. **Quy tắc Ground-Truth First:**
+   - Sinh viên bắt buộc phải có trạng thái `APPROVED` mới được xếp chỗ và phát đề thi.
+   - Giảng viên bắt buộc phải có trạng thái `APPROVED` mới được phân công làm Cán bộ Coi thi (để nạp vào Staff Whitelist).
+
+---
+
+### Workflow 3: Quản Lý Đề Thi, Nhận Diện File Tự Động & Chế Bản Đề (Exam Paper Authoring & Parsing)
+1. **Mục tiêu:** Soạn thảo và lưu trữ đề thi với cấu trúc đa dạng, bảo mật cao.
+2. **Các bước tuần tự:**
+   - **Bước 1:** Giảng viên chọn hình thức tạo đề:
+     + *Hình thức A (Chế bản Quiz chi tiết):* Nhập từng câu hỏi, kèm hình ảnh, mức điểm, đáp án đúng và lời giải thích chi tiết.
+     + *Hình thức B (Tải lên file đề thi PDF/DOCX):* Hệ thống sử dụng `examFileParser.js` tự động nhận diện câu hỏi, các phương án A/B/C/D, số lượng câu trắc nghiệm và tự luận.
+   - **Bước 2 (Kiến trúc đề hỗn hợp):** Đề thi có thể gồm:
+     + Câu hỏi trắc nghiệm đơn (`SINGLE`)
+     + Câu hỏi trắc nghiệm nhiều đáp án đúng (`MULTIPLE`)
+     + Câu hỏi tự luận (`ESSAY`)
+     + Câu hỏi lập trình trực tiếp (`CODING_PROBLEM`)
+   - **Bước 3 (Bảo mật đề thi):** Cấu hình cờ `shuffleQuestions` (xáo trộn thứ tự câu hỏi ngẫu nhiên cho từng thí sinh) và `shuffleOptions` (xáo trộn thứ tự các phương án A, B, C, D) nhằm triệt tiêu hoàn toàn hiện tượng nhìn bài nhau trong phòng thi.
+   - **Bước 4:** Đề thi được lưu vào Collection `ExamPaper` với trạng thái `APPROVED`.
+
+---
+
+### Workflow 4: Lên Lịch Ca Thi & Phân Bổ Sơ Đồ Chỗ Ngồi Phòng Thi (Exam Session & Seating Matrix)
+1. **Mục tiêu:** Khởi tạo ca thi hoàn chỉnh, cấp phát danh tính thi và vị trí bàn cho từng thí sinh.
+2. **Các bước tuần tự:**
+   - **Bước 1:** Admin / Khảo thí tạo ca thi (`POST /api/exam/sessions`):
+     + Chọn Đề thi (`examPaper`), Phòng thi (`room`), Môn thi (`subject`).
+     + Thiết lập Thời gian bắt đầu (`startTime`), Thời lượng làm bài (`durationMinutes`), Thời gian kết thúc (`endTime`).
+     + Phân công Cán bộ Coi thi (`proctors`).
+   - **Bước 2 (Phân bổ thí sinh & Sơ đồ bàn thi):**
+     + Gán danh sách sinh viên vào ca thi (`assignStudentsToSession`).
+     + Hệ thống thuật toán tự động cấp phát:
+       * **Số báo danh (SBD):** Mã phách duy nhất (ví dụ: `PHACH_A82F10`).
+       * **Mã PIN chỗ ngồi:** Mã 4 số ngẫu nhiên (ví dụ: `4821`).
+       * **Vị trí bàn thi:** Tọa độ Dãy/Hàng (`seatRow`) và Cột Bàn (`seatCol`) căn cứ theo kích thước phòng thi (Rows $\rightarrow$\times$\rightarrow$ Cols).
+   - **Bước 3 (Nạp Staff Biometric Whitelist):**
+     + Server trích xuất Vector ArcFace 512D của toàn bộ Cán bộ Coi thi được phân công trong ca thi.
+     + Nạp trước vào In-Memory Cache của ca thi để chuẩn bị cho cơ chế miễn trừ giám thị khi đi kiểm tra bàn.
+
+---
+
+### Workflow 5: Phòng Chờ (Countdown Waiting Room), Chặn Vào Muộn (>15p) & Mở Bàn Đặc Cách
+1. **Mục tiêu:** Đảm bảo tính đồng bộ thời gian thi, ngăn chặn lộ đề thi và xử lý ngoại lệ thí sinh đi muộn.
+2. **Các bước tuần tự:**
+   - **Bước 1 (Đến sớm - Phòng chờ):** Thí sinh truy cập trước giờ thi (`now < session.startTime`):
+     + Server trả về `isPreExamWaiting: true`, `countdownSeconds`, và `questions: []` (Zero-Knowledge, không để lộ câu hỏi ra frontend).
+     + Frontend hiển thị Đồng hồ đếm ngược Flip Clock (`HH:MM:SS`), soi camera kiểm tra đường truyền và nhắc nhở quy chế thi.
+   - **Bước 2 (Đến muộn quá 15 phút - Chặn vào phòng):**
+     + Nếu thí sinh truy cập khi `now > startTime + 15 phút`:
+     + Server trả về `isLateBlocked: true`.
+     + Giao diện khóa buồng thi, thông báo thí sinh đã vi phạm quy chế điểm danh và hướng dẫn liên hệ Giám thị.
+   - **Bước 3 (Giám thị Mở bàn Đặc cách):**
+     + Nếu thí sinh có lý do chính đáng (sự cố giao thông, chuyển phòng thi có xác nhận):
+     + Giám thị thao tác trên màn hình `LiveProctor.tsx`, bấm nút **"Mở Bàn Đặc Cách"**:
+       * Nhập lý do đặc cách (Lưu vết kiểm toán).
+       * Chọn bù giờ: 0 phút (kết thúc cùng ca), +5 phút, +10 phút, +15 phút.
+     + Server cập nhật `isLateUnlocked = true`, ghi log kiểm toán vào `ExamViolation` với loại `PROCTOR_INSPECTION` (0đ phạt).
+     + Socket.IO phát sự kiện `student:late_unlocked` $\rightarrow$ightarrow$\rightarrow$ Màn hình thí sinh lập tức tự động mở khóa và tải đề thi.
+
+---
+
+### Workflow 6: Cổng Check-In Sinh Trắc Học Tại Chỗ Ngồi (Face Check-In Gate)
+1. **Mục tiêu:** Xác thực 1:1 khuôn mặt người ngồi trước máy tính với hồ sơ sinh trắc học gốc và vị trí bàn được phân bổ trước khi mở bài thi.
+2. **Các bước tuần tự:**
+   - **Bước 1:** Thí sinh ngồi vào bàn thi đã được chỉ định (ví dụ Bàn H2-C4).
+   - **Bước 2:** Giao diện hiển thị Cổng Check-In Sinh Trắc Học toàn màn hình (`FaceCheckInGate.tsx`):
+     + Trình duyệt khởi động webcam và hiển thị khung ngắm hình Oval HUD kèm vạch quét Laser.
+     + Thẻ thông tin hiển thị rõ: Họ tên, MSSV, SBD, Vị trí bàn (`H2-C4`), Mã PIN.
+   - **Bước 3:** Thí sinh nhìn thẳng camera và bấm nút **"Quét Khuôn Mặt Điểm Danh Vào Thi"**.
+   - **Bước 4:**
+     + Trích xuất frame ảnh từ webcam, gửi lên `POST /api/proctor/verify-checkin`.
+     + AI trích xuất vector khuôn mặt hiện tại và tính **Cosine Similarity** với Vector Gốc của thí sinh đó:
+       $\rightarrow$$\rightarrow$\text{Similarity} = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$\rightarrow$$\rightarrow$
+   - **Bước 5:**
+     + Nếu $\rightarrow$\text{Similarity} \ge 0.75$\rightarrow$: Hệ thống thông báo thành công (`Độ khớp sinh trắc học: 92%`), âm thanh chuông báo chuẩn, lưu `hasFaceCheckedIn = true` và tự động mở giao diện đề thi sau 1.2 giây.
+     + Nếu $\rightarrow$\text{Similarity} < 0.75$\rightarrow$: Báo lỗi đỏ, phát âm thanh cảnh báo, yêu cầu thí sinh kiểm tra lại ánh sáng hoặc liên hệ Giám thị (ngăn ngừa 100% tình trạng thi hộ tại cổng).
+
+---
+
+### Workflow 7: Quá Trình Làm Bài Thi & Chống Gian Lận Đa Tầng (Candidate Workspace & Anti-Cheat Engine)
+1. **Mục tiêu:** Cung cấp môi trường làm bài thi tối ưu, không che khuất, đồng thời giám sát an ninh chặt chẽ theo thời gian thực.
+2. **Các bước tuần tự:**
+   - **Bước 1 (Giao diện làm bài chia đôi - No Scrolling Interference):**
+     + Đề thi hiển thị bên trái (phóng to/thu nhỏ font chữ tùy ý).
+     + Phiếu trả lời trắc nghiệm OMR Bubble Sheet và trình soạn thảo tự luận hiển thị bên phải.
+     + Tự động lưu bài làm (Auto-Save) định kỳ mỗi 15 giây lên server.
+   - **Bước 2 (Chống gian lận trình duyệt qua Hook `useAntiCheat`):**
+     + Vô hiệu hóa chuột phải (`contextmenu`), cấm sao chép/dán (`copy`, `paste`, `cut`).
+     + Chặn các phím tắt nguy hiểm: `F12`, `Ctrl+Shift+I` (DevTools), `Alt+Tab`, `Ctrl+Tab`, phím Windows.
+     + Cưỡng chế chế độ Toàn màn hình (`Fullscreen`). Bất kỳ hành vi thoát fullscreen hoặc chuyển tab trình duyệt (`visibilitychange`) đều bị ghi nhận ngay lập tức.
+   - **Bước 3 (Thanh Cảnh Báo Top Màn Hình - `TopWarningBanner`):**
+     + Khi phát hiện vi phạm hoặc nhận nhắc nhở từ Giám thị:
+     + Thanh trạng thái mỏng trượt nhẹ từ mép trên cùng màn hình.
+     + Hiển thị: Lý do vi phạm, số điểm uy tín bị trừ (ví dụ `-10đ`), điểm uy tín hiện tại.
+     + Thí sinh không bị gián đoạn bài làm, vẫn quan sát và thao tác được 100% đề thi bên dưới, thanh tự tắt sau 8 giây.
+   - **Bước 4 (Giám sát Camera AI Adaptive Interval):**
+     + Trình duyệt tự động chụp frame camera gửi lên `POST /api/proctor/inspect-frame` theo tần suất thích ứng: Uy tín $\rightarrow$\ge 90 \rightarrow 20\text{s}$\rightarrow$, uy tín $\rightarrow$70-89 \rightarrow 15\text{s}$\rightarrow$, uy tín $\rightarrow$< 70 \rightarrow 10\text{s}$\rightarrow$.
+     + AI phân tích: Hướng mặt 3D (Yaw, Pitch, Roll), phát hiện điện thoại, phát hiện không có người hoặc nhiều người.
+   - **Bước 5 (Miễn trừ Giám thị - Staff Exemption):**
+     + Khi Giám thị đến gần bàn thí sinh để kiểm tra máy hoặc ký biên bản, camera phát hiện $\rightarrow$\ge 2$\rightarrow$ khuôn mặt.
+     + Hệ thống so khớp khuôn mặt thứ 2 với **Staff Biometric Whitelist**. Trùng khớp $\rightarrow$\rightarrow$ Kích hoạt `STAFF_EXEMPTION` (**0đ phạt**), ghi log thông tin giám thị, tuyệt đối không trừ oan điểm uy tín của thí sinh.
+
+---
+
+### Workflow 8: Vòng Đời Ca Thi & Tự Động Thu Bài (Exam Lifecycle & Auto-Submit)
+1. **Mục tiêu:** Khóa buồng thi đúng thời hạn, đảm bảo không có ca thi nào bị "mở mãi" và thu bài trọn vẹn của 100% thí sinh.
+2. **Các bước tuần tự:**
+   - **Trường hợp A (Thí sinh chủ động nộp bài):**
+     + Thí sinh bấm "Nộp Bài Thi" ➔ Hiển thị modal xác nhận thống kê số câu đã làm / chưa làm ➔ Bấm xác nhận nộp.
+   - **Trường hợp B (Hết giờ thi theo lịch - `now >= endTime`):**
+     + Hệ thống kích hoạt cơ chế Tự động thu bài (Auto-Submit Engine).
+   - **Trường hợp C (Giám thị đóng ca thi thủ công):**
+     + Giám thị bấm nút "Kết thúc ca thi & Đóng buồng thi" trên `LiveProctor.tsx`.
+   - **Xử lý thu bài đồng loạt:**
+     + Toàn bộ thí sinh có trạng thái `IN_EXAM` hoặc `CHECKED_IN` được chuyển ngay sang `SUBMITTED`.
+     + Đóng băng dữ liệu bài làm, không cho phép chỉnh sửa đáp án.
+     + Socket.IO phát sự kiện `session:ended` tới toàn bộ máy trạm thí sinh.
+     + Màn hình thí sinh lập tức dừng đếm ngược và hiển thị thông báo: **"✓ BÀI LÀM ĐÃ ĐƯỢC THU NHẬN AN TOÀN — Buồng thi đã đóng và niêm phong"**.
+
+---
+
+### Workflow 9: Tự Động Chấm Điểm Theo Strategy Pattern & Rà Soát Điểm 1 Lần (Scoring Strategy & Post-Exam Review)
+1. **Mục tiêu:** Chấm điểm trắc nghiệm khách quan tức thì, hỗ trợ Giảng viên rà soát chất lượng đề thi và điều chỉnh sai sót đáp án sau thi.
+2. **Các bước tuần tự:**
+   - **Bước 1 (Chấm tự động theo Strategy Pattern):**
+     + Ngay khi bài thi được nộp, `ScoringStrategyFactory` tự động gọi chiến lược tương ứng:
+       * `MultipleChoiceScoringStrategy`: Chấm từng câu trắc nghiệm (đơn, đa đáp án, alternative keys), tính `autoGradeTotal`.
+       * `EssayScoringStrategy`: Đánh dấu trạng thái `PENDING_REVIEW` chờ giảng viên chấm tay.
+     + Cập nhật trạng thái ca thi sang `AUTO_GRADED`.
+   - **Bước 2 (Giảng viên thực hiện Rà soát 1 lần - Item Analysis):**
+     + Giảng viên truy cập cổng `/grading/review/:sessionId`.
+     + Hệ thống cung cấp bảng phân tích từng câu hỏi:
+       * Tỷ lệ chọn các phương án A, B, C, D.
+       * Độ khó câu hỏi ($\rightarrow$P$\rightarrow$).
+       * **Chỉ số phân biệt (Item Discrimination Index - $\rightarrow$D$\rightarrow$):** So sánh tỷ lệ làm đúng giữa nhóm 27% điểm cao nhất và nhóm 27% điểm thấp nhất. Nếu $\rightarrow$D < 0.20$\rightarrow$ $\rightarrow$\rightarrow$ Cảnh báo câu hỏi có vấn đề (đáp án sai hoặc câu hỏi gây hiểu nhầm).
+   - **Bước 3 (Điều chỉnh đáp án sau thi):**
+     + Nếu phát hiện đề in nhầm: Giảng viên có thể điều chỉnh đáp án:
+       * Thêm phương án đúng (công nhận cả A và C).
+       * Cho điểm toàn bộ thí sinh (`ALL_CORRECT`).
+     + Hệ thống tự động tính lại điểm (`recalculateAllScores`) cho toàn bộ thí sinh trong ca thi trong vòng dưới 1 giây.
+   - **Bước 4 (Phê duyệt điểm chính thức):**
+     + Giảng viên sau khi hài lòng bấm nút **"Phê Duyệt & Niêm Phong Điểm Số"** (`batchApproveGrading`).
+     + Điểm chuyển sang trạng thái `FINALIZED`.
+
+---
+
+### Workflow 10: Công Bố Kết Quả & Tra Cứu Giải Thích Chi Tiết (Results & Explanations)
+1. **Mục tiêu:** Đảm bảo tính minh bạch học thuật, giúp sinh viên học hỏi từ sai sót và nắm vững kiến thức môn học.
+2. **Các bước tuần tự:**
+   - **Bước 1:** Khi ca thi được chuyển sang trạng thái `RESULTS_PUBLISHED`, sinh viên truy cập cổng `/exam/results/:sessionStudentId`.
+   - **Bước 2:** Màn hình kết quả hiển thị tổng quan:
+     + Điểm số chính thức (trên thang điểm 10.0).
+     + Điểm trắc nghiệm máy chấm, điểm tự luận giảng viên chấm.
+     + Điểm uy tín kết thúc ca thi (Trust Score).
+     + Số câu làm đúng, số câu làm sai, số câu bỏ qua.
+   - **Bước 3 (Bảng giải thích đáp án chi tiết):**
+     + Sinh viên có thể đối chiếu từng câu hỏi:
+       * Phương án thí sinh đã chọn (tô màu xanh nếu đúng, màu đỏ nếu sai).
+       * Đáp án chính xác theo thang điểm của bộ môn.
+       * Lời giải thích chi tiết, cơ sở lý thuyết và tài liệu tham khảo cho từng câu hỏi.
+     + Hỗ trợ nút **"Xuất Báo Cáo Kết Quả Thi (PDF/In)"** làm căn cứ lưu trữ và khiếu nại điểm (nếu có).
+
+---
+
+*Blueprint version 3.3 — Cập nhật toàn diện: 2026-10-20*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
-*Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/package.json`, `examguard-ai/requirements.txt`, `run_system.bat`*
-
-
-
+*Kiến trúc bổ sung: **SOLID Principles, Layered Clean Architecture, Strategy Pattern Scoring, Non-Intrusive Biometric Exam Guarding, Enterprise Academic Palette (Non-Gaudy)**.*  
+*Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/src/theme/colors.ts`, `examguard-core/server/services/`, `examguard-core/server/strategies/`*

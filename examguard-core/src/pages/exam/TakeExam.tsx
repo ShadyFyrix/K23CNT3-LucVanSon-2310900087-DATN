@@ -20,6 +20,7 @@ import {
   Sparkles,
   HelpCircle,
   FileCheck2,
+  Calendar,
   Eye,
   AlertCircle,
   Zap,
@@ -52,12 +53,25 @@ import {
   Lock,
   Unlock,
   Hourglass,
-  ArrowRight
+  ArrowRight,
+  ScanFace,
+  Sun,
+  Moon,
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { io, Socket } from 'socket.io-client';
 import { apiClient } from '../../api/apiClient';
+import { useQuizSound } from './hooks/useQuizSound';
+import { useAntiCheat } from './hooks/useAntiCheat';
+import { TopWarningBanner } from './components/TopWarningBanner';
+import { FaceCheckInGate } from './components/FaceCheckInGate';
+import { MathSymbolKeyboard } from './components/MathSymbolKeyboard';
+import { NovageniusQuestionMatrix } from './components/NovageniusQuestionMatrix';
+import { useTheme } from '../../context/ThemeContext';
+const officialLogo = '/logo.png';
 
 interface Question {
   stt: number;
@@ -76,6 +90,33 @@ interface Question {
   testCases?: Array<{ input: string; expectedOutput: string }>;
 }
 
+export interface StudentSessionItem {
+  id: string;
+  candidateCode: string;
+  seatRow: number;
+  seatCol: number;
+  seatPin?: string;
+  status: string;
+  trustScore: number;
+  officialScore?: number;
+  session: {
+    id: string;
+    code: string;
+    title: string;
+    subjectName?: string;
+    roomName: string;
+    startTime: string;
+    endTime: string;
+    durationMinutes: number;
+    status: string;
+    gradingStatus?: string;
+  };
+  isEnded: boolean;
+  isUpcoming: boolean;
+  isHappening: boolean;
+  countdownSeconds: number;
+}
+
 interface ExamData {
   isSessionEnded?: boolean;
   endedAt?: string;
@@ -86,6 +127,9 @@ interface ExamData {
   lateMinutes?: number;
   serverTime?: string;
   startTime?: string;
+  todaySessions?: StudentSessionItem[];
+  nextSession?: StudentSessionItem | null;
+  hasActiveExamNow?: boolean;
   examStudent: {
     id: string;
     candidateCode: string;
@@ -97,6 +141,7 @@ interface ExamData {
     extraTimeMinutes: number;
     isLateUnlocked?: boolean;
     status?: string;
+    checkinAt?: string;
   };
   student: {
     id: string;
@@ -149,6 +194,10 @@ export default function TakeExam() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'PROCTOR' | 'NAVIGATOR'>('NAVIGATOR');
+  const [showMathKeyboard, setShowMathKeyboard] = useState(true);
 
   // Tính năng Chế độ làm bài: Chia đôi (File Đề thi & Phiếu tô OMR) hoặc Thẻ Quiz từng câu
   const [workspaceMode, setWorkspaceMode] = useState<'SPLIT_FILE' | 'QUIZ_CARDS'>('QUIZ_CARDS');
@@ -159,6 +208,23 @@ export default function TakeExam() {
   const [filterTab, setFilterTab] = useState<'ALL' | 'ANSWERED' | 'UNANSWERED' | 'FLAGGED'>('ALL');
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const handleInsertMathSymbol = (symbol: string) => {
+    if (!examData) return;
+    const currentQ = examData.questions[currentIdx];
+    const qId = currentQ._id;
+    const currentVal = answers[qId] !== undefined ? answers[qId] : answers[currentIdx];
+
+    if (currentQ.type === 'ESSAY') {
+      const prevText = typeof currentVal === 'object' ? (currentVal?.text || '') : (currentVal || '');
+      const newText = prevText + symbol;
+      handleTextChange(qId, newText);
+      toast.success(`Đã chèn ký hiệu "${symbol}"`);
+    } else {
+      navigator.clipboard?.writeText(symbol);
+      toast.success(`Đã chép ký hiệu "${symbol}" vào clipboard`);
+    }
+  };
 
   // Webcam & AI state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -194,44 +260,72 @@ export default function TakeExam() {
     return () => clearTimeout(timer);
   }, [securityAlert]);
 
-  // Bộ phát âm thanh tổng hợp (Web Audio API - không phụ thuộc file ngoài)
-  const playQuizSound = (type: 'select' | 'flag' | 'warning' | 'finish') => {
-    if (!soundEnabled) return;
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+  // Trạng thái Quét & Xác thực Khuôn mặt Check-in trước khi vào thi (Face Check-In Gate)
+  const [hasFaceCheckedIn, setHasFaceCheckedIn] = useState<boolean>(() => {
+    const key = `face_checkedin_${sessionStudentId || 'current'}`;
+    return sessionStorage.getItem(key) === 'true';
+  });
+  const [isFaceCheckingIn, setIsFaceCheckingIn] = useState<boolean>(false);
+  const [faceCheckinError, setFaceCheckinError] = useState<string | null>(null);
+  const [faceSimilarity, setFaceSimilarity] = useState<number | null>(null);
 
-      if (type === 'select') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-        osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.08); // G5
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
-      } else if (type === 'flag') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.12);
-      } else if (type === 'warning') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, ctx.currentTime);
-        osc.frequency.setValueAtTime(174.61, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
+  // Tự động công nhận đã checkin nếu DB đã có checkinAt hoặc status là IN_EXAM/SUBMITTED
+  useEffect(() => {
+    if (examData?.examStudent?.checkinAt || examData?.examStudent?.status === 'IN_EXAM' || examData?.examStudent?.status === 'SUBMITTED') {
+      setHasFaceCheckedIn(true);
+    }
+  }, [examData]);
+
+  // Xử lý quét khuôn mặt và đối chiếu danh tính + chỗ ngồi
+  const handleFaceCheckIn = async () => {
+    if (!videoRef.current) {
+      toast.error('Webcam chưa sẵn sàng!');
+      return;
+    }
+    setIsFaceCheckingIn(true);
+    setFaceCheckinError(null);
+    try {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       }
-    } catch (_) {}
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+      const targetId = examData?.examStudent?.id || sessionStudentId;
+      const res = await apiClient.post('/api/proctor/verify-checkin', {
+        sessionStudentId: targetId,
+        image_base64: imageBase64
+      });
+
+      if (res.data?.success && res.data?.verified) {
+        const sim = res.data.similarity || 92;
+        setFaceSimilarity(sim);
+        playQuizSound('finish');
+        toast.success(`Xác thực khuôn mặt thành công! Độ khớp: ${sim}%`);
+        sessionStorage.setItem(`face_checkedin_${sessionStudentId || 'current'}`, 'true');
+        setTimeout(() => {
+          setHasFaceCheckedIn(true);
+        }, 1200);
+      } else {
+        setFaceCheckinError(res.data?.message || 'Khuôn mặt không khớp với hồ sơ thí sinh ngồi bàn này!');
+        playQuizSound('warning');
+      }
+    } catch (err: any) {
+      console.error('Lỗi checkin:', err);
+      const msg = err.response?.data?.message || err.message || 'Lỗi kết nối máy chủ AI!';
+      setFaceCheckinError(msg);
+      playQuizSound('warning');
+    } finally {
+      setIsFaceCheckingIn(false);
+    }
   };
+
+  // Bộ phát âm thanh tổng hợp (Tuân thủ SRP - Web Audio API Hook)
+  const { playQuizSound } = useQuizSound(soundEnabled);
 
   // Quản lý Đếm ngược Giờ vào thi (Countdown Waiting Room) & Chặn Vào Phòng khi Đi Muộn (>15p)
   const [isPreExamWaiting, setIsPreExamWaiting] = useState(false);
@@ -241,12 +335,12 @@ export default function TakeExam() {
   const [isSessionEnded, setIsSessionEnded] = useState(false);
 
   // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn / Ca thi kết thúc
-  const fetchExam = async (silent = false) => {
+  const fetchExam = async (silent = false, customStudentId?: string) => {
     try {
-      if (!silent && !examData) {
+      if (!silent) {
         setLoading(true);
       }
-      const targetId = sessionStudentId || 'fallback_student';
+      const targetId = customStudentId || sessionStudentId || 'fallback_student';
       const res = await apiClient.get(`/api/exam/questions/${targetId}`);
       if (res.data && res.data.success) {
         const data: ExamData = res.data.data;
@@ -451,70 +545,13 @@ export default function TakeExam() {
     } catch (_) {}
   };
 
-  // 3. Giám sát chống gian lận đa tầng: Tab switch, Chuột phải, Copy/Paste, DevTools F12
-  useEffect(() => {
-    if (!examData) return;
-
-    // A. Chuyển tab / thu nhỏ trình duyệt
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerAntiCheatEvent('TAB_SWITCH', { action: 'hidden' });
-      }
-    };
-
-    // B. Chặn chuột phải (Context Menu)
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      triggerAntiCheatEvent('RIGHT_CLICK', { x: e.clientX, y: e.clientY });
-    };
-
-    // C. Chặn Copy, Paste, Cut
-    const handleCopyPaste = (e: ClipboardEvent) => {
-      e.preventDefault();
-      triggerAntiCheatEvent('COPY_PASTE', { type: e.type });
-    };
-
-    // D. Chặn DevTools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, PrintScreen)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
-        (e.ctrlKey && ['u', 'U'].includes(e.key))
-      ) {
-        e.preventDefault();
-        triggerAntiCheatEvent('DEVTOOLS_OPEN', { key: e.key });
-      } else if (e.key === 'PrintScreen') {
-        triggerAntiCheatEvent('FULLSCREEN_EXIT', { key: 'PrintScreen' });
-        toast.error('CẢNH BÁO: Nghiêm cấm chụp màn hình bài thi!', { icon: '🚫' });
-      }
-    };
-
-    // E. Thoát Fullscreen
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && isFullscreen) {
-        setIsFullscreen(false);
-        triggerAntiCheatEvent('FULLSCREEN_EXIT', { time: new Date() });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('copy', handleCopyPaste);
-    document.addEventListener('paste', handleCopyPaste);
-    document.addEventListener('cut', handleCopyPaste);
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('copy', handleCopyPaste);
-      document.removeEventListener('paste', handleCopyPaste);
-      document.removeEventListener('cut', handleCopyPaste);
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, [examData, isFullscreen]);
+  // 3. Giám sát chống gian lận đa tầng (Tuân thủ SRP - Anti-Cheat Security Hook)
+  useAntiCheat({
+    enabled: Boolean(examData && !isPreExamWaiting && !isLateBlocked && !isSessionEnded),
+    onViolation: triggerAntiCheatEvent,
+    isFullscreen,
+    setIsFullscreen
+  });
 
   // 4. Gửi frame camera định kỳ lên server để phân tích AI (Adaptive Interval theo điểm uy tín)
   useEffect(() => {
@@ -1489,6 +1526,138 @@ export default function TakeExam() {
               </p>
             </div>
 
+            {/* ── CARD CA THI KẾ TIẾP CỦA THÍ SINH (2 MÔN THI LIÊN TIẾP NHAU) ── */}
+            {examData?.nextSession && (
+              <div className="bg-gradient-to-r from-purple-950/70 via-indigo-950/80 to-cyan-950/70 border border-purple-500/40 rounded-2xl p-4 text-left shadow-xl relative overflow-hidden ring-1 ring-purple-500/30">
+                <div className="flex items-center justify-between pb-2 border-b border-purple-500/30 mb-2.5">
+                  <span className="text-xs font-bold text-purple-300 flex items-center space-x-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>CA THI KẾ TIẾP TRONG NGÀY HÔM NAY:</span>
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                    examData.nextSession.isHappening 
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 animate-pulse'
+                      : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                  }`}>
+                    {examData.nextSession.isHappening ? '🟢 PHÒNG THI ĐANG MỞ' : '⏳ SẮP DIỄN RA'}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white">
+                    {examData.nextSession.session.title}
+                  </h4>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-300">
+                    <span>Phòng: <b className="text-cyan-400 font-mono">{examData.nextSession.session.roomName}</b></span>
+                    <span>•</span>
+                    <span>Giờ thi: <b className="text-white font-mono">{new Date(examData.nextSession.session.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(examData.nextSession.session.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</b></span>
+                    <span>•</span>
+                    <span>SBD: <b className="text-cyan-300 font-mono">{examData.nextSession.candidateCode}</b></span>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="text-[11px] text-slate-400">
+                    {examData.nextSession.isHappening ? (
+                      <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1" />
+                        Đã đến giờ thi! Bấm nút để vào phòng thi
+                      </span>
+                    ) : (
+                      <span>Đếm ngược giờ mở đề: <b className="text-amber-400 font-mono font-bold">{Math.floor(examData.nextSession.countdownSeconds / 60)} phút {examData.nextSession.countdownSeconds % 60}s</b></span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const nextId = examData.nextSession?.id;
+                      if (nextId) {
+                        navigate(`/take-exam/${nextId}`);
+                        fetchExam(false, nextId);
+                      }
+                    }}
+                    className="py-2 px-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center justify-center space-x-1.5 active:scale-95"
+                  >
+                    <span>Vào Phòng Thi Môn Kế Tiếp</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── LỘ TRÌNH CÁC MÔN THI TRONG NGÀY CỦA THÍ SINH (NẾU CÓ TỪ 2 CA THI) ── */}
+            {examData?.todaySessions && examData.todaySessions.length > 1 && (
+              <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 text-left">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>LỘ TRÌNH THI TRONG NGÀY ({examData.todaySessions.length} CA THI):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">Quy chế: 1 ca / khung giờ</span>
+                </div>
+
+                <div className="space-y-2">
+                  {examData.todaySessions.map((ts, idx) => {
+                    const isCurrent = ts.id.toString() === examData.examStudent?.id?.toString();
+                    return (
+                      <div
+                        key={ts.id}
+                        className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                          isCurrent
+                            ? 'bg-slate-900 border-cyan-500/30'
+                            : ts.isHappening
+                            ? 'bg-emerald-950/30 border-emerald-500/40'
+                            : 'bg-slate-900/40 border-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2.5">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono ${
+                            isCurrent ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-300'
+                          }`}>
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <div className="font-bold text-slate-200">
+                              {ts.session.title}
+                              {isCurrent && <span className="text-[10px] text-cyan-400 ml-1.5 font-normal">(Ca hiện tại)</span>}
+                            </div>
+                            <div className="text-[10px] text-slate-400 flex items-center space-x-2">
+                              <span>{new Date(ts.session.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(ts.session.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>•</span>
+                              <span>{ts.session.roomName}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          {ts.isEnded ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
+                              ✓ Đã nộp
+                            </span>
+                          ) : ts.isHappening ? (
+                            <button
+                              onClick={() => {
+                                navigate(`/take-exam/${ts.id}`);
+                                fetchExam(false, ts.id);
+                              }}
+                              className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center space-x-1"
+                            >
+                              <span>Vào thi</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-medium">
+                              Sắp tới ({Math.floor(ts.countdownSeconds / 60)}p)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
@@ -1553,112 +1722,187 @@ export default function TakeExam() {
     );
   }
 
+  // ── CỔNG XÁC THỰC KHUÔN MẶT & ĐIỂM DANH CHỖ NGỒI (FACE CHECK-IN GATE - SRP) ──
+  if (!hasFaceCheckedIn) {
+    return (
+      <FaceCheckInGate
+        examData={examData}
+        bindVideoRef={bindVideoRef}
+        cameraActive={cameraActive}
+        isFaceCheckingIn={isFaceCheckingIn}
+        faceCheckinError={faceCheckinError}
+        faceSimilarity={faceSimilarity}
+        onFaceCheckIn={handleFaceCheckIn}
+      />
+    );
+  }
+
   const currentQ = examData.questions[currentIdx];
   const qId = currentQ._id;
   const currentVal = answers[qId] !== undefined ? answers[qId] : answers[currentIdx];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+    <div className={`h-screen overflow-hidden flex flex-col font-sans select-none transition-colors duration-200 ${
+      isDark ? 'bg-[#0B0F19] text-slate-100' : 'bg-slate-50 text-slate-800'
+    }`}>
       {/* Hidden canvas for webcam frame extraction */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* ── TOP HEADER ── */}
-      <header className="h-16 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-white tracking-wide text-sm">EXAMGUARD AI</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                <span>SECURE EXAM MODE</span>
-              </span>
+      {/* ── TOP HEADER (STYLED AFTER IMAGE 1 & IMAGE 4) ── */}
+      <header className={`h-16 px-4 sm:px-6 flex items-center justify-between z-20 shrink-0 border-b backdrop-blur-md transition-colors ${
+        isDark ? 'bg-slate-900/90 border-slate-800/80' : 'bg-white/95 border-slate-200 shadow-xs'
+      }`}>
+        {/* LEFT: Safe Exit button + Brand Logo */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <button
+            type="button"
+            onClick={() => setShowExitConfirmModal(true)}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+              isDark
+                ? 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-700 hover:text-slate-900'
+            }`}
+            title="Rời khỏi phòng thi an toàn"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden sm:inline">Rời phòng</span>
+          </button>
+
+          <div className="h-5 w-px bg-slate-300 dark:bg-slate-800 hidden sm:block"></div>
+
+          <div className="flex items-center space-x-2.5">
+            <img src={officialLogo} alt="ExamGuard AI" className="w-8 h-8 object-contain rounded-lg" />
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-extrabold tracking-wide text-xs sm:text-sm text-slate-900 dark:text-white">
+                  EXAMGUARD <span className="text-teal-600 dark:text-teal-400">AI</span>
+                </span>
+                <span className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-ping"></span>
+                  <span>PHÒNG THI AN NINH</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-xs">{examData.session.title}</p>
             </div>
-            <p className="text-xs text-slate-400 truncate max-w-xs">{examData.session.title}</p>
           </div>
         </div>
 
-        {/* Chế độ làm bài Switcher (Đề thi & Phiếu OMR vs Thẻ Quiz) */}
-        <div className="hidden lg:flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs shadow-inner">
+        {/* CENTER: Workspace Mode Switcher & Digital Countdown Timer (Image 4 Novagenius) */}
+        <div className="flex items-center space-x-3">
+          {/* Chế độ làm bài Switcher */}
+          <div className={`hidden lg:flex items-center p-1 rounded-xl border text-xs shadow-inner ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
+            <button
+              onClick={() => setWorkspaceMode('SPLIT_FILE')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+                workspaceMode === 'SPLIT_FILE'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+              title="Split View: Xem tài liệu đề thi song song với công thức và bài làm"
+            >
+              <Columns className="w-3.5 h-3.5" />
+              <span>Split View (Đề & Công thức)</span>
+            </button>
+            <button
+              onClick={() => setWorkspaceMode('QUIZ_CARDS')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+                workspaceMode === 'QUIZ_CARDS'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+              title="Novagenius Quiz: Thẻ câu hỏi trắc nghiệm tương tác"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Thẻ Quiz Từng Câu</span>
+            </button>
+          </div>
+
+          {/* Digital Timer Pill (Image 4 Novagenius) */}
+          <div className={`flex items-center space-x-2 px-3 sm:px-4 py-1.5 rounded-full border text-xs font-mono font-bold transition-all shadow-xs ${
+            timeLeft < 300
+              ? 'bg-rose-500/10 border-rose-500/40 text-rose-500 animate-pulse'
+              : isDark
+              ? 'bg-slate-900 border-slate-800 text-teal-300'
+              : 'bg-white border-slate-200 text-teal-700'
+          }`}>
+            <Clock className="w-3.5 h-3.5 text-teal-500" />
+            <span className="text-sm font-extrabold">{formatTime(timeLeft)}</span>
+            <span className="text-[10px] text-slate-400 font-sans hidden sm:inline">
+              / {examData.session.durationMinutes}:00
+            </span>
+          </div>
+        </div>
+
+        {/* RIGHT: Candidate Profile Badge, Theme Switcher & Submit CTA */}
+        <div className="flex items-center space-x-2 sm:space-x-2.5">
+          {/* Candidate Profile Pill (Image 1 style) */}
+          <div className={`hidden xl:flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'
+          }`}>
+            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
+              {examData.student.name?.slice(0, 2).toUpperCase() || 'TS'}
+            </div>
+            <div className="text-left">
+              <span className="font-semibold block text-xs leading-none text-slate-800 dark:text-slate-200">{examData.student.name}</span>
+              <span className="text-[10px] text-slate-400 font-mono">SBD: {examData.examStudent.candidateCode}</span>
+            </div>
+          </div>
+
+          {/* Nút chuyển chế độ Sáng / Tối */}
           <button
-            onClick={() => setWorkspaceMode('SPLIT_FILE')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg font-medium transition ${
-              workspaceMode === 'SPLIT_FILE'
-                ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-md font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+            onClick={toggleTheme}
+            className={`p-2 rounded-xl border transition ${
+              isDark
+                ? 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-amber-400'
+                : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
-            title="Chế độ Chia đôi: Xem File đề thi song song với Phiếu tô trắc nghiệm OMR"
+            title={isDark ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
           >
-            <Columns className="w-3.5 h-3.5" />
-            <span>Đề Thi & Phiếu OMR</span>
-            {examData.examPaper?.paperType === 'FILE_ATTACHED' && (
-              <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse"></span>
-            )}
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
-          <button
-            onClick={() => setWorkspaceMode('QUIZ_CARDS')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg font-medium transition ${
-              workspaceMode === 'QUIZ_CARDS'
-                ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-md font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Chế độ Từng câu: Thẻ câu hỏi trắc nghiệm tương tác"
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Thẻ Quiz Từng Câu</span>
-          </button>
-        </div>
 
-        {/* Thanh tiến độ làm bài */}
-        <div className="hidden md:flex items-center space-x-4">
-          <div className="text-right">
-            <span className="text-xs text-slate-400">Tiến độ bài thi:</span>
-            <span className="text-xs font-bold text-cyan-400 ml-1.5">{answeredCount}/{totalCount} câu ({progressPercent}%)</span>
-          </div>
-          <div className="w-36 lg:w-44 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
-            <div
-              className="h-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-emerald-400 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Nút công cụ & Nộp bài */}
-        <div className="flex items-center space-x-2">
           {/* Nút bật tắt âm thanh */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition"
+            className={`p-2 rounded-xl border transition ${
+              isDark
+                ? 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-600 hover:text-slate-900'
+            }`}
             title={soundEnabled ? 'Tắt âm thanh hiệu ứng' : 'Bật âm thanh hiệu ứng'}
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+            {soundEnabled ? <Volume2 className="w-4 h-4 text-teal-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
           </button>
 
           {/* Nút toàn màn hình */}
           <button
             onClick={toggleFullscreen}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition"
+            className={`p-2 rounded-xl border transition ${
+              isDark
+                ? 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-600 hover:text-slate-900'
+            }`}
             title={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
 
-          {/* Nút nộp bài */}
+          {/* Nút Nộp bài thi CTA chính thức */}
           <button
             onClick={() => setShowSubmitModal(true)}
             disabled={isSubmitting}
-            className="flex items-center space-x-2 px-4 sm:px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition active:scale-95 disabled:opacity-50"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-teal-600/20 transition active:scale-95 disabled:opacity-50"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            <span>NỘP BÀI THI</span>
+            <span>NỘP BÀI</span>
           </button>
         </div>
       </header>
 
       {/* ── MAIN WORKSPACE ── */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {workspaceMode === 'SPLIT_FILE' ? (
           /* ======================================================== */
           /* CHẾ ĐỘ 1: CHIA ĐÔI MÀN HÌNH (FILE ĐỀ THI & PHIẾU TÔ OMR) */
@@ -2544,20 +2788,31 @@ export default function TakeExam() {
                     </div>
                   </div>
                 )}
+
+                {/* Bàn phím ký hiệu toán học & khoa học (Theo mẫu Image 1) */}
+                <div className="pt-2">
+                  <MathSymbolKeyboard onInsert={handleInsertMathSymbol} />
+                </div>
               </div>
 
               {/* Bottom Bar: Nút chuyển câu & Tự động lưu */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 border-t border-slate-800/60 mt-4">
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 border-t mt-4 ${
+                isDark ? 'border-slate-800/60' : 'border-slate-200'
+              }`}>
                 <div className="flex items-center space-x-2 text-xs text-slate-500">
-                  <Save className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Đã lưu đám mây: <b className="text-slate-400">{autoSaveTime}</b></span>
+                  <Save className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Đã lưu đám mây: <b className={isDark ? 'text-slate-300' : 'text-slate-700'}>{autoSaveTime}</b></span>
                 </div>
 
                 <div className="flex items-center space-x-3">
                   <button
                     disabled={currentIdx === 0}
                     onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
-                    className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    className={`flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition border ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+                        : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                    }`}
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span>Câu trước (←)</span>
@@ -2565,7 +2820,7 @@ export default function TakeExam() {
                   <button
                     disabled={currentIdx === totalCount - 1}
                     onClick={() => setCurrentIdx(prev => Math.min(totalCount - 1, prev + 1))}
-                    className="flex items-center space-x-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-cyan-600/20 transition"
+                    className="flex items-center space-x-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-blue-700/20 transition"
                   >
                     <span>Câu tiếp theo (→)</span>
                     <ChevronRight className="w-4 h-4" />
@@ -2577,24 +2832,30 @@ export default function TakeExam() {
         )}
 
         {/* ======================================================== */}
-        {/* PANEL PHẢI: KHU VỰC CAMERA & GIÁM SÁT AI (COLLAPSIBLE)   */}
+        {/* PANEL PHẢI: KHU VỰC CAMERA & NOVAGENIUS MA TRẬN (COLLAPSIBLE) */}
         {/* ======================================================== */}
         <div className={`${
-          isProctorCollapsed ? 'w-16' : 'w-80 md:w-88'
-        } bg-slate-900/90 border-l border-slate-800 p-3 sm:p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar transition-all duration-300 shrink-0`}>
+          isProctorCollapsed ? 'w-16' : 'w-80 md:w-92'
+        } h-full border-l p-3 sm:p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar transition-all duration-300 shrink-0 ${
+          isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
           {isProctorCollapsed ? (
             /* COLLAPSED HUD VIEW */
             <div className="flex flex-col items-center space-y-4">
               <button
                 onClick={() => setIsProctorCollapsed(false)}
-                className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 flex items-center justify-center transition"
-                title="Mở rộng bảng Giám sát AI"
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition border ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-400'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-teal-600'
+                }`}
+                title="Mở rộng bảng Giám sát & Ma trận câu"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
 
               {/* Mini camera */}
-              <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-500/50 relative bg-slate-950" title="Webcam giám sát đang hoạt động">
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-teal-500/50 relative bg-slate-950" title="Webcam giám sát đang hoạt động">
                 <video
                   ref={bindVideoRef}
                   autoPlay
@@ -2607,50 +2868,109 @@ export default function TakeExam() {
 
               {/* Mini Timer */}
               <div className="flex flex-col items-center py-2 text-center" title="Thời gian còn lại">
-                <Clock className="w-4 h-4 text-cyan-400 mb-1" />
-                <span className="font-mono text-[10px] font-bold text-slate-200">
+                <Clock className="w-4 h-4 text-teal-500 mb-1" />
+                <span className={`font-mono text-[10px] font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                   {Math.floor(timeLeft / 60)}p
                 </span>
               </div>
 
               {/* Mini Trust score */}
               <div className="flex flex-col items-center py-2 text-center" title="Điểm uy tín">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 mb-1" />
+                <ShieldCheck className="w-4 h-4 text-emerald-500 mb-1" />
                 <span className={`font-mono text-[10px] font-bold ${
-                  trustScore >= 80 ? 'text-emerald-400' : trustScore >= 50 ? 'text-amber-400' : 'text-red-400'
+                  trustScore >= 80 ? 'text-emerald-500' : trustScore >= 50 ? 'text-amber-500' : 'text-rose-500'
                 }`}>
                   {trustScore}
                 </span>
               </div>
             </div>
           ) : (
-            /* FULL EXPANDED PROCTOR HUD */
+            /* FULL EXPANDED VIEW WITH NOVAGENIUS & PROCTOR TABS */
             <div className="space-y-4">
-              {/* Header with collapse button */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-white uppercase tracking-wider">
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>GIÁM SÁT AI REALTIME</span>
+              {/* Header with Tab switcher & collapse button */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center space-x-1 p-0.5 rounded-xl border bg-slate-100 dark:bg-slate-950/80 border-slate-200 dark:border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab('NAVIGATOR')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center space-x-1.5 ${
+                      sidebarTab === 'NAVIGATOR'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Ma trận đề</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab('PROCTOR')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center space-x-1.5 ${
+                      sidebarTab === 'PROCTOR'
+                        ? 'bg-teal-600 text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Camera AI</span>
+                  </button>
                 </div>
+
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => startCamera()}
-                    className="p-1 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition"
+                    className="p-1 text-slate-400 hover:text-teal-500 rounded-lg transition"
                     title="Làm mới kết nối Webcam"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setIsProctorCollapsed(true)}
-                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
-                    title="Thu gọn bảng giám sát"
+                    className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-lg transition"
+                    title="Thu gọn bảng"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* 1. KHUNG CAMERA LIVE & HUD AI OVERLAY */}
+              {/* TAB 1: NOVAGENIUS QUESTION MATRIX (IMAGE 4) */}
+              {sidebarTab === 'NAVIGATOR' && (
+                <div className="space-y-3">
+                  <NovageniusQuestionMatrix
+                    questions={examData.questions}
+                    answers={answers}
+                    flagged={flagged}
+                    currentIdx={currentIdx}
+                    onSelectQuestion={setCurrentIdx}
+                    timeLeft={timeLeft}
+                    totalDurationMinutes={examData.session.durationMinutes}
+                    formatTime={formatTime}
+                  />
+
+                  {/* Compact Biometric HUD chip */}
+                  <div className={`p-2.5 rounded-xl border flex items-center space-x-2.5 ${
+                    isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="w-12 h-10 rounded-lg overflow-hidden border border-teal-500/40 relative bg-black shrink-0">
+                      <video ref={bindVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute top-0.5 right-0.5"></span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">Bảo mật AI:</span>
+                        <span className="font-mono font-bold text-teal-600 dark:text-teal-400">{trustScore}/100</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">Nhận diện khuôn mặt liên tục</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: FULL PROCTOR AI CAMERA HUD */}
+              {sidebarTab === 'PROCTOR' && (
+                <div className="space-y-4">
+                  {/* 1. KHUNG CAMERA LIVE & HUD AI OVERLAY */}
               <div className="relative rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 aspect-video shadow-2xl group">
                 <video
                   ref={bindVideoRef}
@@ -2816,6 +3136,8 @@ export default function TakeExam() {
               </div>
             </div>
           )}
+        </div>
+      )}
 
           <div className="text-[10px] text-slate-600 text-center pt-2">
             ExamGuard AI • Mã phiên: {examData.session.code}
@@ -2880,96 +3202,67 @@ export default function TakeExam() {
         </div>
       )}
 
-      {/* ── MODAL CẢNH BÁO AN NINH CHỐNG GIAN LẬN NỔI BẬT TOÀN MÀN HÌNH ── */}
-      {securityAlert && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl shadow-red-950/60 animate-in zoom-in-95 space-y-4 text-center">
-            {/* Warning Shield Pulse */}
-            <div className="w-16 h-16 rounded-3xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center border border-red-500/40 shadow-lg shadow-red-500/20">
-              <ShieldAlert className="w-9 h-9 animate-pulse" />
+      {/* ── MODAL XÁC NHẬN RỜI PHÒNG THI AN TOÀN (IMAGE 1 IŠEITI) ── */}
+      {showExitConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`border rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
+              <LogOut className="w-7 h-7" />
             </div>
 
-            <div className="space-y-1">
-              <span className="inline-block px-3 py-0.5 bg-red-500/20 border border-red-500/40 text-red-400 rounded-full text-[11px] font-black uppercase tracking-wider">
-                🚨 CẢNH BÁO VI PHẠM QUY CHẾ THI
-              </span>
-              <h3 className="text-xl font-extrabold text-white">
-                {securityAlert.title}
-              </h3>
-            </div>
-
-            <div className="bg-slate-950 p-3.5 rounded-2xl border border-red-500/30 text-red-200 text-xs sm:text-sm font-medium">
-              "{securityAlert.message}"
-            </div>
-
-            {/* Penalty & Trust Score Card */}
-            <div className="grid grid-cols-2 gap-2 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 text-xs">
-              <div className="text-center p-2 rounded-xl bg-red-500/10 border border-red-500/20">
-                <span className="text-slate-400 block text-[11px]">Mức phạt trừ điểm</span>
-                <span className="text-xl font-black text-red-400">
-                  -{securityAlert.penalty} điểm
-                </span>
-              </div>
-              <div className="text-center p-2 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-slate-400 block text-[11px]">Điểm uy tín còn lại</span>
-                <span className={`text-xl font-black ${
-                  securityAlert.newScore >= 80 ? 'text-emerald-400' : securityAlert.newScore >= 50 ? 'text-amber-400' : 'text-red-400'
-                }`}>
-                  {securityAlert.newScore} / 100
-                </span>
-              </div>
-            </div>
-
-            {/* Serious Rule Explanation */}
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[11px] text-amber-300 text-left space-y-1 leading-relaxed">
-              <p className="font-bold flex items-center space-x-1 text-amber-200">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                <span>Quy chế An ninh Khảo thí Đại học:</span>
-              </p>
-              <p className="text-slate-300">
-                Mọi hành vi chuyển tab, mở công cụ DevTools, hoặc rời khỏi tầm mắt webcam đều được AI ghi nhận và gửi trực tiếp đến Cán bộ Coi thi.
-              </p>
-              <p className="text-red-400 font-semibold">
-                • Nếu điểm uy tín dưới 50đ: Chuyển sang diện NGHI VẤN GIAN LẬN.<br />
-                • Nếu điểm uy tín về 0đ: HỆ THỐNG TỰ ĐỘNG KHÓA BÀI & ĐÌNH CHỈ THI!
-              </p>
-            </div>
-
-            <button
-              onClick={() => setSecurityAlert(null)}
-              className="w-full py-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-red-600/30 uppercase tracking-wider"
-            >
-              TÔI ĐÃ HIỂU VÀ CAM KẾT TUÂN THỦ QUY CHẾ
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL CẢNH BÁO TRỰC TIẾP TỪ GIÁM THỊ (SOCKET.IO) ── */}
-      {directWarning && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
-              <ShieldAlert className="w-8 h-8 animate-pulse" />
-            </div>
-            <h3 className="text-lg font-bold text-white uppercase tracking-wide">
-              CẢNH BÁO TỪ CÁN BỘ COI THI
-            </h3>
-            <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/30 text-amber-200 text-sm font-semibold">
-              "{directWarning.message}"
-            </div>
-            <p className="text-xs text-slate-400">
-              Bạn bị trừ <b className="text-amber-400">5 điểm uy tín</b>. Vui lòng tập trung nhìn thẳng màn hình, không thực hiện hành vi khả nghi.
+            <h3 className="text-lg font-bold text-center">Xác nhận Rời Phòng Thi?</h3>
+            <p className="text-xs text-slate-400 text-center mt-2 leading-relaxed">
+              Bạn đang ở trong phòng thi an ninh ExamGuard AI. Nếu bạn rời khỏi giao diện mà chưa bấm nộp bài chính thức, kết quả hiện tại có thể không được tính điểm.
             </p>
-            <button
-              onClick={() => setDirectWarning(null)}
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-amber-500/20"
-            >
-              TÔI ĐÃ HIỂU VÀ QUAY LẠI LÀM BÀI
-            </button>
+
+            <div className={`rounded-2xl p-4 my-4 space-y-2 text-xs border ${
+              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Số câu đã làm:</span>
+                <span className="font-bold text-teal-600 dark:text-teal-400">{answeredCount} / {totalCount} câu</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Thời gian còn lại:</span>
+                <span className="font-bold text-amber-500">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowExitConfirmModal(false)}
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-xs transition border ${
+                  isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                }`}
+              >
+                Tiếp tục làm bài
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitConfirmModal(false);
+                  navigate('/student/dashboard');
+                }}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-600/20 transition"
+              >
+                Rời phòng thi
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* ── THÔNG BÁO CẢNH BÁO AN NINH TRÊN TOP MÀN HÌNH (SRP - TopWarningBanner) ── */}
+      <TopWarningBanner
+        securityAlert={securityAlert}
+        directWarning={directWarning}
+        onDismissSecurityAlert={() => setSecurityAlert(null)}
+        onDismissDirectWarning={() => setDirectWarning(null)}
+      />
+
       {/* ── MODAL CHỤP BÀI LÀM GIẤY QUA WEBCAM MÁY TÍNH (CHUẨN QUY CHẾ - KHÔNG DÙNG ĐIỆN THOẠI) ── */}
       {showWebcamCaptureModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">

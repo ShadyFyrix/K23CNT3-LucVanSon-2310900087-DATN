@@ -9,6 +9,24 @@ const { connectMySQL } = require("./configs/mysql");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const helmet = require("helmet");
 
+process.on('uncaughtException', (err) => {
+  console.error('💥 UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 UNHANDLED REJECTION:', reason);
+});
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT');
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM');
+  process.exit(0);
+});
+process.on('exit', (code) => {
+  console.log(`🛑 Process exiting with code: ${code}`);
+});
+
 // Khởi tạo thư mục uploads cho hệ thống ExamGuard AI
 const uploadDirInit = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
 try {

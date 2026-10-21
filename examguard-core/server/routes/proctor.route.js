@@ -10,6 +10,9 @@ router.get('/live/:sessionId', proctorController.getLiveRoomState);
 // Kiểm tra frame webcam của thí sinh (AI phát hiện góc mặt, nhiều mặt, xác thực giám thị)
 router.post('/inspect-frame', upload.single('frame'), proctorController.inspectCameraFrame);
 
+// Quét & Xác thực khuôn mặt thí sinh trước khi vào phòng thi (Face Check-In Gate)
+router.post('/verify-checkin', upload.single('frame'), proctorController.verifyCheckIn);
+
 // Giám thị gửi popup cảnh báo
 router.post('/send-warning', proctorController.sendWarning);
 

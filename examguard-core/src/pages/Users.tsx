@@ -60,15 +60,15 @@ function UserAvatar({
         />
       ) : (
         <div
-          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-indigo-50/70 border border-slate-200/80 text-slate-400 group-hover:text-indigo-600 transition-colors shadow-inner"
+          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/70 dark:from-slate-800 dark:via-slate-800 dark:to-slate-750 border border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shadow-inner"
           style={{ borderRadius: 'inherit' }}
         >
-          <UsersIcon className={`${iconSize} stroke-[1.8] text-slate-400`} />
+          <UsersIcon className={`${iconSize} stroke-[1.8] text-slate-400 dark:text-slate-500`} />
         </div>
       )}
       {status && (
         <span
-          className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ring-1 ring-slate-100 shadow-xs ${
+          className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ring-1 ring-slate-100 dark:ring-slate-800 shadow-xs ${
             status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'
           }`}
           title={status === 'active' ? 'Đang hoạt động' : 'Đã khóa'}
@@ -81,11 +81,11 @@ function UserAvatar({
 // Helper map màu sắc Role chuẩn theo SYSTEM_BLUEPRINT.md
 const getRoleStyle = (roleName: string) => {
   const name = roleName?.toLowerCase() || '';
-  if (name.includes('admin')) return 'bg-rose-50 text-rose-700 border-rose-200 ring-rose-500/20';
-  if (name.includes('academic') || name.includes('giáo vụ')) return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-  if (name.includes('teacher') || name.includes('giảng viên')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (name.includes('student') || name.includes('sinh viên')) return 'bg-sky-50 text-sky-700 border-sky-200';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
+  if (name.includes('admin')) return 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/50';
+  if (name.includes('academic') || name.includes('giáo vụ')) return 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50';
+  if (name.includes('teacher') || name.includes('giảng viên')) return 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50';
+  if (name.includes('student') || name.includes('sinh viên')) return 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-900/50';
+  return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
 };
 
 const DEPT_MAP: Record<string, string> = {
@@ -264,20 +264,20 @@ export default function Users() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       {/* ── HEADER CHÍNH ────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs">
               <UsersIcon className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 Quản lý Tài khoản & Phân quyền
-                <span className="text-xs font-bold px-2.5 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                <span className="text-xs font-bold px-2.5 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200/50 dark:border-blue-900/50">
                   {users.length} tài khoản
                 </span>
               </h1>
-              <p className="text-slate-500 text-xs mt-0.5">
+              <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
                 Thiết lập thông tin nhân sự, ảnh đại diện, phòng ban và phân công đa vai trò hệ thống.
               </p>
             </div>
@@ -288,8 +288,8 @@ export default function Users() {
           {/* Trạng thái Face AI Microservice */}
           <div className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-2 transition-all ${
             faceAiStatus?.healthy
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-rose-50 text-rose-700 border-rose-200'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
           }`}>
             <span className={`w-2 h-2 rounded-full ${faceAiStatus?.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
             <span>{faceAiStatus?.healthy ? 'Face AI (ArcFace 512D): Hoạt động' : 'Face AI: Ngoại tuyến'}</span>
@@ -299,17 +299,17 @@ export default function Users() {
           <button
             type="button"
             onClick={() => setIsTestFaceModalOpen(true)}
-            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl border border-indigo-200 font-bold flex items-center gap-2 transition-all cursor-pointer text-sm shadow-2xs"
+            className="px-4 py-2.5 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-xl border border-teal-200 dark:border-teal-800 font-bold flex items-center gap-2 transition-all cursor-pointer text-sm shadow-2xs"
             title="Mở camera để nhận diện thử nghiệm với toàn bộ Vector DB"
           >
-            <ScanFace className="w-4 h-4 text-indigo-600" />
+            <ScanFace className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <span>Thử nghiệm Face AI</span>
           </button>
 
           <button
             onClick={() => { fetchData(); checkFaceAiHealth(); }}
             disabled={loading}
-            className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
             title="Làm mới dữ liệu"
           >
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -317,7 +317,7 @@ export default function Users() {
 
           <button
             onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-200 cursor-pointer text-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-blue-500/20 cursor-pointer text-sm"
           >
             <UserPlus className="w-4 h-4" /> Tạo tài khoản mới
           </button>
@@ -326,49 +326,49 @@ export default function Users() {
 
       {/* ── KPI METRICS THỐNG KÊ ────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tổng nhân sự</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.total}</p>
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tổng nhân sự</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
             <UsersIcon className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Đang hoạt động</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.active}</p>
+            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Đang hoạt động</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.active}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
             <CheckCircle className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-rose-500 uppercase tracking-wider">Đang tạm khóa</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.inactive}</p>
+            <p className="text-xs font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider">Đang tạm khóa</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.inactive}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-100 dark:border-rose-900/50">
             <Lock className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">Quản trị & Lãnh đạo</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.adminCount}</p>
+            <p className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Quản trị & Lãnh đạo</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.adminCount}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-100 dark:border-teal-900/50">
             <ShieldCheck className="w-6 h-6" />
           </div>
         </div>
       </div>
 
       {/* ── BỘ LỌC & TÌM KIẾM ──────────────────────────────────── */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Ô tìm kiếm */}
           <div className="relative flex-1">
@@ -378,13 +378,13 @@ export default function Users() {
               placeholder="Tìm theo họ tên, email hoặc số điện thoại..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pr-9 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-850 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500"
               style={{ paddingLeft: '2.6rem' }}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -395,7 +395,7 @@ export default function Users() {
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
           >
             <option value="all">Tất cả phòng ban</option>
             {Object.entries(DEPT_MAP).map(([key, label]) => (
@@ -407,7 +407,7 @@ export default function Users() {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
           >
             <option value="all">Tất cả vai trò</option>
             {roles.map(r => (
@@ -419,7 +419,7 @@ export default function Users() {
           <select
             value={selectedFaceFilter}
             onChange={(e) => setSelectedFaceFilter(e.target.value as any)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
           >
             <option value="all">Khuôn mặt: Tất cả ({users.length})</option>
             <option value="registered">Đã đăng ký ({stats.faceCount})</option>
@@ -427,11 +427,13 @@ export default function Users() {
           </select>
 
           {/* Lọc trạng thái */}
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center shrink-0 border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setSelectedStatus('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                selectedStatus === 'all' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                selectedStatus === 'all'
+                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               Tất cả
@@ -439,7 +441,9 @@ export default function Users() {
             <button
               onClick={() => setSelectedStatus('active')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                selectedStatus === 'active' ? 'bg-emerald-500 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                selectedStatus === 'active'
+                  ? 'bg-emerald-500 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               Hoạt động
@@ -447,7 +451,9 @@ export default function Users() {
             <button
               onClick={() => setSelectedStatus('inactive')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                selectedStatus === 'inactive' ? 'bg-rose-500 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                selectedStatus === 'inactive'
+                  ? 'bg-rose-500 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               Đã khóa
@@ -455,11 +461,13 @@ export default function Users() {
           </div>
 
           {/* Chuyển đổi View Mode */}
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0 border border-slate-200">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center shrink-0 border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-lg transition-all cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-400 hover:text-slate-700'
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
               title="Xem dạng thẻ (Grid)"
             >
@@ -468,7 +476,9 @@ export default function Users() {
             <button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded-lg transition-all cursor-pointer ${
-                viewMode === 'list' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-400 hover:text-slate-700'
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
               title="Xem dạng bảng (Table)"
             >
@@ -479,13 +489,13 @@ export default function Users() {
 
         {/* Thông tin số lượng kết quả */}
         {(searchTerm || selectedDept !== 'all' || selectedRole !== 'all' || selectedStatus !== 'all' || selectedFaceFilter !== 'all') && (
-          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
             <span>
-              Tìm thấy <strong className="text-slate-800 font-bold">{filteredUsers.length}</strong> kết quả phù hợp
+              Tìm thấy <strong className="text-slate-800 dark:text-slate-200 font-bold">{filteredUsers.length}</strong> kết quả phù hợp
             </span>
             <button
               onClick={resetFilters}
-              className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline cursor-pointer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold hover:underline cursor-pointer"
             >
               Xóa bộ lọc
             </button>
@@ -495,25 +505,25 @@ export default function Users() {
 
       {/* ── NỘI DUNG CHÍNH (GRID HOẶC TABLE) ─────────────────────── */}
       {loading ? (
-        <div className="bg-white rounded-3xl p-16 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-          <p className="text-slate-500 text-sm font-medium">Đang tải danh sách người dùng...</p>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-16 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-600 dark:text-blue-400" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Đang tải danh sách người dùng...</p>
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="bg-white rounded-3xl p-16 border border-slate-200/80 shadow-xs text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-16 border border-slate-200/80 dark:border-slate-800 shadow-xs text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-100 dark:border-blue-900/50">
             <UsersIcon className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800">Không tìm thấy tài khoản nào</h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">Không tìm thấy tài khoản nào</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
               Thử thay đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc trạng thái, phòng ban.
             </p>
           </div>
           {(searchTerm || selectedDept !== 'all' || selectedRole !== 'all' || selectedStatus !== 'all' || selectedFaceFilter !== 'all') && (
             <button
               onClick={resetFilters}
-              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="px-4 py-2 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-blue-200 dark:border-blue-800"
             >
               Đặt lại toàn bộ lọc
             </button>
@@ -529,7 +539,7 @@ export default function Users() {
                 return (
                   <div
                     key={user._id}
-                    className="bg-white rounded-3xl shadow-xs border border-slate-200/80 hover:border-indigo-200 hover:shadow-xl transition-all duration-200 flex flex-col justify-between group overflow-hidden"
+                    className="bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xl transition-all duration-200 flex flex-col justify-between group overflow-hidden"
                   >
                     <div className="p-6 space-y-5">
                       {/* Top Header Card: Avatar + Tên + Hành động nhanh */}
@@ -539,20 +549,20 @@ export default function Users() {
                             avatar={user.avatar}
                             name={user.fullName}
                             status={user.status}
-                            className="w-14 h-14 rounded-2xl shadow-sm border border-slate-200/70"
+                            className="w-14 h-14 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-700"
                             iconSize="w-6 h-6"
                           />
                           <div className="min-w-0">
-                            <h3 className="font-black text-slate-900 text-base leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                            <h3 className="font-black text-slate-900 dark:text-white text-base leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                               {user.fullName || 'Chưa đặt tên'}
                             </h3>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium truncate mt-0.5">
-                              <Mail className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">
+                              <Mail className="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
                               <span className="truncate">{user.email}</span>
                             </div>
                             {user.phone && (
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium truncate mt-0.5">
-                                <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                                <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
                                 <span>{user.phone}</span>
                               </div>
                             )}
@@ -563,14 +573,14 @@ export default function Users() {
                         <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer"
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors cursor-pointer"
                             title="Chỉnh sửa tài khoản"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(user._id, user.fullName)}
-                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                            className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
                             title="Xóa tài khoản"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -580,8 +590,8 @@ export default function Users() {
 
                       {/* Các vai trò */}
                       <div>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                          <Shield className="w-3 h-3 text-indigo-500" />
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                           Vai trò ({userRolesList.length})
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -598,20 +608,20 @@ export default function Users() {
 
                       {/* Thông tin phòng ban & Trạng thái */}
                       <div className="grid grid-cols-2 gap-2.5 pt-1">
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-slate-400" /> Bộ phận
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Bộ phận
                           </p>
-                          <p className="text-xs font-bold text-slate-700 truncate">
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
                             {DEPT_MAP[user.department] || user.department || 'Chưa chọn'}
                           </p>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-0.5">
                             Trạng thái
                           </p>
                           <span className={`inline-flex items-center gap-1 text-[11px] font-black ${
-                            user.status === 'active' ? 'text-emerald-600' : 'text-rose-500'
+                            user.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
                           }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                             {user.status === 'active' ? 'HOẠT ĐỘNG' : 'ĐÃ KHÓA'}
@@ -620,26 +630,26 @@ export default function Users() {
                       </div>
 
                       {/* Đăng ký khuôn mặt */}
-                      <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100 flex items-center justify-between gap-2.5">
+                      <div className="bg-slate-50/80 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                             user.isFaceRegistered || user.facePhoto
-                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                              : 'bg-slate-200/80 text-slate-500 border border-slate-300/60'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300/60 dark:border-slate-600'
                           }`}>
                             <ScanFace className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 leading-none">
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-0.5 leading-none">
                               Khuôn mặt
                             </p>
                             <p className="text-xs font-black truncate">
                               {user.isFaceRegistered || user.facePhoto ? (
-                                <span className="text-emerald-700 inline-flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3 text-emerald-600 inline" /> Đã đăng ký
+                                <span className="text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400 inline" /> Đã đăng ký
                                 </span>
                               ) : (
-                                <span className="text-slate-400 font-semibold">Chưa đăng ký</span>
+                                <span className="text-slate-400 dark:text-slate-500 font-semibold">Chưa đăng ký</span>
                               )}
                             </p>
                           </div>
@@ -650,7 +660,7 @@ export default function Users() {
                             <button
                               type="button"
                               onClick={() => { setSelectedUserForFace(user); setIsFaceModalOpen(true); }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
                               title="Đăng ký lại khuôn mặt cho tài khoản này"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -661,7 +671,7 @@ export default function Users() {
                           <button
                             type="button"
                             onClick={() => { setSelectedUserForFace(user); setIsFaceModalOpen(true); }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shadow-indigo-200 cursor-pointer shrink-0"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shadow-teal-500/20 cursor-pointer shrink-0"
                             title="Đăng ký nhận diện khuôn mặt"
                           >
                             <ScanFace className="w-3.5 h-3.5" />
@@ -672,7 +682,7 @@ export default function Users() {
 
                       {/* Quê quán / Năm sinh nếu có */}
                       {(user.hometown || user.yearOfBirth) && (
-                        <div className="flex items-center gap-3 text-xs text-slate-400 font-medium pt-0.5">
+                        <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500 font-medium pt-0.5">
                           {user.hometown && (
                             <span className="flex items-center gap-1 truncate">
                               <MapPin className="w-3 h-3 shrink-0" /> {user.hometown}
@@ -686,12 +696,12 @@ export default function Users() {
                     </div>
 
                     {/* Bottom Actions Bar */}
-                    <div className="bg-slate-50/70 px-5 py-3.5 flex items-center gap-2.5 border-t border-slate-100">
+                    <div className="bg-slate-50/70 dark:bg-slate-800/60 px-5 py-3.5 flex items-center gap-2.5 border-t border-slate-100 dark:border-slate-800">
                       <button
                         onClick={() => toggleStatus(user)}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           user.status === 'active'
-                            ? 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 shadow-2xs'
+                            ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 shadow-2xs'
                             : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
                         }`}
                       >
@@ -701,7 +711,7 @@ export default function Users() {
 
                       <button
                         onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-2xs cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-2xs cursor-pointer"
                       >
                         <Key className="w-3.5 h-3.5 text-amber-500" /> Sửa / Đổi MK
                       </button>
@@ -712,26 +722,26 @@ export default function Users() {
             </div>
           ) : (
             /* VIEW DẠNG TABLE */
-            <div className="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200/80">
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Nhân sự</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Liên hệ</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Các vai trò</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Phòng ban</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Khuôn mặt</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Trạng thái</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Thao tác</th>
+                    <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800">
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nhân sự</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Liên hệ</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Các vai trò</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phòng ban</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Khuôn mặt</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
+                      <th className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredUsers.map((user: any) => {
                       const userRolesList = getUserRolesList(user);
                       const isFaceDone = Boolean(user.isFaceRegistered || user.facePhoto);
                       return (
-                        <tr key={user._id} className="hover:bg-slate-50/60 transition-colors group">
+                        <tr key={user._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors group">
                           {/* Cột Nhân sự: Avatar + Tên */}
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3.5">
@@ -739,27 +749,27 @@ export default function Users() {
                                 avatar={user.avatar}
                                 name={user.fullName}
                                 status={user.status}
-                                className="w-11 h-11 rounded-xl shadow-2xs border border-slate-200/60"
+                                className="w-11 h-11 rounded-xl shadow-2xs border border-slate-200/60 dark:border-slate-700"
                                 iconSize="w-5 h-5"
                               />
                               <div>
-                                <p className="font-bold text-slate-900 text-sm leading-tight group-hover:text-indigo-600 transition-colors">
+                                <p className="font-bold text-slate-900 dark:text-white text-sm leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                   {user.fullName || 'Chưa đặt tên'}
                                 </p>
-                                <p className="text-xs text-slate-400 font-medium mt-0.5">{user.email}</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">{user.email}</p>
                               </div>
                             </div>
                           </td>
 
                           {/* Cột Liên hệ */}
-                          <td className="px-6 py-4 text-xs font-medium text-slate-600">
+                          <td className="px-6 py-4 text-xs font-medium text-slate-600 dark:text-slate-300">
                             {user.phone ? (
-                              <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                              <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
                                 <Phone className="w-3.5 h-3.5 text-slate-400" />
                                 {user.phone}
                               </span>
                             ) : (
-                              <span className="text-slate-400 italic">Chưa có SĐT</span>
+                              <span className="text-slate-400 dark:text-slate-500 italic">Chưa có SĐT</span>
                             )}
                           </td>
 
@@ -778,8 +788,8 @@ export default function Users() {
                           </td>
 
                           {/* Cột Phòng ban */}
-                          <td className="px-6 py-4 text-xs font-bold text-slate-700">
-                            <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-slate-700 border border-slate-200">
+                          <td className="px-6 py-4 text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               {DEPT_MAP[user.department] || user.department || 'Chưa chọn'}
                             </span>
                           </td>
@@ -788,14 +798,14 @@ export default function Users() {
                           <td className="px-6 py-4">
                             {isFaceDone ? (
                               <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                   Đã đăng ký
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => { setSelectedUserForFace(user); setIsFaceModalOpen(true); }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
                                   title="Đăng ký lại khuôn mặt"
                                 >
                                   <RotateCcw className="w-3 h-3" />
@@ -806,7 +816,7 @@ export default function Users() {
                               <button
                                 type="button"
                                 onClick={() => { setSelectedUserForFace(user); setIsFaceModalOpen(true); }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-indigo-600 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-600 text-teal-700 dark:text-teal-300 hover:text-white border border-teal-200 dark:border-teal-800 hover:border-teal-600 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
                                 title="Đăng ký nhận diện khuôn mặt"
                               >
                                 <ScanFace className="w-3.5 h-3.5" />
@@ -819,8 +829,8 @@ export default function Users() {
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-md border ${
                               user.status === 'active'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                             }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                               {user.status === 'active' ? 'HOẠT ĐỘNG' : 'ĐÃ KHÓA'}
@@ -835,8 +845,8 @@ export default function Users() {
                                 title={user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                                 className={`p-2 rounded-xl transition-all cursor-pointer ${
                                   user.status === 'active'
-                                    ? 'text-rose-500 hover:bg-rose-50'
-                                    : 'text-emerald-600 hover:bg-emerald-50'
+                                    ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                                    : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                                 }`}
                               >
                                 {user.status === 'active' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
@@ -844,14 +854,14 @@ export default function Users() {
                               <button
                                 onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
                                 title="Chỉnh sửa & Đổi mật khẩu"
-                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer"
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors cursor-pointer"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDelete(user._id, user.fullName)}
                                 title="Xóa tài khoản"
-                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                                className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>

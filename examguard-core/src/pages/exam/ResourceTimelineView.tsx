@@ -17,8 +17,14 @@ import {
   Globe,
   Info,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Layers,
+  Sparkles,
+  Sun,
+  Moon
 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ExamSessionItem {
   _id: string;
@@ -44,7 +50,7 @@ interface RoomItem {
   rows?: number;
   cols?: number;
   roomType?: string;
-  campus?: any;
+  status?: string;
 }
 
 interface ResourceTimelineViewProps {
@@ -55,11 +61,6 @@ interface ResourceTimelineViewProps {
   onEndSession: (session: ExamSessionItem) => void;
 }
 
-// Khung giờ hiển thị chuẩn trên trục thời gian: 07:00 -> 19:00 (12 tiếng)
-const START_HOUR = 7;
-const END_HOUR = 19;
-const TOTAL_HOURS = END_HOUR - START_HOUR; // 12 hours
-
 export function ResourceTimelineView({
   sessions,
   rooms,
@@ -68,6 +69,14 @@ export function ResourceTimelineView({
   onEndSession
 }: ResourceTimelineViewProps) {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
+
+  // Chế độ trục thời gian (24h matching Image 2 vs 12h học thuật)
+  const [timeRangeMode, setTimeRangeMode] = useState<'24H' | '12H'>('24H');
+
+  const startHour = timeRangeMode === '24H' ? 0 : 7;
+  const endHour = timeRangeMode === '24H' ? 24 : 19;
+  const totalHours = endHour - startHour;
 
   // Ngày đang được chọn để quan sát timeline (mặc định hôm nay)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -95,7 +104,7 @@ export function ResourceTimelineView({
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
-  // Format ngày hiển thị tiếng Việt (VD: "Thứ Hai, ngày 19/10/2026")
+  // Format ngày hiển thị tiếng Việt
   const formattedDateTitle = useMemo(() => {
     const d = new Date(selectedDate);
     return d.toLocaleDateString('vi-VN', {
@@ -106,7 +115,6 @@ export function ResourceTimelineView({
     });
   }, [selectedDate]);
 
-  // Kiểm tra xem selectedDate có phải là ngày hôm nay hay không
   const isToday = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     return selectedDate === todayStr;
@@ -117,9 +125,9 @@ export function ResourceTimelineView({
     if (!isToday) return null;
     const now = new Date();
     const currentHour = now.getHours() + now.getMinutes() / 60;
-    if (currentHour < START_HOUR || currentHour > END_HOUR) return null;
-    return ((currentHour - START_HOUR) / TOTAL_HOURS) * 100;
-  }, [isToday]);
+    if (currentHour < startHour || currentHour > endHour) return null;
+    return ((currentHour - startHour) / totalHours) * 100;
+  }, [isToday, startHour, endHour, totalHours]);
 
   // Lọc các ca thi diễn ra trong ngày được chọn
   const sessionsOnDate = useMemo(() => {
@@ -135,27 +143,27 @@ export function ResourceTimelineView({
     if (rooms && rooms.length > 0) return rooms;
     return [
       { _id: 'r_p302', code: 'P302', name: 'Phòng Lab Máy tính P302', capacity: 40, roomType: 'LAB_PC' },
-      { _id: 'r_lab01', code: 'LAB01', name: 'Phòng Lab Công nghệ Cao LAB-01', capacity: 24, roomType: 'LAB_PC' }
+      { _id: 'r_lab01', code: 'LAB01', name: 'Phòng Lab Công nghệ Cao LAB-01', capacity: 24, roomType: 'LAB_PC' },
+      { _id: 'r_lab02', code: 'LAB02', name: 'Phòng Thi Sinh Trắc Học LAB-02', capacity: 36, roomType: 'BIOMETRIC_PC' }
     ];
   }, [rooms]);
 
   // Tính toán vị trí và chiều rộng của một khối ca thi trên trục timeline
   const getSessionPosition = (session: ExamSessionItem) => {
     const start = new Date(session.startTime);
-    const startHour = start.getHours() + start.getMinutes() / 60;
+    const sHour = start.getHours() + start.getMinutes() / 60;
     const durationHours = (session.durationMinutes || 60) / 60;
 
-    // Giới hạn trong khoảng START_HOUR -> END_HOUR
-    const clampedStart = Math.max(START_HOUR, Math.min(END_HOUR, startHour));
-    const clampedEnd = Math.max(START_HOUR, Math.min(END_HOUR, startHour + durationHours));
+    const clampedStart = Math.max(startHour, Math.min(endHour, sHour));
+    const clampedEnd = Math.max(startHour, Math.min(endHour, sHour + durationHours));
 
-    const leftPercent = ((clampedStart - START_HOUR) / TOTAL_HOURS) * 100;
-    const widthPercent = Math.max(4, ((clampedEnd - clampedStart) / TOTAL_HOURS) * 100);
+    const leftPercent = ((clampedStart - startHour) / totalHours) * 100;
+    const widthPercent = Math.max(5, ((clampedEnd - clampedStart) / totalHours) * 100);
 
-    return { leftPercent, widthPercent, startHour, durationHours };
+    return { leftPercent, widthPercent, sHour, durationHours };
   };
 
-  // Định kiểu màu sắc & trạng thái cho thẻ ca thi trên timeline
+  // Định kiểu màu sắc & trạng thái cho thẻ ca thi trên timeline theo EXAMGUARD_COLORS
   const getSessionStyle = (session: ExamSessionItem) => {
     const now = Date.now();
     const start = session.startTime ? new Date(session.startTime).getTime() : now;
@@ -163,66 +171,116 @@ export function ResourceTimelineView({
 
     if (session.gradingStatus === 'PUBLISHED') {
       return {
-        bg: 'bg-emerald-950/70 hover:bg-emerald-900/80 border-emerald-500/60 text-emerald-200',
-        badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        bg: isDark ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200' : 'bg-emerald-50 border-emerald-400 text-emerald-900',
+        badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
         label: 'Đã công bố',
-        glow: 'shadow-emerald-500/10'
+        glow: 'shadow-xs'
       };
     }
     if (session.status === 'COMPLETED' || now > end) {
       return {
-        bg: 'bg-slate-900/80 hover:bg-slate-800/90 border-slate-700/70 text-slate-300',
-        badge: 'bg-slate-800 text-slate-400 border-slate-700',
+        bg: isDark ? 'bg-slate-900 border-slate-700/80 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-700',
+        badge: 'bg-slate-700/50 text-slate-400 border-slate-600',
         label: 'Đã kết thúc',
         glow: 'shadow-none'
       };
     }
     if (now >= start && now <= end) {
       return {
-        bg: 'bg-gradient-to-r from-cyan-950/90 to-indigo-950/90 hover:from-cyan-900/90 hover:to-indigo-900/90 border-cyan-400/80 text-cyan-100 ring-2 ring-cyan-500/40',
-        badge: 'bg-cyan-500/30 text-cyan-200 border-cyan-400 animate-pulse',
+        bg: isDark
+          ? 'bg-gradient-to-r from-teal-950/90 to-blue-950/90 border-teal-400/80 text-teal-100 ring-2 ring-teal-500/40'
+          : 'bg-gradient-to-r from-teal-50 to-blue-50 border-teal-500 text-teal-950 ring-2 ring-teal-500/30',
+        badge: 'bg-teal-500/30 text-teal-600 dark:text-teal-300 border-teal-400 animate-pulse',
         label: '● ĐANG THI',
-        glow: 'shadow-lg shadow-cyan-500/20'
+        glow: 'shadow-md shadow-teal-500/20'
       };
     }
     return {
-      bg: 'bg-indigo-950/70 hover:bg-indigo-900/80 border-indigo-500/60 text-indigo-200',
-      badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+      bg: isDark ? 'bg-blue-950/60 border-blue-500/50 text-blue-200' : 'bg-blue-50 border-blue-300 text-blue-900',
+      badge: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30',
       label: 'Sắp thi',
-      glow: 'shadow-indigo-500/10'
+      glow: 'shadow-xs'
     };
   };
 
+  // Major time ticks
+  const hourTicks = useMemo(() => {
+    if (timeRangeMode === '24H') {
+      return [0, 4, 8, 12, 16, 20, 24];
+    }
+    return [7, 9, 11, 13, 15, 17, 19];
+  }, [timeRangeMode]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-sans">
       {/* ── THANH ĐIỀU HƯỚNG THỜI GIAN & CHỌN NGÀY (TIMELINE HEADER) ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+      <div
+        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border rounded-2xl p-4 shadow-sm backdrop-blur-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        }`}
+      >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
             <CalendarIcon className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-base font-bold text-white capitalize">{formattedDateTitle}</h2>
+              <h2 className={`text-base font-bold capitalize ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formattedDateTitle}
+              </h2>
               {isToday && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 animate-pulse">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-600 dark:text-teal-300 border border-teal-500/30">
                   HÔM NAY
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-400">
-              Có <b className="text-cyan-400">{sessionsOnDate.length} ca thi</b> được xếp lịch tại{' '}
-              <b className="text-white">{displayRooms.length} phòng thi</b>.
+              Có <b className="text-teal-600 dark:text-teal-400">{sessionsOnDate.length} ca thi</b> tại{' '}
+              <b className={isDark ? 'text-white' : 'text-slate-900'}>{displayRooms.length} phòng thi</b>.
             </p>
           </div>
         </div>
 
-        {/* Nút lùi/tiến ngày */}
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        {/* Nút lùi/tiến ngày & Range switch */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Switch 24H vs 12H (Image 2 style) */}
+          <div
+            className={`flex items-center p-1 rounded-xl border text-xs ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setTimeRangeMode('24H')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                timeRangeMode === '24H'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              24 Giờ (00-24h)
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimeRangeMode('12H')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                timeRangeMode === '12H'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Học Thuật (07-19h)
+            </button>
+          </div>
+
+          <div
+            className={`flex items-center space-x-1 p-1 rounded-xl border ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}
+          >
             <button
               onClick={handlePrevDay}
-              className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
               title="Ngày trước"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -230,14 +288,16 @@ export function ResourceTimelineView({
             <button
               onClick={handleToday}
               className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
-                isToday ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                isToday
+                  ? 'bg-blue-600 text-white font-bold'
+                  : isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
               Hôm nay
             </button>
             <button
               onClick={handleNextDay}
-              className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
               title="Ngày sau"
             >
               <ChevronRight className="w-4 h-4" />
@@ -248,12 +308,16 @@ export function ResourceTimelineView({
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+            className={`rounded-xl px-3 py-1.5 text-xs font-mono border cursor-pointer focus:outline-none ${
+              isDark
+                ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500'
+                : 'bg-white border-slate-200 text-slate-800 focus:border-blue-600'
+            }`}
           />
 
           <button
             onClick={() => onOpenCreateModal()}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-500/20 transition active:scale-95"
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Thêm Ca Thi</span>
@@ -261,25 +325,32 @@ export function ResourceTimelineView({
         </div>
       </div>
 
-      {/* ── BẢNG GANTT / RESOURCE TIMELINE CHÍNH ── */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
-        {/* Header các cột giờ (07:00 -> 19:00) */}
-        <div className="flex border-b border-slate-800 bg-slate-950/80 sticky top-0 z-20">
-          {/* Cột trái: Tên phòng thi */}
-          <div className="w-64 min-w-[240px] p-3 text-xs font-bold text-slate-400 uppercase tracking-wider border-r border-slate-800 flex items-center justify-between">
+      {/* ── BẢNG GANTT / RESOURCE TIMELINE CHÍNH (THEO MẪU HÌNH 2) ── */}
+      <div
+        className={`border rounded-2xl shadow-xl overflow-hidden backdrop-blur-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        }`}
+      >
+        {/* Header các cột giờ (00:00 -> 24:00 Image 2) */}
+        <div
+          className={`flex border-b sticky top-0 z-20 ${
+            isDark ? 'bg-slate-950/90 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          {/* Cột trái: Tên phòng thi (Vessel / Room panel) */}
+          <div className="w-64 min-w-[240px] p-3 text-xs font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <span>TÀI NGUYÊN PHÒNG THI</span>
             <span className="text-[10px] text-slate-500 font-normal">{displayRooms.length} phòng</span>
           </div>
 
-          {/* Dải 12 tiếng */}
+          {/* Dải thời gian 24h */}
           <div className="flex-1 relative flex">
-            {Array.from({ length: TOTAL_HOURS }).map((_, idx) => {
-              const hour = START_HOUR + idx;
+            {hourTicks.map((hour, idx) => {
               const hourLabel = `${String(hour).padStart(2, '0')}:00`;
               return (
                 <div
                   key={hour}
-                  className="flex-1 text-center py-2.5 border-r border-slate-800/60 text-xs font-mono font-medium text-slate-400"
+                  className="flex-1 text-center py-2.5 border-r border-slate-200/80 dark:border-slate-800/60 text-xs font-mono font-medium text-slate-500 dark:text-slate-400"
                 >
                   {hourLabel}
                 </div>
@@ -289,9 +360,8 @@ export function ResourceTimelineView({
         </div>
 
         {/* Danh sách các Hàng Phòng Thi (Room Rows) */}
-        <div className="divide-y divide-slate-800/60 relative">
+        <div className="divide-y divide-slate-200 dark:divide-slate-800/60 relative">
           {displayRooms.map(room => {
-            // Lọc các ca thi thuộc phòng này trong ngày được chọn
             const roomSessions = sessionsOnDate.filter(s => {
               if (s.room?._id && room._id && s.room._id.toString() === room._id.toString()) return true;
               if (s.room?.code && room.code && s.room.code.toUpperCase() === room.code.toUpperCase()) return true;
@@ -299,30 +369,37 @@ export function ResourceTimelineView({
             });
 
             return (
-              <div key={room._id || room.code} className="flex min-h-[96px] group hover:bg-slate-800/20 transition">
-                {/* CỘT TRÁI: THÔNG TIN PHÒNG THI */}
-                <div className="w-64 min-w-[240px] p-3 border-r border-slate-800 bg-slate-950/40 flex flex-col justify-between">
+              <div
+                key={room._id || room.code}
+                className="flex min-h-[105px] group hover:bg-slate-50 dark:hover:bg-slate-800/20 transition"
+              >
+                {/* CỘT TRÁI: THÔNG TIN PHÒNG THI (IMAGE 2 STYLE) */}
+                <div
+                  className={`w-64 min-w-[240px] p-3 border-r flex flex-col justify-between ${
+                    isDark ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-200'
+                  }`}
+                >
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      <h4 className="font-bold text-white text-sm group-hover:text-cyan-300 transition truncate">
+                      <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                      <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">
                         {room.code}
                       </h4>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 uppercase">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
                         {room.roomType || 'LAB_PC'}
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5 truncate">{room.name}</p>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-800/40">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200 dark:border-slate-800/40">
                     <span className="flex items-center space-x-1">
                       <Users className="w-3 h-3 text-slate-400" />
-                      <span>{room.capacity} máy</span>
+                      <span>{room.capacity} máy thi</span>
                     </span>
                     <button
                       onClick={() => onOpenCreateModal(room._id, `${selectedDate}T08:00`)}
-                      className="text-cyan-400 hover:text-cyan-300 font-semibold opacity-0 group-hover:opacity-100 transition flex items-center space-x-1"
+                      className="text-teal-600 dark:text-teal-400 font-semibold opacity-0 group-hover:opacity-100 transition flex items-center space-x-1"
                       title="Lên lịch ca thi tại phòng này"
                     >
                       <Plus className="w-3 h-3" />
@@ -332,25 +409,25 @@ export function ResourceTimelineView({
                 </div>
 
                 {/* CỘT PHẢI: TRỤC GANTT TIMELINE CHO PHÒNG NÀY */}
-                <div className="flex-1 relative bg-slate-950/20 overflow-hidden">
+                <div className="flex-1 relative overflow-hidden">
                   {/* Đường kẻ vạch giờ nền */}
                   <div className="absolute inset-0 flex pointer-events-none">
-                    {Array.from({ length: TOTAL_HOURS }).map((_, idx) => (
-                      <div key={idx} className="flex-1 border-r border-slate-800/40 border-dashed"></div>
+                    {hourTicks.map((_, idx) => (
+                      <div key={idx} className="flex-1 border-r border-slate-200 dark:border-slate-800/40 border-dashed"></div>
                     ))}
                   </div>
 
-                  {/* Vạch thời gian hiện tại (Red vertical line) */}
+                  {/* Vạch thời gian hiện tại (Live Time Cursor) */}
                   {currentTimePercentage !== null && (
                     <div
                       className="absolute top-0 bottom-0 z-10 w-0.5 bg-rose-500 shadow-md shadow-rose-500/50 pointer-events-none"
                       style={{ left: `${currentTimePercentage}%` }}
                     >
-                      <div className="w-2 h-2 rounded-full bg-rose-500 -ml-[3px] -mt-1 shadow-sm"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500 -ml-[4px] -mt-1 shadow-sm"></div>
                     </div>
                   )}
 
-                  {/* CÁC KHỐI CA THI (SESSION BLOCKS) */}
+                  {/* CÁC KHỐI CA THI (SESSION BLOCKS - IMAGE 2) */}
                   {roomSessions.map(session => {
                     const pos = getSessionPosition(session);
                     const style = getSessionStyle(session);
@@ -358,61 +435,86 @@ export function ResourceTimelineView({
                       hour: '2-digit',
                       minute: '2-digit'
                     });
-                    const endTimeFormatted = new Date(session.endTime || new Date(new Date(session.startTime).getTime() + (session.durationMinutes || 60) * 60000)).toLocaleTimeString('vi-VN', {
+                    const endTimeFormatted = new Date(
+                      session.endTime || new Date(new Date(session.startTime).getTime() + (session.durationMinutes || 60) * 60000)
+                    ).toLocaleTimeString('vi-VN', {
                       hour: '2-digit',
                       minute: '2-digit'
                     });
+
+                    // Initials for avatar
+                    const proctorName = session.proctor1?.fullName || 'Giám thị 1';
+                    const initials = proctorName.split(' ').map(n => n[0]).join('').slice(-2).toUpperCase();
 
                     return (
                       <div
                         key={session._id}
                         onClick={() => setActiveSessionDetail(session)}
-                        className={`absolute top-2 bottom-2 rounded-xl border p-2.5 cursor-pointer transition-all hover:scale-[1.01] hover:z-20 shadow-md flex flex-col justify-between ${style.bg} ${style.glow}`}
+                        className={`absolute top-2 bottom-2 rounded-2xl border p-2.5 cursor-pointer transition-all hover:scale-[1.01] hover:z-20 shadow-sm flex flex-col justify-between ${style.bg} ${style.glow}`}
                         style={{
                           left: `${pos.leftPercent}%`,
                           width: `${pos.widthPercent}%`
                         }}
                       >
                         <div className="flex items-center justify-between gap-1 overflow-hidden">
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border truncate ${style.badge}`}>
-                            {style.label}
-                          </span>
-                          <span className="font-mono text-[10px] text-slate-300 shrink-0">
+                          {/* Proctor Avatar chip (Image 2 style) */}
+                          <div className="flex items-center space-x-1.5 min-w-0">
+                            <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
+                              {initials}
+                            </span>
+                            <span className="text-[10px] font-semibold truncate">
+                              {proctorName}
+                            </span>
+                          </div>
+
+                          <span className="font-mono text-[10px] text-slate-400 shrink-0">
                             {startTimeFormatted} - {endTimeFormatted}
                           </span>
                         </div>
 
                         <div className="my-0.5">
-                          <h5 className="font-bold text-xs truncate text-white leading-tight">
+                          <h5 className="font-bold text-xs truncate leading-tight">
                             {session.title}
                           </h5>
-                          <p className="text-[10px] text-slate-300 font-mono truncate">
+                          <p className="text-[10px] text-slate-400 font-mono truncate">
                             {session.code} • {session.subject?.name || 'Môn thi'}
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-white/10 text-slate-300">
-                          <span className="flex items-center space-x-1">
+                        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-black/10 dark:border-white/10 text-slate-400">
+                          <span className="flex items-center space-x-1 font-semibold text-teal-600 dark:text-teal-400">
                             <Users className="w-3 h-3" />
-                            <span>{session.studentCount !== undefined ? session.studentCount : 0} SV</span>
+                            <span>{session.studentCount !== undefined ? session.studentCount : 0} Thí sinh</span>
                           </span>
-                          <span className="truncate">{session.proctor1?.fullName || 'Cán bộ 1'}</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${style.badge}`}>
+                            {style.label}
+                          </span>
                         </div>
                       </div>
                     );
                   })}
 
-                  {/* Nếu không có ca thi nào */}
-                  {roomSessions.length === 0 && (
+                  {/* Open Slot Placeholder (+ Open - assign Image 2) */}
+                  {roomSessions.length === 0 ? (
                     <div
                       onClick={() => onOpenCreateModal(room._id, `${selectedDate}T08:00`)}
-                      className="absolute inset-0 flex items-center justify-center text-xs text-slate-600 hover:text-cyan-400 hover:bg-cyan-500/5 transition cursor-pointer select-none"
+                      className="absolute inset-2 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 hover:text-teal-600 hover:border-teal-500/50 transition cursor-pointer select-none"
                     >
-                      <span className="flex items-center space-x-1.5 opacity-60 hover:opacity-100">
+                      <span className="flex items-center space-x-1.5 font-semibold">
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Phòng trống cả ngày • Nhấp để lên lịch thi</span>
+                        <span>+ Open - assign (Phòng trống • Nhấp để xếp ca)</span>
                       </span>
                     </div>
+                  ) : (
+                    /* Dành thêm khe trống nếu phòng thi còn thời gian rảnh */
+                    <button
+                      type="button"
+                      onClick={() => onOpenCreateModal(room._id, `${selectedDate}T14:00`)}
+                      className="absolute right-2 top-2 bottom-2 w-28 border border-dashed border-slate-300 dark:border-slate-800 hover:border-teal-500/60 rounded-xl text-[10px] text-slate-400 hover:text-teal-500 flex items-center justify-center transition"
+                      title="Lên lịch ca tiếp theo"
+                    >
+                      <span>+ Open - assign</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -421,130 +523,119 @@ export function ResourceTimelineView({
         </div>
 
         {/* Footer Chú thích Màu sắc (Legend) */}
-        <div className="p-3 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-3">
+        <div
+          className={`p-3 border-t flex flex-wrap items-center justify-between text-xs gap-3 ${
+            isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+          }`}
+        >
           <div className="flex items-center space-x-4">
-            <span className="font-semibold text-slate-300">CHÚ THÍCH TRẠNG THÁI:</span>
+            <span className="font-semibold text-slate-400">TRẠNG THÁI CA THI:</span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-3 h-3 rounded bg-cyan-500 border border-cyan-400 animate-pulse"></span>
-              <span className="text-cyan-300">Đang thi trực tuyến</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></span>
+              <span className="text-teal-600 dark:text-teal-400 font-medium">Đang thi trực tuyến</span>
             </span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-3 h-3 rounded bg-indigo-600 border border-indigo-400"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
               <span>Lên lịch / Sắp thi</span>
             </span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-3 h-3 rounded bg-slate-700 border border-slate-600"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
               <span>Đã kết thúc</span>
             </span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-600 border border-emerald-400"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
               <span>Đã công bố điểm</span>
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 text-[11px] text-slate-500">
+          <div className="flex items-center space-x-2 text-[11px] text-slate-400">
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
             <span>Vạch đỏ: Thời gian hiện tại ({new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})</span>
           </div>
         </div>
       </div>
 
-      {/* ── MODAL / DRAWER XEM NHANH CHI TIẾT CA THI KHI NHẤP VÀO KHỐI TIMELINE ── */}
+      {/* Drawer xem chi tiết ca thi khi click vào khối timeline */}
       {activeSessionDetail && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-start justify-between pb-3 border-b border-slate-800 mb-4">
-              <div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
-                  {activeSessionDetail.code}
-                </span>
-                <h3 className="text-base font-bold text-white mt-1">{activeSessionDetail.title}</h3>
-                <p className="text-xs text-indigo-400 font-semibold">{activeSessionDetail.subject?.name}</p>
+          <div
+            className={`border rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4 ${
+              isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">{activeSessionDetail.title}</h4>
+                  <span className="text-[10px] font-mono text-slate-400">{activeSessionDetail.code}</span>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveSessionDetail(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
               >
-                ✕
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs mb-6">
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 grid grid-cols-2 gap-3">
-                <div>
-                  <span className="text-slate-500 block">Phòng thi:</span>
-                  <span className="font-bold text-white">{activeSessionDetail.room?.code} - {activeSessionDetail.room?.name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Thời gian:</span>
-                  <span className="font-bold text-cyan-400">
-                    {new Date(activeSessionDetail.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} • {activeSessionDetail.durationMinutes} phút
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Thí sinh đã xếp:</span>
-                  <span className="font-bold text-emerald-400">{activeSessionDetail.studentCount || 0} thí sinh</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Giám thị coi thi:</span>
-                  <span className="font-bold text-slate-200">{activeSessionDetail.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
-                </div>
+            <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
+              isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Thời gian thi:</span>
+                <span className="font-mono font-bold">
+                  {new Date(activeSessionDetail.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {activeSessionDetail.durationMinutes} phút
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Phòng thi:</span>
+                <span className="font-bold text-teal-600 dark:text-teal-400">
+                  {activeSessionDetail.room?.code} ({activeSessionDetail.room?.capacity || 40} máy)
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Cán bộ coi thi:</span>
+                <span className="font-semibold">{activeSessionDetail.proctor1?.fullName || 'Chưa phân công'}</span>
               </div>
             </div>
 
-            {/* Các nút hành động */}
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    navigate(`/live-proctor/${activeSessionDetail._id}`);
-                    setActiveSessionDetail(null);
-                  }}
-                  className="py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Giám Thị 3D Live</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    navigate(`/grading-review/${activeSessionDetail._id}`);
-                    setActiveSessionDetail(null);
-                  }}
-                  className="py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 border border-slate-700"
-                >
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>Rà Soát Điểm</span>
-                </button>
-              </div>
-
+            <div className="flex items-center space-x-3 pt-2">
               <button
+                type="button"
                 onClick={() => {
-                  onOpenCandidateManager(activeSessionDetail);
                   setActiveSessionDetail(null);
+                  onOpenCandidateManager(activeSessionDetail);
                 }}
-                className="w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-sm"
               >
-                <Users className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Quản Lý Thí Sinh & Số Báo Danh</span>
+                Quản lý Thí sinh
               </button>
-
-              {activeSessionDetail.status !== 'COMPLETED' && (
-                <button
-                  onClick={() => {
-                    onEndSession(activeSessionDetail);
-                    setActiveSessionDetail(null);
-                  }}
-                  className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
-                >
-                  <Lock className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Kết Thúc Ca Thi Ngay</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setActiveSessionDetail(null)}
+                className={`px-4 py-2.5 rounded-xl border font-semibold text-xs transition ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function XIcon(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }

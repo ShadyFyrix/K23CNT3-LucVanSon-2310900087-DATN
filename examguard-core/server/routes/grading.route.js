@@ -18,6 +18,7 @@ router.post('/recalculate/:sessionId', gradingController.recalculateSession);
 router.post('/approve/:sessionId', gradingController.approveGrades);
 
 // Ban Khảo thí công bố kết quả và đáp án cho sinh viên
-router.post('/publish/:sessionId', gradingController.publishGrades);
+// Giảng viên sửa kết quả Đúng/Sai của câu hoặc điều chỉnh điểm trực tiếp cho 1 thí sinh
+router.post('/override-student-score', gradingController.overrideStudentScore);
 
 module.exports = router;

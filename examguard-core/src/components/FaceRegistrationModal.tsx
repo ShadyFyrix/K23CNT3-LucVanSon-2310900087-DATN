@@ -865,27 +865,27 @@ export function FaceRegistrationModal({
   const isAlreadyRegistered = Boolean(currentEmployee.isFaceRegistered || currentEmployee.facePhoto);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl p-6 rounded-3xl shadow-2xl border border-slate-200 max-h-[94vh] overflow-y-auto flex flex-col gap-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl p-6 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[94vh] overflow-y-auto flex flex-col gap-4 text-slate-900 dark:text-slate-100 transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-xl text-slate-900 font-black tracking-tight flex items-center gap-2">
+            <h2 className="text-xl text-slate-900 dark:text-white font-black tracking-tight flex items-center gap-2">
               Đăng Ký Khuôn Mặt 5 Góc (Apple FaceID 3D)
               {isAlreadyRegistered && (
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                   Đã có hồ sơ
                 </span>
               )}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Nhân sự: <strong className="text-indigo-600 font-bold">{currentEmployee.fullName}</strong> ({currentEmployee.email})
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Nhân sự: <strong className="text-teal-600 dark:text-teal-400 font-bold">{currentEmployee.fullName}</strong> ({currentEmployee.email})
               {currentEmployee.department && ` — Phòng ban: ${currentEmployee.department}`}
             </p>
           </div>
           <button
             onClick={() => { stopCamera(); onClose(); }}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all cursor-pointer"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -905,14 +905,14 @@ export function FaceRegistrationModal({
                 onClick={() => setActiveStep(idx)}
                 className={`p-2.5 rounded-2xl border transition-all flex flex-col items-center gap-1 cursor-pointer ${
                   isActive
-                    ? 'border-indigo-600 bg-indigo-50/80 text-indigo-700 shadow-xs'
+                    ? 'border-teal-600 dark:border-teal-400 bg-teal-50/80 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 shadow-sm'
                     : isDone
-                    ? 'border-emerald-300 bg-emerald-50/70 text-emerald-700'
-                    : 'border-slate-200 bg-slate-50/70 text-slate-500 hover:bg-slate-100'
+                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <Icon size={14} className={isDone ? 'text-emerald-600' : isActive ? 'text-indigo-600' : 'text-slate-400'} />
+                  <Icon size={14} className={isDone ? 'text-emerald-600 dark:text-emerald-400' : isActive ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'} />
                   <span className="text-xs font-bold truncate">{ang.label}</span>
                 </div>
                 <span className="text-[10px] font-semibold">
@@ -925,13 +925,13 @@ export function FaceRegistrationModal({
 
         {/* Alerts */}
         {errorMsg && (
-          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
         {successMsg && (
-          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
             <CheckCircle size={16} className="shrink-0" />
             <span>{successMsg}</span>
           </div>
@@ -939,11 +939,13 @@ export function FaceRegistrationModal({
 
         {/* Mode Selector & Controls */}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800/70 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-700">
             <button
               type="button"
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                tabMode === 'camera' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                tabMode === 'camera'
+                  ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
               onClick={() => setTabMode('camera')}
             >
@@ -952,7 +954,9 @@ export function FaceRegistrationModal({
             <button
               type="button"
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                tabMode === 'upload' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                tabMode === 'upload'
+                  ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
               onClick={() => setTabMode('upload')}
             >
@@ -966,8 +970,8 @@ export function FaceRegistrationModal({
                 type="button"
                 className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   showMesh
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
                 onClick={() => setShowMesh(!showMesh)}
               >
@@ -977,14 +981,14 @@ export function FaceRegistrationModal({
                 type="button"
                 className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   autoScanEnabled
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                    : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
                 onClick={() => setAutoScanEnabled(!autoScanEnabled)}
               >
                 <span>{autoScanEnabled ? 'Tự Động Chụp: Bật' : 'Tự Động Chụp: Tắt'}</span>
               </button>
-              <span className="px-2.5 py-1 rounded-xl text-[11px] font-mono bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="px-2.5 py-1 rounded-xl text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 FPS: {fps}
               </span>
             </div>
@@ -1029,7 +1033,7 @@ export function FaceRegistrationModal({
                     : 'bg-slate-900/90 border-white/20'
                 }`}
               >
-                <currentAngleObj.icon size={15} className={telemetry.isTargetMet || isStepTransitioning ? 'text-white' : 'text-indigo-300'} />
+                <currentAngleObj.icon size={15} className={telemetry.isTargetMet || isStepTransitioning ? 'text-white' : 'text-teal-300'} />
                 <span>
                   {initialWarmupSeconds > 0
                     ? `⏳ Chuẩn bị: Hãy nhìn thẳng vào camera (sẵn sàng sau ${initialWarmupSeconds}s)...`
@@ -1049,7 +1053,7 @@ export function FaceRegistrationModal({
                 </div>
               )}
 
-              {/* Step Success Overlay (Thay thế pháo hoa confetti bằng hiệu ứng thanh lịch) */}
+              {/* Step Success Overlay */}
               {stepSuccessFlash && (
                 <div className="absolute inset-0 bg-emerald-950/35 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-150 z-20 pointer-events-none">
                   <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-500/60 mb-2.5 animate-in zoom-in-75 duration-200 ring-4 ring-white/30">
@@ -1080,57 +1084,57 @@ export function FaceRegistrationModal({
 
             {/* Step Card & Snapshot Preview */}
             <div className="flex flex-col justify-between gap-3">
-              <div className="bg-slate-50 border border-slate-200/80 rounded-3xl p-5 flex flex-col gap-2.5">
+              <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <currentAngleObj.icon size={20} className="text-indigo-600" />
-                    <h4 className="text-base font-black text-slate-900">{currentAngleObj.label}</h4>
+                    <currentAngleObj.icon size={20} className="text-teal-600 dark:text-teal-400" />
+                    <h4 className="text-base font-black text-slate-900 dark:text-white">{currentAngleObj.label}</h4>
                   </div>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/50">
                     Góc {activeStep + 1}/5
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-500 leading-relaxed">{currentAngleObj.desc}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{currentAngleObj.desc}</p>
 
-                <div className="p-3 bg-indigo-50/70 border border-indigo-200/60 rounded-2xl text-[11px] text-indigo-900 leading-relaxed">
+                <div className="p-3 bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-900/40 rounded-2xl text-[11px] text-teal-900 dark:text-teal-200 leading-relaxed">
                   💡 <strong>Chỉ dẫn:</strong> {(currentAngleObj as any).tip || currentAngleObj.instruction}
                 </div>
 
                 {/* Realtime Telemetry Angles Gauge */}
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="p-2 rounded-xl bg-white border border-slate-200 flex flex-col items-center">
-                    <span className="text-slate-400 font-medium text-[10px]">Quay ngang (Yaw)</span>
-                    <strong className={Math.abs(telemetry.yaw) > 7 ? 'text-indigo-600 font-bold' : 'text-slate-700'}>
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium text-[10px]">Quay ngang (Yaw)</span>
+                    <strong className={Math.abs(telemetry.yaw) > 7 ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-700 dark:text-slate-300'}>
                       {telemetry.yaw > 0 ? `Trái +${telemetry.yaw}°` : telemetry.yaw < 0 ? `Phải ${telemetry.yaw}°` : '0°'}
                     </strong>
                   </div>
-                  <div className="p-2 rounded-xl bg-white border border-slate-200 flex flex-col items-center">
-                    <span className="text-slate-400 font-medium text-[10px]">Ngước/Cúi (Pitch)</span>
-                    <strong className={Math.abs(telemetry.pitch) > 5 ? 'text-indigo-600 font-bold' : 'text-slate-700'}>
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium text-[10px]">Ngước/Cúi (Pitch)</span>
+                    <strong className={Math.abs(telemetry.pitch) > 5 ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-700 dark:text-slate-300'}>
                       {telemetry.pitch > 0 ? `Ngước +${telemetry.pitch}°` : telemetry.pitch < 0 ? `Cúi ${telemetry.pitch}°` : '0°'}
                     </strong>
                   </div>
                 </div>
 
                 {capturedImages[currentAngleObj.key] ? (
-                  <div className="mt-1 p-3 bg-white rounded-2xl border border-slate-200 flex items-center gap-3">
+                  <div className="mt-1 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
                     <img
                       src={capturedImages[currentAngleObj.key]?.previewUrl}
                       alt="captured"
                       className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shrink-0"
                     />
                     <div>
-                      <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase">
+                      <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 uppercase">
                         ✓ Đã lưu ảnh
                       </span>
-                      <div className="text-[11px] text-slate-400 mt-1">
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                         Bấm nút bên dưới nếu bạn muốn chụp lại góc này
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs text-slate-400 p-2.5 bg-white border border-slate-200/80 rounded-2xl text-center">
+                  <div className="text-xs text-slate-400 dark:text-slate-500 p-2.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-center">
                     Hệ thống sẽ tự động chụp khi bạn xoay đúng góc và giữ yên 1 giây.
                   </div>
                 )}
@@ -1142,7 +1146,7 @@ export function FaceRegistrationModal({
                   type="button"
                   onClick={triggerCaptureCurrentAngle}
                   disabled={!isCameraActive}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-2xl font-black text-sm shadow-md shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed transition-all"
+                  className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-md shadow-teal-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed transition-all"
                 >
                   <Camera size={16} />
                   <span>{capturedImages[currentAngleObj.key] ? 'Chụp Lại Góc Này' : 'Chụp Ngay'}</span>
@@ -1153,7 +1157,7 @@ export function FaceRegistrationModal({
                     type="button"
                     disabled={activeStep === 0}
                     onClick={() => setActiveStep(activeStep - 1)}
-                    className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed"
+                    className="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed"
                   >
                     Góc trước
                   </button>
@@ -1161,7 +1165,7 @@ export function FaceRegistrationModal({
                     type="button"
                     disabled={activeStep === 4}
                     onClick={() => setActiveStep(activeStep + 1)}
-                    className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed"
+                    className="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed"
                   >
                     Góc tiếp theo
                   </button>
@@ -1181,19 +1185,19 @@ export function FaceRegistrationModal({
               return (
                 <div
                   key={ang.key}
-                  className="p-3.5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 text-center flex flex-col items-center gap-2"
+                  className="p-3.5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-center flex flex-col items-center gap-2"
                 >
-                  <Icon size={18} className="text-indigo-600" />
-                  <span className="text-xs font-bold text-slate-800">{ang.label}</span>
+                  <Icon size={18} className="text-teal-600 dark:text-teal-400" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{ang.label}</span>
 
                   {imgData ? (
                     <img
                       src={imgData.previewUrl}
                       alt={ang.key}
-                      className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-xs"
+                      className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[10px] font-semibold text-slate-400">
+                    <div className="w-16 h-16 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-[10px] font-semibold text-slate-400 dark:text-slate-500">
                       Trống
                     </div>
                   )}
@@ -1207,7 +1211,7 @@ export function FaceRegistrationModal({
                   />
                   <label
                     htmlFor={`upload_${ang.key}`}
-                    className="w-full py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-700 hover:text-indigo-800 border border-slate-200 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                    className="w-full py-1.5 px-2 bg-white dark:bg-slate-900 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-slate-200 dark:border-slate-800 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                   >
                     <Upload size={11} /> {imgData ? 'Đổi ảnh' : 'Chọn ảnh'}
                   </label>
@@ -1218,11 +1222,11 @@ export function FaceRegistrationModal({
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
-          <div className="text-xs text-slate-500 flex items-center gap-3">
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+          <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
             <span>
               Đã thu thập:{' '}
-              <strong className={capturedCount >= 3 ? 'text-emerald-600 font-black' : 'text-amber-600 font-bold'}>
+              <strong className={capturedCount >= 3 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-amber-600 dark:text-amber-400 font-bold'}>
                 {capturedCount}/5
               </strong>{' '}
               góc khuôn mặt
@@ -1233,7 +1237,7 @@ export function FaceRegistrationModal({
                 type="button"
                 onClick={handleDeleteFace}
                 disabled={deleting}
-                className="text-rose-600 hover:text-rose-700 hover:underline text-xs font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline text-xs font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                 Xóa hồ sơ khuôn mặt
@@ -1244,14 +1248,14 @@ export function FaceRegistrationModal({
           <div className="flex gap-2">
             <button
               type="button"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
               onClick={() => { stopCamera(); onClose(); }}
             >
               Đóng
             </button>
             <button
               type="button"
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md shadow-teal-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
               onClick={handleSaveAllAngles}
               disabled={submitting || capturedCount === 0}
             >
