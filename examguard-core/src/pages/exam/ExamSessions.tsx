@@ -642,6 +642,20 @@ export default function ExamSessions() {
                     ))
                   )}
                 </select>
+                <div className="flex items-center justify-between mt-1.5 text-xs">
+                  <span className="text-slate-400">Muốn tạo đề trắc nghiệm mới cho Quiz?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreateQuizModalOpen(false);
+                      navigate('/exam-papers?mode=quiz');
+                    }}
+                    className="text-amber-500 hover:text-amber-400 font-bold flex items-center gap-1 cursor-pointer transition"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                    <span>Mở Studio Soạn Đề Quiz →</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

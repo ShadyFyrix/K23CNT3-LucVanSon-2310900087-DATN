@@ -42,7 +42,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardPaste,
-  SplitSquareVertical
+  SplitSquareVertical,
+  Zap,
+  Gamepad2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -95,6 +97,16 @@ export default function ExamPapers() {
   const [selectedPaper, setSelectedPaper] = useState<ExamPaperItem | null>(null);
   const { isDark } = useTheme();
   const [builderMode, setBuilderMode] = useState<'EDUTECH' | 'DUAL_VIEW'>('EDUTECH');
+  const [isQuizModeForBuilder, setIsQuizModeForBuilder] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'quiz' || params.get('createQuiz') === 'true') {
+      setBuilderMode('EDUTECH');
+      setIsQuizModeForBuilder(true);
+      setShowCreateModal(true);
+    }
+  }, []);
 
   const handleSaveEduTechPaper = async (paperData: any) => {
     try {
@@ -890,10 +902,23 @@ export default function ExamPapers() {
             </h1>
           </div>
 
-          <div className="flex items-center space-x-2.5">
+          <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
             <button
               onClick={() => {
                 setBuilderMode('EDUTECH');
+                setIsQuizModeForBuilder(true);
+                handleOpenCreateModal();
+              }}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-purple-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/25 transition active:scale-95 cursor-pointer"
+              title="Mở Assessment Studio với kho đề trắc nghiệm Quiz, AI parser và chế độ Đấu trường Quiz Arena"
+            >
+              <Zap className="w-4 h-4 fill-current text-slate-950 animate-pulse" />
+              <span>⚡ TẠO ĐỀ QUIZ ARENA</span>
+            </button>
+            <button
+              onClick={() => {
+                setBuilderMode('EDUTECH');
+                setIsQuizModeForBuilder(false);
                 handleOpenCreateModal();
               }}
               className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95 cursor-pointer"
@@ -904,6 +929,7 @@ export default function ExamPapers() {
             <button
               onClick={() => {
                 setBuilderMode('DUAL_VIEW');
+                setIsQuizModeForBuilder(false);
                 handleOpenCreateModal();
               }}
               className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-cyan-300 font-bold rounded-xl text-xs border border-slate-200 dark:border-cyan-500/30 transition active:scale-95 cursor-pointer"
@@ -1151,9 +1177,14 @@ export default function ExamPapers() {
       {showCreateModal && (
         builderMode === 'EDUTECH' ? (
           <EduTechExamBuilder
-            onClose={() => setShowCreateModal(false)}
+            onClose={() => {
+              setShowCreateModal(false);
+              setIsQuizModeForBuilder(false);
+            }}
             onSave={handleSaveEduTechPaper}
             courses={courses}
+            initialIsQuizArena={isQuizModeForBuilder}
+            autoOpenQuizModal={isQuizModeForBuilder}
             onOpenDualView={() => setBuilderMode('DUAL_VIEW')}
             onTriggerSnippingTool={() => setShowCropModal(true)}
           />

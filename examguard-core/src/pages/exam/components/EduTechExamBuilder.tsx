@@ -666,6 +666,7 @@ interface EduTechExamBuilderProps {
   initialCourseId?: string;
   initialQuestions?: BuilderQuestion[];
   initialIsQuizArena?: boolean;
+  autoOpenQuizModal?: boolean;
   onOpenDualView?: () => void;
   onTriggerSnippingTool?: () => void;
 }
@@ -681,6 +682,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
   initialCourseId = '',
   initialQuestions = [],
   initialIsQuizArena = false,
+  autoOpenQuizModal = false,
   onOpenDualView,
   onTriggerSnippingTool
 }) => {
@@ -730,7 +732,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
   // ── MỚI: QUẢN LÝ CHẾ ĐỘ ĐẤU TRƯỜNG QUIZ ARENA GAMIFICATION ───────────────
   // =========================================================================
   const [isQuizArenaMode, setIsQuizArenaMode] = useState<boolean>(initialIsQuizArena || false);
-  const [showQuizGeneratorModal, setShowQuizGeneratorModal] = useState<boolean>(false);
+  const [showQuizGeneratorModal, setShowQuizGeneratorModal] = useState<boolean>(autoOpenQuizModal || false);
   const [quizModalTab, setQuizModalTab] = useState<'PACKS' | 'PASTE_TEXT' | 'BLANK_BATCH'>('PACKS');
   const [rawQuizText, setRawQuizText] = useState<string>('');
   const [blankQuizCount, setBlankQuizCount] = useState<number>(10);
