@@ -637,4 +637,29 @@ BLOCKED_NO_KYC → not_checkin → checkin ⇄ suspicious → suspended
 
 ---
 
-*Tài liệu phân tích này được xây dựng từ `SYSTEM_BLUEPRINT.md v3.3` và khảo sát cấu trúc mã nguồn thực tế của dự án ExamGuard AI.*
+## X. CÔNG CỤ TẠO ĐỀ THI QUIZ ARENA (ASSESSMENT STUDIO v3.5)
+
+### 10.1 Tổng quan
+Nhằm phục vụ chế độ kiểm tra Quiz gamification (sàn đấu cạnh tranh trực tiếp, tính điểm tốc độ, combo streak, bảng xếp hạng realtime), hệ thống **Assessment Studio v3.5 SOLID** đã được bổ sung bộ công cụ chuyên dụng cho phép Giảng viên tạo và quản trị đề thi Quiz Arena:
+
+1. **Top Menu Bar Quiz Controls:**
+   - `[⚡ Tạo Đề Cho Quiz]`: Mở modal sinh đề tự động đa năng.
+   - `[🎮 Quiz Mode: BẬT/TẮT]`: Bật/Tắt chế độ hiển thị Đấu trường Quiz trong Studio.
+   - `[▶ Test Quiz Arena]`: Trình giả lập Live Quiz Simulator thử nghiệm ngay trong Studio với âm thanh Web Audio và 4 khối màu Kahoot.
+
+2. **Modal Tạo Đề Thi Nhanh (Quiz Generator Modal):**
+   - **Tab 1 - Preset Packs:** 4 bộ đề mẫu sẵn có chuẩn kiến thức CNTT (JavaScript Web Core, Thuật toán & CTDL, SQL Database, ExamGuard AI & Quy chế thi).
+   - **Tab 2 - Fast Text AI Parser:** Bóc tách tự động từ văn bản thô (cú pháp: `Câu 1: [20s] Đề bài?`, `A. Đáp án`, `B. Đáp án*`, `Giải thích: ...`). Tự động phát hiện thời gian và đáp án đúng.
+   - **Tab 3 - Batch Generator:** Sinh hàng loạt N câu hỏi trắc nghiệm A-B-C-D kèm tùy biến thời gian (10s - 60s) và điểm số.
+
+3. **Cấu hình Đếm ngược & Giao diện Kahoot cho từng câu:**
+   - Bộ chọn thời gian đếm ngược trực tiếp cho từng câu hỏi (`10s`, `15s`, `20s`, `30s`, `45s`, `60s`, `90s`, `120s`).
+   - Huy hiệu Kahoot đặc trưng cho 4 phương án: ▲ Đỏ (A), ◆ Xanh dương (B), ● Vàng (C), ■ Xanh lá (D).
+   - Lưu trữ thuộc tính `isQuizArena`, `quizSettings: { defaultTimePerQuestion, speedBonus }` và `timeLimitSeconds` trực tiếp vào MongoDB CSDL `exam_papers`.
+
+4. **Live Quiz Arena Simulator:**
+   - Giả lập phòng thi thời gian thực: Đếm ngược từng giây, ticker audio khi còn dưới 5s, điểm số đua tốc độ (Speed Bonus), chuỗi trả lời đúng (Streak Combo), âm thanh chuẩn Web Audio (fanfare, streak, correct, wrong, tick).
+
+---
+
+*Tài liệu phân tích này được xây dựng từ `SYSTEM_BLUEPRINT.md v3.3` và cập nhật theo phiên bản mới nhất của ExamGuard AI & Assessment Studio v3.5.*
