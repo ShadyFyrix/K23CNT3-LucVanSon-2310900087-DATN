@@ -41,6 +41,10 @@ const QuestionSchema = new mongoose.Schema({
     type: String, 
     default: '' // Lời giải thích chi tiết vì sao đáp án đúng (công bố cho SV sau duyệt)
   },
+  timeLimitSeconds: { 
+    type: Number, 
+    default: 20 // Thời gian giới hạn đếm ngược mỗi câu khi thi Quiz Arena (giây)
+  },
 
   // Dành riêng cho FILL_IN_BLANK
   blankTemplate: { type: String, default: '' },
@@ -146,6 +150,13 @@ const ExamPaperSchema = new mongoose.Schema({
     default: 'OMR_BUBBLE_SHEET' 
   },
   answerKeyString: { type: String, default: '' }, // Ví dụ: "1:A, 2:B, 3:C, 4:D..."
+
+  // Chuyên biệt cho Đấu trường Quiz & Gamification
+  isQuizArena: { type: Boolean, default: false },
+  quizSettings: {
+    defaultTimePerQuestion: { type: Number, default: 20 },
+    speedBonus: { type: Boolean, default: true }
+  },
 
   questions: [QuestionSchema],
   status: { 

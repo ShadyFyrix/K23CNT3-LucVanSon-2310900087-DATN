@@ -121,6 +121,7 @@ class ExamService {
           minWords: q.minWords || 0,
           submissionMethod: q.submissionMethod || 'TEXT_EDITOR',
           allowAttachment: Boolean(q.allowAttachment),
+          timeLimitSeconds: q.timeLimitSeconds ? Number(q.timeLimitSeconds) : 20,
           explanation: q.explanation || (isEssay ? 'Câu hỏi tự luận' : `Đáp án câu số ${idx + 1}`)
         };
       });
@@ -143,6 +144,7 @@ class ExamService {
           selectionMode: isMulti ? 'MULTIPLE' : 'SINGLE',
           scoringMode: 'ALL_OR_NOTHING',
           score: scorePerQ,
+          timeLimitSeconds: 20,
           explanation: `Đáp án câu số ${i} theo file đề thi.`
         });
       }
@@ -178,6 +180,8 @@ class ExamService {
       shuffleOptions: shuffleOptions !== undefined ? shuffleOptions : false,
       paperType,
       structureType: effectiveStructureType,
+      isQuizArena: Boolean(data.isQuizArena),
+      quizSettings: data.quizSettings || { defaultTimePerQuestion: 20, speedBonus: true },
       mcqCount: calculatedMcqCount,
       essayCount: calculatedEssayCount,
       fileUrl,

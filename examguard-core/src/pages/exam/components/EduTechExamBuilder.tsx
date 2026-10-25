@@ -58,10 +58,19 @@ import {
   ListPlus,
   MousePointerClick,
   AlertCircle,
-  CheckCheck
+  CheckCheck,
+  Zap,
+  Flame,
+  Gamepad2,
+  Trophy,
+  BarChart3,
+  VolumeX,
+  FastForward,
+  Award
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../../api/apiClient';
+import { useQuizSound } from '../hooks/useQuizSound';
 
 export type QuestionBlockType = 
   | 'MULTIPLE_CHOICE' 
@@ -85,6 +94,7 @@ export interface BuilderQuestion {
   score: number;
   prompt: string;
   explanation?: string;
+  timeLimitSeconds?: number; // Thời gian đếm ngược từng câu trong Quiz Arena (giây)
   options: string[];
   selectionMode: 'SINGLE' | 'MULTIPLE' | 'ALTERNATIVE';
   correctAnswers: number[];
@@ -157,6 +167,7 @@ export const BLOCK_CATALOG: Record<QuestionBlockType, BlockCatalogItem> = {
       stt,
       type: 'MULTIPLE_CHOICE',
       score: customScore,
+      timeLimitSeconds: 20,
       prompt: useTemplate ? `Câu hỏi số ${stt}: Chọn phương án trả lời chính xác nhất:` : '',
       options: useTemplate ? ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'] : ['', '', '', ''],
       selectionMode: 'SINGLE',
@@ -346,6 +357,293 @@ export const BLOCK_CATALOG: Record<QuestionBlockType, BlockCatalogItem> = {
   }
 };
 
+/**
+ * Danh sách các gói đề Quiz mẫu chọn lọc phục vụ Đấu trường Quiz Arena
+ */
+export const PRESET_QUIZ_PACKS = [
+  {
+    id: 'pack_web_js',
+    title: 'Đấu Trường Quiz: Lập Trình Web & JavaScript ES6',
+    code: 'QUIZ-JS-101',
+    description: 'Bộ 10 câu hỏi trắc nghiệm phản xạ nhanh về JS, DOM, React & Async/Await.',
+    category: 'Công nghệ thông tin',
+    badge: '10 Câu · 20s/câu',
+    color: 'from-amber-500 to-orange-600',
+    questions: [
+      {
+        stt: 1,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Trong JavaScript, kiểu dữ liệu trả về của biểu thức "typeof NaN" là gì?',
+        options: ['number', 'NaN', 'undefined', 'object'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [0],
+        explanation: 'Mặc dù NaN đại diện cho "Not-a-Number", theo chuẩn ECMAScript thì typeof NaN vẫn trả về "number".'
+      },
+      {
+        stt: 2,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Từ khóa nào trong ES6 dùng để khai báo biến có phạm vi khối (block-scope) và không thể gán lại giá trị?',
+        options: ['var', 'let', 'const', 'static'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [2],
+        explanation: 'const tạo một hằng số có phạm vi khối (block-scoped) và không cho phép tái gán (re-assignment).'
+      },
+      {
+        stt: 3,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Trong React, Hook nào được dùng để thực thi side-effects như fetch API hoặc đăng ký sự kiện?',
+        options: ['useState', 'useEffect', 'useMemo', 'useRef'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'useEffect được thiết kế để quản lý vòng đời và xử lý các side-effects trong Function Component.'
+      },
+      {
+        stt: 4,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Trong CSS Flexbox, thuộc tính nào dùng để căn chỉnh các phần tử con dọc theo trục chính (Main Axis)?',
+        options: ['align-items', 'justify-content', 'align-content', 'flex-direction'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'justify-content căn chỉnh các phần tử theo Main Axis (ngang nếu row, dọc nếu column).'
+      },
+      {
+        stt: 5,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Phương thức Promise nào giải quyết ngay khi BẤT KỲ promise nào trong danh sách hoàn thành (fulfill)?',
+        options: ['Promise.all', 'Promise.race', 'Promise.any', 'Promise.allSettled'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [2],
+        explanation: 'Promise.any trả về giá trị của promise đầu tiên hoàn thành thành công (fulfilled).'
+      },
+      {
+        stt: 6,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Toán tử Spread (...) trong JavaScript được dùng cho mục đích nào sau đây?',
+        options: ['So sánh giá trị tuyệt đối', 'Trải phẳng hoặc sao chép nông Array/Object', 'Ép kiểu chuỗi sang số', 'Đóng gói module'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Spread operator (...) cho phép mở rộng các phần tử của array hoặc thuộc tính của object thành các đối số/phần tử riêng lẻ.'
+      },
+      {
+        stt: 7,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Giao thức nào cung cấp kênh giao tiếp hai chiều thời gian thực (Full-Duplex) liên tục qua 1 kết nối TCP?',
+        options: ['HTTP 1.1', 'REST API', 'WebSocket', 'GraphQL'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [2],
+        explanation: 'WebSocket thiết lập kết nối 2 chiều liên tục giữa client và server với độ trễ tối thiểu.'
+      },
+      {
+        stt: 8,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Mã trạng thái HTTP nào biểu thị "Unauthorized" (Yêu cầu xác thực tài khoản)?',
+        options: ['400', '401', '403', '404'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: '401 Unauthorized yêu cầu người dùng phải xác thực danh tính (chưa đăng nhập hoặc token không hợp lệ).'
+      },
+      {
+        stt: 9,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Trong JavaScript, cơ chế nào cho phép hàm truy cập vào các biến từ phạm vi bên ngoài (Lexical Scope) ngay cả khi hàm ngoài đã thực thi xong?',
+        options: ['Prototype', 'Closure', 'Hoisting', 'Currying'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Closure là sự kết hợp giữa một hàm và môi trường từ vựng (lexical environment) nơi hàm đó được khai báo.'
+      },
+      {
+        stt: 10,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 20,
+        prompt: 'Virtual DOM trong React giúp tối ưu hiệu năng render nhờ thuật toán so sánh nào?',
+        options: ['Dijkstra', 'Diffing Algorithm', 'Binary Search', 'A* Search'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'React sử dụng Diffing Algorithm với độ phức tạp O(n) để phát hiện phần tử thay đổi trên Virtual DOM và cập nhật tối thiểu vào Real DOM.'
+      }
+    ]
+  },
+  {
+    id: 'pack_dsa',
+    title: 'Đấu Trường Quiz: Cấu Trúc Dữ Liệu & Giải Thuật',
+    code: 'QUIZ-DSA-201',
+    description: 'Bộ câu hỏi thuật toán chọn lọc: Big-O, Stack/Queue, Cây nhị phân và Tìm kiếm.',
+    category: 'Khoa học máy tính',
+    badge: '5 Câu · 30s/câu',
+    color: 'from-blue-600 to-indigo-600',
+    questions: [
+      {
+        stt: 1,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 30,
+        prompt: 'Độ phức tạp thời gian trung bình của thuật toán QuickSort là bao nhiêu?',
+        options: ['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'QuickSort có độ phức tạp trung bình là O(n log n) dựa trên cơ chế chia để trị (Divide and Conquer).'
+      },
+      {
+        stt: 2,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 30,
+        prompt: 'Cấu trúc dữ liệu nào hoạt động theo nguyên tắc LIFO (Last In First Out)?',
+        options: ['Queue', 'Stack', 'Array', 'Linked List'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Stack (Ngăn xếp) hoạt động theo cơ chế LIFO - phần tử vào sau cùng sẽ được lấy ra đầu tiên.'
+      },
+      {
+        stt: 3,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 30,
+        prompt: 'Thuật toán tìm kiếm nhị phân (Binary Search) yêu cầu điều kiện tiên quyết nào của mảng?',
+        options: ['Mảng chứa toàn số dương', 'Mảng đã được sắp xếp', 'Mảng không có phần tử trùng', 'Kích thước mảng là lũy thừa của 2'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Binary Search bắt buộc dữ liệu phải được sắp xếp trước để có thể loại bỏ một nửa không gian tìm kiếm sau mỗi bước.'
+      },
+      {
+        stt: 4,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 30,
+        prompt: 'Trong Cây tìm kiếm nhị phân (BST), với mỗi node X, các node thuộc cây con bên trái luôn có giá trị như thế nào?',
+        options: ['Lớn hơn X', 'Nhỏ hơn X', 'Bằng X', 'Ngẫu nhiên'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Đặc trưng của BST: Cây con bên trái chứa các khóa nhỏ hơn nút gốc, cây con bên phải chứa các khóa lớn hơn.'
+      },
+      {
+        stt: 5,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 30,
+        prompt: 'Cấu trúc dữ liệu nào thường được dùng để cài đặt thuật toán duyệt đồ thị theo chiều rộng (BFS)?',
+        options: ['Stack', 'Queue (Hàng đợi)', 'Bảng băm (Hash Table)', 'Đống nhị phân (Heap)'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'BFS sử dụng Hàng đợi (Queue) theo nguyên lý FIFO để thăm các đỉnh cùng mức trước khi sang mức kế tiếp.'
+      }
+    ]
+  },
+  {
+    id: 'pack_ai_examguard',
+    title: 'Đấu Trường Quiz: Trí Tuệ Nhân Tạo & Sinh Trắc Học ExamGuard',
+    code: 'QUIZ-AI-301',
+    description: 'Bộ câu hỏi về ArcFace, MiniFASNet Anti-Spoofing, YOLOv8 và Zero-Trust Security.',
+    category: 'AI & An ninh mạng',
+    badge: '5 Câu · 15s/câu',
+    color: 'from-emerald-500 to-teal-600',
+    questions: [
+      {
+        stt: 1,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 15,
+        prompt: 'Mô hình ArcFace trong hệ thống ExamGuard AI trích xuất vector đặc trưng khuôn mặt có bao nhiêu chiều?',
+        options: ['128 chiều', '256 chiều', '512 chiều', '1024 chiều'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [2],
+        explanation: 'ArcFace chuẩn trích xuất vector nhúng đặc trưng khuôn mặt chuẩn hóa 512 chiều (512-D float32 vector).'
+      },
+      {
+        stt: 2,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 15,
+        prompt: 'Độ đo toán học nào được hệ thống sử dụng để so khớp độ tương đồng giữa 2 vector khuôn mặt?',
+        options: ['Khoảng cách Manhattan', 'Cosine Similarity', 'Hamming Distance', 'Jaccard Index'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'Cosine Similarity so sánh góc giữa hai vector trên hình cầu đơn vị, đạt tối ưu cho bài toán nhận dạng khuôn mặt.'
+      },
+      {
+        stt: 3,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 15,
+        prompt: 'Mục tiêu chính của thuật toán Liveness Anti-Spoofing (MiniFASNet) là gì?',
+        options: ['Nhận diện cảm xúc khuôn mặt', 'Chống gian lận bằng ảnh in, video phát lại hoặc mặt nạ giả', 'Đo tuổi tác thí sinh', 'Tự động chỉnh sáng webcam'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'MiniFASNet phân tích cấu trúc vật lý và phản xạ ánh sáng để phân biệt người thật đang ngồi trước máy với màn hình hoặc ảnh giả mạo.'
+      },
+      {
+        stt: 4,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 15,
+        prompt: 'Cơ chế STAFF_EXEMPTION trong ExamGuard AI hoạt động như thế nào khi phát hiện có 2 người trong khung hình?',
+        options: ['Lập tức đình chỉ thi thí sinh', 'So khớp khuôn mặt người thứ 2 với danh sách Giám thị (Staff Whitelist) để không phạt nhầm', 'Tắt webcam của thí sinh', 'Trừ ngay 50 điểm uy tín'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'STAFF_EXEMPTION bảo vệ thí sinh khi giám thị đến bàn kiểm tra; AI nhận diện khuôn mặt giám thị và ghi nhận 0 điểm phạt.'
+      },
+      {
+        stt: 5,
+        type: 'MULTIPLE_CHOICE' as QuestionBlockType,
+        score: 1.0,
+        timeLimitSeconds: 15,
+        prompt: 'Quy tắc Zero-Trust RULE-SEC-01 quy định điều gì đối với Giảng viên soạn đề thi?',
+        options: ['Được tự do coi thi môn của mình', 'Bị hệ thống tự động loại khỏi danh sách cán bộ coi thi môn đó', 'Bắt buộc phải chấm bài thi trắc nghiệm', 'Được phép xem trước bài thi của sinh viên'],
+        selectionMode: 'SINGLE' as const,
+        correctAnswers: [1],
+        explanation: 'RULE-SEC-01 cách ly hoàn toàn giữa khâu soạn đề và coi thi nhằm đảm bảo tính khách quan và bảo mật đề thi tối đa.'
+      }
+    ]
+  }
+];
+
+export const FAST_QUIZ_TEXT_SAMPLE = `1. Trong JavaScript, kiểu dữ liệu trả về của biểu thức "typeof NaN" là gì?
+A. number *
+B. NaN
+C. undefined
+D. object
+[20s] [Giải thích: Theo chuẩn ECMAScript, NaN được coi là giá trị số đặc biệt nên typeof NaN trả về "number".]
+
+2. Hook nào trong React dùng để thực thi các tác vụ bất đồng bộ (side-effects) như gọi API?
+A. useState
+B. useEffect *
+C. useMemo
+D. useRef
+[15s] [Giải thích: useEffect được thiết kế để xử lý vòng đời component và side-effects.]
+
+3. Trong CSS Flexbox, thuộc tính nào căn giữa các phần tử con theo trục chính (Main Axis)?
+A. align-items
+B. justify-content *
+C. flex-direction
+D. align-content
+[20s] [Giải thích: justify-content căn chỉnh vị trí các item theo trục chính.]
+
+4. Giao thức mạng nào cung cấp kênh truyền hai chiều thời gian thực (Full-Duplex) liên tục?
+A. HTTP 1.1
+B. REST API
+C. WebSocket *
+D. GraphQL
+[15s] [Giải thích: WebSocket duy trì kết nối hai chiều liên tục giữa client và server.]`;
+
 interface EduTechExamBuilderProps {
   onClose: () => void;
   onSave: (paperData: {
@@ -356,6 +654,8 @@ interface EduTechExamBuilderProps {
     totalScore: number;
     courseId: string;
     coverUrl?: string;
+    isQuizArena?: boolean;
+    quizSettings?: { defaultTimePerQuestion: number; speedBonus: boolean };
     questions: BuilderQuestion[];
   }) => Promise<void>;
   courses: Array<{ _id: string; name: string; courseCode: string }>;
@@ -365,6 +665,7 @@ interface EduTechExamBuilderProps {
   initialDuration?: number;
   initialCourseId?: string;
   initialQuestions?: BuilderQuestion[];
+  initialIsQuizArena?: boolean;
   onOpenDualView?: () => void;
   onTriggerSnippingTool?: () => void;
 }
@@ -379,6 +680,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
   initialDuration = 60,
   initialCourseId = '',
   initialQuestions = [],
+  initialIsQuizArena = false,
   onOpenDualView,
   onTriggerSnippingTool
 }) => {
@@ -423,6 +725,29 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
   const [previewDevice, setPreviewDevice] = useState<'DESKTOP' | 'MOBILE'>('DESKTOP');
   const [previewActiveStt, setPreviewActiveStt] = useState<number>(1);
   const [previewAnswers, setPreviewAnswers] = useState<Record<number, any>>({});
+
+  // =========================================================================
+  // ── MỚI: QUẢN LÝ CHẾ ĐỘ ĐẤU TRƯỜNG QUIZ ARENA GAMIFICATION ───────────────
+  // =========================================================================
+  const [isQuizArenaMode, setIsQuizArenaMode] = useState<boolean>(initialIsQuizArena || false);
+  const [showQuizGeneratorModal, setShowQuizGeneratorModal] = useState<boolean>(false);
+  const [quizModalTab, setQuizModalTab] = useState<'PACKS' | 'PASTE_TEXT' | 'BLANK_BATCH'>('PACKS');
+  const [rawQuizText, setRawQuizText] = useState<string>('');
+  const [blankQuizCount, setBlankQuizCount] = useState<number>(10);
+  const [blankQuizTime, setBlankQuizTime] = useState<number>(20);
+  const [blankQuizScore, setBlankQuizScore] = useState<number>(1.0);
+
+  // Trình Mô Phỏng Đấu Trường Live Quiz Simulator Preview States
+  const [showQuizArenaPreview, setShowQuizArenaPreview] = useState<boolean>(false);
+  const [previewQuizIndex, setPreviewQuizIndex] = useState<number>(0);
+  const [previewQuizSelectedOpt, setPreviewQuizSelectedOpt] = useState<number | null>(null);
+  const [previewQuizRevealed, setPreviewQuizRevealed] = useState<boolean>(false);
+  const [previewQuizTimer, setPreviewQuizTimer] = useState<number>(20);
+  const [previewQuizScore, setPreviewQuizScore] = useState<number>(0);
+  const [previewQuizStreak, setPreviewQuizStreak] = useState<number>(0);
+  const [previewSoundMuted, setPreviewSoundMuted] = useState<boolean>(false);
+
+  const { playQuizSound } = useQuizSound(!previewSoundMuted);
 
   // =========================================================================
   // ── MỚI: QUẢN LÝ TAB "THÊM VÀO ĐỀ" & CƠ CHẾ KÉO THẢ (DRAG & DROP) ────────
@@ -573,6 +898,246 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
     setSelectedQuestionStt(1);
     toast.success('Đã nạp bộ đề mẫu minh họa 7 câu chuẩn!');
   };
+
+  // ── HANDLERS CHO CHẾ ĐỘ TẠO ĐỀ QUIZ ARENA ──
+  const handleLoadPresetQuizPack = (pack: typeof PRESET_QUIZ_PACKS[0]) => {
+    setTitle(pack.title);
+    setCode(pack.code);
+    setQuestions(pack.questions.map((q, idx) => ({ ...q, stt: idx + 1 })));
+    setIsQuizArenaMode(true);
+    setSelectedQuestionStt(1);
+    setShowQuizGeneratorModal(false);
+    toast.success(`Đã nạp gói "${pack.title}" (${pack.questions.length} câu)!`);
+  };
+
+  const handleGenerateBlankQuiz = (count: number, timeSec: number = 20, scoreVal: number = 1.0) => {
+    const newQs: BuilderQuestion[] = [];
+    for (let i = 1; i <= count; i++) {
+      newQs.push({
+        stt: i,
+        type: 'MULTIPLE_CHOICE',
+        score: scoreVal,
+        timeLimitSeconds: timeSec,
+        prompt: `Câu hỏi số ${i}: Nhập nội dung câu hỏi trắc nghiệm Quiz tại đây...`,
+        options: [
+          `Phương án A (Đỏ ▲)`,
+          `Phương án B (Xanh ◆)`,
+          `Phương án C (Vàng ●)`,
+          `Phương án D (Lá ■)`
+        ],
+        selectionMode: 'SINGLE',
+        correctAnswers: [0],
+        explanation: `Lời giải thích chi tiết cho câu hỏi số ${i}.`
+      });
+    }
+    setQuestions(newQs);
+    setIsQuizArenaMode(true);
+    setSelectedQuestionStt(1);
+    setShowQuizGeneratorModal(false);
+    toast.success(`Đã tạo ${count} câu hỏi Quiz khung trống (${timeSec}s/câu)!`);
+  };
+
+  const handleParseQuizFromText = (raw: string) => {
+    if (!raw || !raw.trim()) {
+      toast.error('Vui lòng dán nội dung văn bản câu hỏi!');
+      return;
+    }
+
+    try {
+      const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const parsedQuestions: BuilderQuestion[] = [];
+      let currentQ: {
+        prompt: string;
+        options: string[];
+        correctAnswers: number[];
+        timeLimitSeconds: number;
+        explanation: string;
+      } | null = null;
+
+      const finishQuestion = () => {
+        if (currentQ && currentQ.prompt && currentQ.options.length >= 2) {
+          parsedQuestions.push({
+            stt: parsedQuestions.length + 1,
+            type: 'MULTIPLE_CHOICE',
+            score: 1.0,
+            prompt: currentQ.prompt,
+            options: currentQ.options,
+            selectionMode: currentQ.correctAnswers.length > 1 ? 'MULTIPLE' : 'SINGLE',
+            correctAnswers: currentQ.correctAnswers.length > 0 ? currentQ.correctAnswers : [0],
+            timeLimitSeconds: currentQ.timeLimitSeconds || 20,
+            explanation: currentQ.explanation || ''
+          });
+        }
+      };
+
+      for (const line of lines) {
+        // Bắt đầu câu hỏi mới: "Câu 1:", "1.", "1/", "1:"
+        const qMatch = line.match(/^(?:Câu\s*\d+[:.]?|\d+[\.:\/\)])\s*(.+)/i);
+        if (qMatch) {
+          finishQuestion();
+          let pText = qMatch[1].trim();
+          let qTime = 20;
+
+          // Kiểm tra tag thời gian: [15s], [20s], [thời gian: 30s]
+          const timeMatch = pText.match(/\[(?:thời\s*gian\s*:\s*)?(\d+)\s*s?\]/i);
+          if (timeMatch) {
+            qTime = parseInt(timeMatch[1], 10) || 20;
+            pText = pText.replace(timeMatch[0], '').trim();
+          }
+
+          currentQ = {
+            prompt: pText,
+            options: [],
+            correctAnswers: [],
+            timeLimitSeconds: qTime,
+            explanation: ''
+          };
+          continue;
+        }
+
+        // Phương án: "A.", "B.", "A)", "A -",...
+        const optMatch = line.match(/^([A-Fa-f])[\.:\-\)]\s*(.+)/);
+        if (optMatch && currentQ) {
+          const optLetter = optMatch[1].toUpperCase();
+          let optText = optMatch[2].trim();
+          const optIdx = optLetter.charCodeAt(0) - 65;
+
+          // Dấu sao * hoặc [đúng] ở cuối
+          let isCorrect = false;
+          if (optText.endsWith('*')) {
+            isCorrect = true;
+            optText = optText.slice(0, -1).trim();
+          } else if (/\(?đúng\)?/i.test(optText) || /\[đúng\]/i.test(optText)) {
+            isCorrect = true;
+            optText = optText.replace(/\(?đúng\)?/gi, '').replace(/\[đúng\]/gi, '').trim();
+          }
+
+          currentQ.options.push(optText);
+          if (isCorrect) {
+            currentQ.correctAnswers.push(optIdx);
+          }
+          continue;
+        }
+
+        // Tag giải thích: [Giải thích: ...] hoặc Giải thích: ...
+        const expMatch = line.match(/^(?:\[?\s*Giải\s*thích\s*:\s*(.+)\]?)/i);
+        if (expMatch && currentQ) {
+          let expText = expMatch[1].replace(/\]$/, '').trim();
+          currentQ.explanation = expText;
+          continue;
+        }
+
+        // Dòng đáp án riêng: "Đáp án: B" hoặc "[Đáp án: A, C]"
+        const ansMatch = line.match(/^(?:\[?\s*Đáp\s*án\s*:\s*([A-Fa-f,\s]+)\]?)/i);
+        if (ansMatch && currentQ) {
+          const letters = ansMatch[1].toUpperCase().split(/[,\s]+/).filter(Boolean);
+          currentQ.correctAnswers = letters.map(l => l.charCodeAt(0) - 65);
+          continue;
+        }
+
+        // Text nối tiếp của prompt
+        if (currentQ && currentQ.options.length === 0) {
+          currentQ.prompt += ' ' + line;
+        }
+      }
+
+      finishQuestion();
+
+      if (parsedQuestions.length === 0) {
+        toast.error('Không nhận diện được câu hỏi nào! Vui lòng kiểm tra lại định dạng (ví dụ: Câu 1: ... A. ... B. ...*)');
+        return;
+      }
+
+      setQuestions(parsedQuestions);
+      setIsQuizArenaMode(true);
+      setSelectedQuestionStt(1);
+      setShowQuizGeneratorModal(false);
+      toast.success(`Đã phân tích và nạp thành công ${parsedQuestions.length} câu hỏi Quiz Arena!`);
+    } catch (err: any) {
+      toast.error('Lỗi khi phân tích văn bản: ' + err.message);
+    }
+  };
+
+  // Mở trình mô phỏng Quiz Arena Live Simulator
+  const handleOpenQuizSimulator = (startIdx: number = 0) => {
+    const targetIdx = Math.min(Math.max(0, startIdx), questions.length - 1);
+    const targetQ = questions[targetIdx] || questions[0];
+    setPreviewQuizIndex(targetIdx);
+    setPreviewQuizSelectedOpt(null);
+    setPreviewQuizRevealed(false);
+    setPreviewQuizTimer(targetQ?.timeLimitSeconds || 20);
+    setPreviewQuizScore(0);
+    setPreviewQuizStreak(0);
+    setShowQuizArenaPreview(true);
+  };
+
+  const handleNextQuizSimulatorQuestion = () => {
+    if (previewQuizIndex < questions.length - 1) {
+      const nextIdx = previewQuizIndex + 1;
+      const nextQ = questions[nextIdx];
+      setPreviewQuizIndex(nextIdx);
+      setPreviewQuizSelectedOpt(null);
+      setPreviewQuizRevealed(false);
+      setPreviewQuizTimer(nextQ?.timeLimitSeconds || 20);
+    } else {
+      playQuizSound('fanfare');
+      toast.success('🎉 Chúc mừng bạn đã hoàn thành bộ câu hỏi Đấu trường Quiz!');
+    }
+  };
+
+  const handleSelectQuizSimulatorAnswer = (optIdx: number) => {
+    if (previewQuizRevealed) return;
+    const currentQ = questions[previewQuizIndex];
+    if (!currentQ) return;
+
+    setPreviewQuizSelectedOpt(optIdx);
+    setPreviewQuizRevealed(true);
+
+    const isCorrect = currentQ.correctAnswers?.includes(optIdx);
+    const totalTime = currentQ.timeLimitSeconds || 20;
+
+    if (isCorrect) {
+      const basePoints = 500;
+      const speedBonus = Math.round(500 * (previewQuizTimer / totalTime));
+      const newStreak = previewQuizStreak + 1;
+      setPreviewQuizStreak(newStreak);
+      const points = basePoints + speedBonus + (newStreak * 50);
+      setPreviewQuizScore(prev => prev + points);
+
+      if (newStreak >= 3) {
+        playQuizSound('streak');
+      } else {
+        playQuizSound('correct');
+      }
+    } else {
+      setPreviewQuizStreak(0);
+      playQuizSound('wrong');
+    }
+  };
+
+  // Countdown timer cho Live Quiz Simulator
+  useEffect(() => {
+    let timerId: any = null;
+    if (showQuizArenaPreview && !previewQuizRevealed && previewQuizTimer > 0) {
+      timerId = setInterval(() => {
+        setPreviewQuizTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerId);
+            setPreviewQuizRevealed(true);
+            playQuizSound('wrong');
+            return 0;
+          }
+          if (prev <= 6 && !previewSoundMuted) {
+            playQuizSound('tick');
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [showQuizArenaPreview, previewQuizRevealed, previewQuizTimer, previewSoundMuted]);
 
   // Thêm phương án trắc nghiệm (Tối đa 6 phương án A-F)
   const handleAddOption = (questionIdx: number) => {
@@ -804,14 +1369,22 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
     try {
       await onSave({
         id: initialId,
-        title,
+        title: isQuizArenaMode && !title.toLowerCase().includes('quiz') ? `[Quiz] ${title}` : title,
         code,
         duration,
         totalScore: totalCalculatedScore || 10.0,
         courseId,
-        questions
+        isQuizArena: isQuizArenaMode,
+        quizSettings: {
+          defaultTimePerQuestion: 20,
+          speedBonus: true
+        },
+        questions: questions.map(q => ({
+          ...q,
+          timeLimitSeconds: q.timeLimitSeconds || 20
+        }))
       });
-      toast.success('Đã lưu đề thi thành công vào CSDL!');
+      toast.success(isQuizArenaMode ? 'Đã lưu Đề Đấu Trường Quiz thành công!' : 'Đã lưu đề thi thành công vào CSDL!');
       onClose();
     } catch (err: any) {
       toast.error(err.message || 'Lỗi khi lưu đề thi');
@@ -918,6 +1491,42 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
             >
               <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
               <span>Góc Nhìn Thí Sinh</span>
+            </button>
+            <span className="text-slate-600">|</span>
+            <button
+              type="button"
+              onClick={() => setShowQuizGeneratorModal(true)}
+              className="px-2.5 py-0.5 rounded bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+              title="Mở trình tạo đề thi trắc nghiệm Quiz nhanh: Kho đề có sẵn, dán văn bản AI phân tích, hoặc sinh câu trống"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Tạo Đề Cho Quiz</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = !isQuizArenaMode;
+                setIsQuizArenaMode(nextMode);
+                toast(nextMode ? '🎮 Chế độ Quiz Arena: BẬT (Thời gian đếm ngược & phong cách Đấu Trường)' : 'Chế độ Đề thi truyền thống');
+              }}
+              className={`px-2 py-0.5 rounded border transition flex items-center gap-1 cursor-pointer font-bold ${
+                isQuizArenaMode
+                  ? 'bg-purple-600/30 border-purple-500 text-purple-300 shadow-sm'
+                  : 'bg-white/5 border-slate-700 text-slate-400 hover:text-white'
+              }`}
+              title="Chuyển đổi giao diện sang chế độ Đấu trường Quiz"
+            >
+              <Gamepad2 className="w-3 h-3 text-purple-400" />
+              <span>Quiz: {isQuizArenaMode ? 'BẬT' : 'TẮT'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenQuizSimulator(0)}
+              className="hover:text-emerald-300 text-emerald-400 transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-emerald-500/10 border border-emerald-500/30"
+              title="Mở màn hình thi thử Live Quiz Arena với âm thanh, đếm ngược và bảng điểm như Kahoot"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Test Quiz Arena</span>
             </button>
           </div>
         </div>
@@ -1846,6 +2455,58 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                   </div>
                 )}
 
+                {/* Quiz Arena Countdown Time Selector */}
+                <div className={`p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
+                  isQuizArenaMode
+                    ? 'bg-gradient-to-r from-amber-950/40 via-purple-950/30 to-slate-900 border-amber-500/40 shadow-sm'
+                    : 'bg-[#202024] border-[#27272a]'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-2">
+                        <span>Thời lượng đếm ngược:</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-mono text-xs font-black shadow-xs">
+                          {currentSelectedQuestion.timeLimitSeconds || 20} GIÂY
+                        </span>
+                        {isQuizArenaMode && (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-amber-400" />
+                            Đua Điểm Tốc Độ & Combo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Thí sinh trả lời càng nhanh sẽ nhận được điểm thưởng tốc độ (Speed Bonus) càng cao
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[10, 15, 20, 30, 45, 60, 90, 120].map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => {
+                          setQuestions(prev => {
+                            const next = [...prev];
+                            next[currentSelectedIdx].timeLimitSeconds = sec;
+                            return next;
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                          (currentSelectedQuestion.timeLimitSeconds || 20) === sec
+                            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 ring-2 ring-amber-300 scale-105'
+                            : 'bg-[#18181b] text-slate-400 hover:text-white hover:bg-white/10 border border-[#27272a]'
+                        }`}
+                      >
+                        {sec}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Options List (For Multiple Choice, Geometry, Image MCQ, Audio) */}
                 {currentSelectedQuestion.options?.length > 0 && (
                   <div className="bg-[#202024] p-4 rounded-xl border border-[#27272a] space-y-3">
@@ -1887,6 +2548,16 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                     <div className="space-y-2">
                       {currentSelectedQuestion.options.map((opt, oIdx) => {
                         const isCorrect = currentSelectedQuestion.correctAnswers.includes(oIdx);
+                        const KAHOOT_THEMES = [
+                          { bg: 'bg-rose-600', text: 'text-white', icon: '▲', label: 'A' },
+                          { bg: 'bg-blue-600', text: 'text-white', icon: '◆', label: 'B' },
+                          { bg: 'bg-amber-500', text: 'text-slate-950', icon: '●', label: 'C' },
+                          { bg: 'bg-emerald-600', text: 'text-white', icon: '■', label: 'D' },
+                          { bg: 'bg-purple-600', text: 'text-white', icon: '⬟', label: 'E' },
+                          { bg: 'bg-cyan-600', text: 'text-white', icon: '★', label: 'F' }
+                        ];
+                        const kahoot = KAHOOT_THEMES[oIdx % KAHOOT_THEMES.length];
+
                         return (
                           <div
                             key={oIdx}
@@ -1900,14 +2571,23 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleToggleAnswer(currentSelectedIdx, oIdx)}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 transition cursor-pointer ${
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold shrink-0 transition cursor-pointer ${
                                   isCorrect
-                                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/50'
+                                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300'
+                                    : isQuizArenaMode
+                                    ? `${kahoot.bg} ${kahoot.text} shadow-xs hover:opacity-90`
                                     : 'border border-slate-600 text-slate-400 hover:border-cyan-400 hover:text-white'
                                 }`}
                                 title="Bấm để đặt làm đáp án đúng"
                               >
-                                {String.fromCharCode(65 + oIdx)}
+                                {isQuizArenaMode ? (
+                                  <span className="flex items-center gap-0.5 text-[11px]">
+                                    <span className="text-[9px]">{kahoot.icon}</span>
+                                    <span>{kahoot.label}</span>
+                                  </span>
+                                ) : (
+                                  String.fromCharCode(65 + oIdx)
+                                )}
                               </button>
                               <input
                                 type="text"
@@ -2555,6 +3235,513 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 </div>
               </div>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 8. MODAL: QUIZ GENERATOR & IMPORTER (TẠO ĐỀ QUIZ ARENA)                   */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {showQuizGeneratorModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-[#18181b] border border-amber-500/30 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl text-slate-200"
+            >
+              {/* Header */}
+              <div className="p-4 bg-gradient-to-r from-amber-950/60 via-purple-950/50 to-slate-900 border-b border-[#27272a] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-slate-950 flex items-center justify-center font-bold shadow-lg shadow-amber-500/30">
+                    <Zap className="w-6 h-6 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Tạo Đề Thi Cho Quiz & Sàn Đấu Quiz Arena</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono">
+                        v3.5 Arena
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Nạp bộ đề mẫu theo chủ đề, dán văn bản bóc tách tự động, hoặc tạo hàng loạt câu hỏi trắc nghiệm
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQuizGeneratorModal(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex items-center gap-2 px-4 pt-3 border-b border-[#27272a] bg-[#141416]">
+                <button
+                  type="button"
+                  onClick={() => setQuizModalTab('PACKS')}
+                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                    quizModalTab === 'PACKS'
+                      ? 'border-amber-400 text-amber-300 bg-amber-500/10'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Bộ Đề Mẫu Theo Chủ Đề</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
+                    {PRESET_QUIZ_PACKS.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setQuizModalTab('PASTE_TEXT')}
+                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                    quizModalTab === 'PASTE_TEXT'
+                      ? 'border-cyan-400 text-cyan-300 bg-cyan-500/10'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>Dán Văn Bản Tự Động Bóc Tách</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px]">
+                    AI Parser
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setQuizModalTab('BLANK_BATCH')}
+                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                    quizModalTab === 'BLANK_BATCH'
+                      ? 'border-purple-400 text-purple-300 bg-purple-500/10'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <ListPlus className="w-3.5 h-3.5" />
+                  <span>Sinh Đề Trống Hàng Loạt</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 text-[10px]">
+                    Batch
+                  </span>
+                </button>
+              </div>
+
+              {/* Tab Contents */}
+              <div className="p-5 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                {/* TAB 1: PRESET PACKS */}
+                {quizModalTab === 'PACKS' && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-slate-400">
+                      Chọn một bộ đề đã được thiết kế sẵn chuẩn định dạng Đấu trường Quiz Arena với thời gian đếm ngược và câu trả lời hoàn chỉnh:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {PRESET_QUIZ_PACKS.map((pack) => (
+                        <div
+                          key={pack.id}
+                          className="bg-[#202024] hover:bg-[#25252a] p-4 rounded-xl border border-[#2e2e36] hover:border-amber-500/40 transition flex flex-col justify-between group shadow-sm"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold">
+                                {pack.category}
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-400" />
+                                {pack.questions[0]?.timeLimitSeconds || 20}s/câu
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-white group-hover:text-amber-300 transition">
+                              {pack.title}
+                            </h4>
+                            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                              {pack.description}
+                            </p>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-[#2e2e36] flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              {pack.questions.length} câu trắc nghiệm
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleLoadPresetQuizPack(pack)}
+                              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition cursor-pointer"
+                            >
+                              <Zap className="w-3 h-3 fill-current" />
+                              <span>Nạp Vào Studio</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: TEXT PARSER */}
+                {quizModalTab === 'PASTE_TEXT' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-cyan-950/30 p-3 rounded-xl border border-cyan-800/40 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <span className="text-cyan-200">
+                          Hỗ trợ định dạng: <code className="text-amber-300">Câu 1: [20s] Nội dung?</code> kèm <code className="text-emerald-300">A. / B.* (dấu * hoặc [đúng])</code> và <code className="text-slate-300">Giải thích: ...</code>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setRawQuizText(FAST_QUIZ_TEXT_SAMPLE)}
+                          className="px-2.5 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold text-[10px] cursor-pointer"
+                        >
+                          Dán Đoạn Mẫu
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRawQuizText('')}
+                          className="px-2 py-1 rounded text-slate-400 hover:text-rose-400 text-[10px] cursor-pointer"
+                        >
+                          Xóa Trắng
+                        </button>
+                      </div>
+                    </div>
+
+                    <textarea
+                      rows={12}
+                      value={rawQuizText}
+                      onChange={(e) => setRawQuizText(e.target.value)}
+                      placeholder={`Dán nội dung câu hỏi trắc nghiệm của bạn vào đây...\nVí dụ:\nCâu 1: Thủ đô của Việt Nam là gì? [15s]\nA. Đà Nẵng\nB. TP. Hồ Chí Minh\nC. Hà Nội*\nD. Hải Phòng\nGiải thích: Hà Nội là thủ đô của Việt Nam.`}
+                      className="w-full bg-[#121214] border border-[#27272a] rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed focus:border-cyan-500 focus:outline-none custom-scrollbar"
+                    />
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-slate-400">
+                        Hệ thống sẽ tự nhận diện câu hỏi, các đáp án A/B/C/D, đáp án đúng và thời gian đếm ngược.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleParseQuizFromText(rawQuizText)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 cursor-pointer"
+                      >
+                        <Wand2 className="w-4 h-4" />
+                        <span>Bóc Tách & Nạp Vào Studio</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: BLANK BATCH */}
+                {quizModalTab === 'BLANK_BATCH' && (
+                  <div className="space-y-6">
+                    <p className="text-xs text-slate-400">
+                      Khởi tạo nhanh một danh sách các câu hỏi trắc nghiệm A-B-C-D trống với cấu hình thời gian và điểm số tùy chỉnh:
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Số lượng câu */}
+                      <div className="bg-[#202024] p-4 rounded-xl border border-[#27272a] space-y-2">
+                        <label className="text-xs font-bold text-slate-300 block">Số Lượng Câu Hỏi:</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[5, 10, 15, 20, 25, 30].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => setBlankQuizCount(num)}
+                              className={`py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                blankQuizCount === num
+                                  ? 'bg-purple-600 text-white shadow-sm'
+                                  : 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]'
+                              }`}
+                            >
+                              {num} câu
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Thời gian mỗi câu */}
+                      <div className="bg-[#202024] p-4 rounded-xl border border-[#27272a] space-y-2">
+                        <label className="text-xs font-bold text-slate-300 block">Thời Gian Mỗi Câu (Giây):</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[10, 15, 20, 30, 45, 60].map((sec) => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setBlankQuizTime(sec)}
+                              className={`py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                blankQuizTime === sec
+                                  ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                                  : 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]'
+                              }`}
+                            >
+                              {sec}s
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Điểm mỗi câu */}
+                      <div className="bg-[#202024] p-4 rounded-xl border border-[#27272a] space-y-2">
+                        <label className="text-xs font-bold text-slate-300 block">Điểm Mỗi Câu:</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[1.0, 2.0, 5.0, 10.0].map((sc) => (
+                            <button
+                              key={sc}
+                              type="button"
+                              onClick={() => setBlankQuizScore(sc)}
+                              className={`py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                blankQuizScore === sc
+                                  ? 'bg-emerald-600 text-white shadow-sm'
+                                  : 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]'
+                              }`}
+                            >
+                              {sc} đ
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-purple-950/20 border border-purple-800/30 rounded-xl flex items-center justify-between">
+                      <div className="text-xs text-slate-300">
+                        <span>Tổng điểm dự kiến: </span>
+                        <strong className="text-emerald-400 font-mono text-sm">
+                          {(blankQuizCount * blankQuizScore).toFixed(1)} điểm
+                        </strong>
+                        <span className="text-slate-500 ml-2">
+                          (Ước tính thời lượng: {Math.ceil((blankQuizCount * blankQuizTime) / 60)} phút)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateBlankQuiz(blankQuizCount, blankQuizTime, blankQuizScore)}
+                        className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/30 cursor-pointer"
+                      >
+                        <ListPlus className="w-4 h-4" />
+                        <span>Khởi Tạo {blankQuizCount} Câu Trống</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 9. MODAL: LIVE QUIZ ARENA SIMULATOR (THỬ NGHIỆM ĐẤU TRƯỜNG QUIZ)          */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {showQuizArenaPreview && questions.length > 0 && (
+          <div className="fixed inset-0 z-50 bg-[#0c0d14]/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 overflow-hidden select-none">
+            {/* Top Bar Simulator */}
+            <div className="flex items-center justify-between border-b border-[#27272a] pb-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center font-bold shadow-md shadow-purple-500/30">
+                  <Gamepad2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <span>QUIZ ARENA LIVE SIMULATOR</span>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono border border-purple-500/30">
+                      Câu #{previewQuizIndex + 1}/{questions.length}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Trải nghiệm thời gian thực như thí sinh trong phòng thi Quiz</p>
+                </div>
+              </div>
+
+              {/* Status Pills */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPreviewSoundMuted(!previewSoundMuted)}
+                  className={`p-2 rounded-lg border text-xs flex items-center gap-1.5 transition cursor-pointer ${
+                    previewSoundMuted
+                      ? 'border-slate-700 bg-slate-800 text-slate-400'
+                      : 'border-cyan-500/40 bg-cyan-500/20 text-cyan-300'
+                  }`}
+                  title={previewSoundMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+                >
+                  {previewSoundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+
+                <div className="px-3 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <span>Combo x{previewQuizStreak}</span>
+                </div>
+
+                <div className="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                  <Trophy className="w-4 h-4 text-emerald-400" />
+                  <span>{previewQuizScore.toLocaleString()} Điểm</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuizArenaPreview(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 transition cursor-pointer"
+                  title="Thoát Simulator"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Central Area: Timer & Question */}
+            {(() => {
+              const currentQ = questions[previewQuizIndex] || questions[0];
+              const totalTime = currentQ.timeLimitSeconds || 20;
+              const timerPercent = Math.max(0, Math.min(100, (previewQuizTimer / totalTime) * 100));
+              const isUrgent = previewQuizTimer <= 5;
+
+              return (
+                <div className="flex-1 flex flex-col items-center justify-center max-w-4xl w-full mx-auto my-3 space-y-4 overflow-y-auto custom-scrollbar">
+                  {/* Countdown Timer Graphic */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-mono text-2xl font-black transition-all ${
+                      isUrgent
+                        ? 'border-rose-500 text-rose-400 shadow-lg shadow-rose-500/40 animate-pulse scale-110'
+                        : 'border-amber-400 text-amber-300 shadow-md shadow-amber-500/20'
+                    }`}>
+                      {previewQuizTimer}
+                    </div>
+                    <div className="w-64 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                      <div
+                        style={{ width: `${timerPercent}%` }}
+                        className={`h-full transition-all duration-300 ${
+                          isUrgent ? 'bg-rose-500' : 'bg-gradient-to-r from-amber-400 to-orange-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Question Card */}
+                  <div className="w-full bg-[#181820] border border-[#2b2b3a] rounded-2xl p-6 shadow-2xl text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-xs font-mono text-slate-400">
+                      <span>CÂU SỐ {previewQuizIndex + 1}</span>
+                      <span>•</span>
+                      <span>{currentQ.score || 1.0} ĐIỂM</span>
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-bold text-white leading-relaxed">
+                      {currentQ.prompt || '(Chưa nhập nội dung đề bài)'}
+                    </h2>
+                  </div>
+
+                  {/* Kahoot 4-Option Grid */}
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {(currentQ.options || []).map((opt, oIdx) => {
+                      const KAHOOT_COLORS_ARENA = [
+                        { bg: 'bg-rose-600', hover: 'hover:bg-rose-500', icon: '▲', label: 'A' },
+                        { bg: 'bg-blue-600', hover: 'hover:bg-blue-500', icon: '◆', label: 'B' },
+                        { bg: 'bg-amber-500', hover: 'hover:bg-amber-400', icon: '●', label: 'C', text: 'text-slate-950' },
+                        { bg: 'bg-emerald-600', hover: 'hover:bg-emerald-500', icon: '■', label: 'D' },
+                        { bg: 'bg-purple-600', hover: 'hover:bg-purple-500', icon: '⬟', label: 'E' },
+                        { bg: 'bg-cyan-600', hover: 'hover:bg-cyan-500', icon: '★', label: 'F' }
+                      ];
+                      const theme = KAHOOT_COLORS_ARENA[oIdx % KAHOOT_COLORS_ARENA.length];
+                      const isCorrect = currentQ.correctAnswers?.includes(oIdx);
+                      const isSelected = previewQuizSelectedOpt === oIdx;
+
+                      let btnStyle = `${theme.bg} ${theme.text || 'text-white'} ${theme.hover} shadow-lg cursor-pointer`;
+                      if (previewQuizRevealed) {
+                        if (isCorrect) {
+                          btnStyle = 'bg-emerald-500 text-slate-950 ring-4 ring-emerald-300 shadow-xl shadow-emerald-500/40 scale-[1.02] font-black';
+                        } else if (isSelected) {
+                          btnStyle = 'bg-rose-900/60 text-rose-300 border-2 border-rose-500 opacity-80';
+                        } else {
+                          btnStyle = 'bg-slate-800/40 text-slate-500 border border-slate-700/50 opacity-40';
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={oIdx}
+                          type="button"
+                          disabled={previewQuizRevealed}
+                          onClick={() => handleSelectQuizSimulatorAnswer(oIdx)}
+                          className={`p-4 rounded-xl flex items-center justify-between text-left transition-all ${btnStyle}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center font-bold text-sm shrink-0">
+                              {theme.icon}
+                            </span>
+                            <span className="font-semibold text-sm leading-snug">
+                              {opt || `Phương án ${theme.label}`}
+                            </span>
+                          </div>
+                          {previewQuizRevealed && isCorrect && (
+                            <span className="w-7 h-7 rounded-full bg-emerald-950 text-emerald-300 flex items-center justify-center font-bold shrink-0">
+                              <Check className="w-4 h-4" />
+                            </span>
+                          )}
+                          {previewQuizRevealed && isSelected && !isCorrect && (
+                            <span className="w-7 h-7 rounded-full bg-rose-950 text-rose-300 flex items-center justify-center font-bold shrink-0">
+                              <X className="w-4 h-4" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Explanation card after reveal */}
+                  {previewQuizRevealed && currentQ.explanation && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full p-4 rounded-xl bg-indigo-950/40 border border-indigo-700/50 text-xs text-indigo-200 text-left space-y-1"
+                    >
+                      <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        Lời giải thích chi tiết:
+                      </span>
+                      <p className="leading-relaxed text-slate-300">{currentQ.explanation}</p>
+                    </motion.div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Bottom Bar Simulator */}
+            <div className="flex items-center justify-between border-t border-[#27272a] pt-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenQuizSimulator(previewQuizIndex)}
+                className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Làm lại câu này</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                {previewQuizIndex < questions.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextQuizSimulatorQuestion}
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                  >
+                    <span>Câu Tiếp Theo</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playQuizSound('fanfare');
+                      setShowQuizArenaPreview(false);
+                      toast.success(`🎉 Tổng kết: Bạn đạt ${previewQuizScore.toLocaleString()} Điểm!`);
+                    }}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    <span>Hoàn Thành & Đóng</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </AnimatePresence>

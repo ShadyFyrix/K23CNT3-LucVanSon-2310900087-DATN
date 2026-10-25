@@ -83,6 +83,7 @@ interface ExamPaperItem {
   fileSize?: number;
   totalQuestions?: number;
   submissionMode?: string;
+  isQuizArena?: boolean;
 }
 
 export default function ExamPapers() {
@@ -105,12 +106,15 @@ export default function ExamPapers() {
         subject: paperData.courseId || selectedCourseId || (courses[0]?._id),
         paperType: 'STRUCTURED_QUIZ',
         submissionMode: 'ONLINE_ONLY',
-        structureType: 'HYBRID',
+        structureType: paperData.isQuizArena ? 'PURE_MCQ' : 'HYBRID',
+        isQuizArena: Boolean(paperData.isQuizArena),
+        quizSettings: paperData.quizSettings || { defaultTimePerQuestion: 20, speedBonus: true },
         totalQuestions: paperData.questions.length,
         questions: paperData.questions.map((q: any, i: number) => ({
           stt: i + 1,
           type: q.type,
           score: q.score,
+          timeLimitSeconds: q.timeLimitSeconds || 20,
           options: q.options || [],
           correctAnswers: q.correctAnswers || [],
           selectionMode: q.selectionMode || 'SINGLE',
@@ -951,7 +955,11 @@ export default function ExamPapers() {
                         <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20">
                           {paper.code}
                         </span>
-                        {isHybrid ? (
+                        {paper.isQuizArena ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 font-bold flex items-center gap-1">
+                            <span>🎮 QUIZ ARENA</span>
+                          </span>
+                        ) : isHybrid ? (
                           <span className="text-[10px] px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 font-bold">
                             ⚡ HỖN HỢP (MCQ + TL)
                           </span>

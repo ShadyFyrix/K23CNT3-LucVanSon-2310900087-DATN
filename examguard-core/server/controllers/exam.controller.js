@@ -323,6 +323,8 @@ exports.updateExamPaper = async (req, res) => {
     if (shuffleOptions !== undefined) paper.shuffleOptions = shuffleOptions;
     if (paperType) paper.paperType = paperType;
     if (submissionMode) paper.submissionMode = submissionMode;
+    if (req.body.isQuizArena !== undefined) paper.isQuizArena = req.body.isQuizArena;
+    if (req.body.quizSettings) paper.quizSettings = req.body.quizSettings;
 
     if (Array.isArray(questions)) {
       paper.questions = questions.map((q, idx) => {
@@ -337,6 +339,7 @@ exports.updateExamPaper = async (req, res) => {
           score: Number(q.score) > 0 ? Number(q.score) : 1.0,
           content: q.content || q.prompt || `Câu hỏi ${idx + 1}`,
           explanation: q.explanation || '',
+          timeLimitSeconds: q.timeLimitSeconds ? Number(q.timeLimitSeconds) : 20,
           options: isEssay ? [] : (q.options || ['A', 'B', 'C', 'D']),
           correctAnswers: corrList,
           correctAnswer: corrList.length > 0 ? corrList[0] : null,
