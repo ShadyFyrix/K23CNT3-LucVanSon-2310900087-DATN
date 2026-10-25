@@ -22,7 +22,11 @@ import {
   Trophy,
   Sparkles,
   X,
-  Zap
+  Zap,
+  Heart,
+  Flame,
+  Sliders,
+  Timer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -75,6 +79,10 @@ export default function ExamSessions() {
   const [selectedPaperId, setSelectedPaperId] = useState('');
   const [availablePapers, setAvailablePapers] = useState<any[]>([]);
   const [quizSeconds, setQuizSeconds] = useState(30);
+  const [scoringType, setScoringType] = useState<'SPEED_BONUS' | 'STANDARD'>('SPEED_BONUS');
+  const [enableHearts, setEnableHearts] = useState<boolean>(true);
+  const [timerType, setTimerType] = useState<'PER_QUESTION_TIMER' | 'MANUAL_HOST'>('PER_QUESTION_TIMER');
+  const [showLeaderboardLive, setShowLeaderboardLive] = useState<boolean>(true);
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
 
   const openCreateQuizModal = async () => {
@@ -103,11 +111,12 @@ export default function ExamSessions() {
         title: quizTitle || undefined,
         examPaperId: selectedPaperId,
         gameRules: {
-          scoringType: 'SPEED_BONUS',
-          timerType: 'PER_QUESTION_TIMER',
+          scoringType,
+          timerType,
           secondsPerQuestion: quizSeconds,
-          enableHearts: true,
-          maxHearts: 3
+          enableHearts,
+          maxHearts: 3,
+          showLeaderboard: showLeaderboardLive
         }
       });
       if (res.data && res.data.success) {
@@ -658,29 +667,118 @@ export default function ExamSessions() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                    Thời Gian / Câu
+              {/* Tùy Biến Luật Chơi */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Tùy Biến Luật Chơi (Custom Rules)</span>
                   </label>
-                  <select
-                    value={quizSeconds}
-                    onChange={e => setQuizSeconds(Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    <option value={15}>15 giây / câu (Nhanh)</option>
-                    <option value={30}>30 giây / câu (Chuẩn)</option>
-                    <option value={45}>45 giây / câu (Vừa)</option>
-                    <option value={60}>60 giây / câu (Code)</option>
-                  </select>
+                  <span className="text-[10px] text-amber-500 font-mono font-bold">Thời gian thực</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                    Chế Độ Luật Chơi
-                  </label>
-                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-amber-500 font-bold flex items-center space-x-1.5">
-                    <span>⚡ Thưởng Tốc Độ + 3 Tim</span>
+                {/* 1. Tính điểm tốc độ vs Chuẩn */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScoringType('SPEED_BONUS')}
+                    className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                      scoringType === 'SPEED_BONUS'
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-400 shadow-sm'
+                        : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <Flame className="w-4 h-4 shrink-0 text-amber-500" />
+                    <div>
+                      <div>⚡ Đua Tốc Độ</div>
+                      <div className="text-[10px] font-normal text-slate-400">Trả lời nhanh điểm cao</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScoringType('STANDARD')}
+                    className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                      scoringType === 'STANDARD'
+                        ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400 shadow-sm'
+                        : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <CheckCircle className="w-4 h-4 shrink-0 text-cyan-400" />
+                    <div>
+                      <div>🎯 Điểm Cố Định</div>
+                      <div className="text-[10px] font-normal text-slate-400">Đúng nhận điểm chuẩn</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 2. Chế độ Sinh Tồn (3 Tim) & Bảng Xếp Hạng */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEnableHearts(!enableHearts)}
+                    className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                      enableHearts
+                        ? 'border-rose-500 bg-rose-500/10 text-rose-400 shadow-sm'
+                        : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 shrink-0 ${enableHearts ? 'fill-rose-500 text-rose-500' : 'text-slate-500'}`} />
+                    <div>
+                      <div>❤️ Sinh Tồn: {enableHearts ? '3 Tim' : 'Vô Hạn'}</div>
+                      <div className="text-[10px] font-normal text-slate-400">{enableHearts ? 'Sai 3 câu là bị loại' : 'Không giới hạn mạng'}</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowLeaderboardLive(!showLeaderboardLive)}
+                    className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                      showLeaderboardLive
+                        ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-sm'
+                        : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <Trophy className="w-4 h-4 shrink-0 text-indigo-400" />
+                    <div>
+                      <div>🏆 BXH Trực Tiếp</div>
+                      <div className="text-[10px] font-normal text-slate-400">{showLeaderboardLive ? 'Hiện Top 10 mỗi câu' : 'Chỉ hiện cuối giờ'}</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 3. Cơ chế Bấm giờ & Thời gian */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Thời Lượng / Câu
+                    </label>
+                    <select
+                      value={quizSeconds}
+                      onChange={e => setQuizSeconds(Number(e.target.value))}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value={10}>10 giây / câu (Siêu tốc)</option>
+                      <option value={15}>15 giây / câu (Nhanh)</option>
+                      <option value={20}>20 giây / câu (Chuẩn)</option>
+                      <option value={30}>30 giây / câu (Vừa)</option>
+                      <option value={45}>45 giây / câu (Suy luận)</option>
+                      <option value={60}>60 giây / câu (Tính toán)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Cơ Chế Bấm Giờ
+                    </label>
+                    <select
+                      value={timerType}
+                      onChange={e => setTimerType(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="PER_QUESTION_TIMER">⏱️ Đếm ngược tự động</option>
+                      <option value="MANUAL_HOST">🕹️ Host chuyển câu thủ công</option>
+                    </select>
                   </div>
                 </div>
               </div>
