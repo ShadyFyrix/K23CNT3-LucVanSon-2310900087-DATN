@@ -660,6 +660,24 @@ Nhằm phục vụ chế độ kiểm tra Quiz gamification (sàn đấu cạnh 
 4. **Live Quiz Arena Simulator:**
    - Giả lập phòng thi thời gian thực: Đếm ngược từng giây, ticker audio khi còn dưới 5s, điểm số đua tốc độ (Speed Bonus), chuỗi trả lời đúng (Streak Combo), âm thanh chuẩn Web Audio (fanfare, streak, correct, wrong, tick).
 
+
+### 10.2 Bộ Động Cơ Luật Chơi Tùy Biến (Custom Game Rules Engine)
+Hệ thống cho phép Giảng viên tùy biến luật chơi ở 2 cấp độ và lưu trữ trực tiếp vào CSDL:
+1. **Cấp độ Từng câu hỏi (Trong Studio):**
+   - Tùy chỉnh `timeLimitSeconds` cho từng câu (10s, 15s, 20s, 30s, 45s, 60s, 90s, 120s).
+   - Tùy chỉnh dạng đáp án `SINGLE` (đơn đáp án) hoặc `MULTIPLE` (đa đáp án).
+2. **Cấp độ Trận đấu Đấu trường (Trong Modal Tạo phòng Ca thi & Cockpit Host):**
+   - **Cơ chế tính điểm (`scoringType`):** `SPEED_BONUS` (Đua điểm tốc độ tối đa 1.000đ/câu: 500đ cơ bản + 500đ tốc độ + 50đ * chuỗi streak) vs `STANDARD` (Điểm cố định).
+   - **Cơ chế Sinh tồn (`enableHearts`):** `3 Quả Tim (Survival Mode)` (mỗi lần trả lời sai bị trừ 1 tim, hết 3 tim bị loại vào chế độ Khán giả) vs `Vô hạn mạng`.
+   - **Cơ chế Bấm giờ (`timerType`):** `PER_QUESTION_TIMER` (Đếm ngược tự động từng câu) vs `MANUAL_HOST` (Host tự bấm chuyển câu khi sinh viên thảo luận xong).
+   - **Bảng xếp hạng trực tiếp (`showLeaderboard`):** BẬT/TẮT hiển thị Top 10 sau mỗi câu hỏi.
+
+### 10.3 Luồng Vận Hành Khép Kín: Dữ Liệu Thật 100%
+- **Không dùng mock data:** Toàn bộ đề thi từ Assessment Studio được lưu vào MongoDB (`exam_papers`).
+- **Tạo phòng thi thời gian thực:** Giảng viên khởi tạo phòng tại `/exam-sessions` -> Gọi `POST /api/quiz-arena/create-room` -> MongoDB lưu `ExamSession` với `isGamifiedQuiz: true`, `quizPin` (6 số) và `gameRules`.
+- **Đấu trực tiếp qua WebSocket:** Sinh viên vào `/quiz-arena/play` nhập mã PIN -> Gia nhập Room `arena_{pinCode}` -> Host bấm bắt đầu -> Socket.IO phát sóng câu hỏi, thu thập câu trả lời và tính điểm trực tiếp.
+- **Quy đổi điểm thi chính thức:** Sau trận đấu, Giảng viên bấm `Đồng bộ điểm` -> Hệ thống tự động quy đổi điểm Quiz sang thang điểm 10 và lưu vào bảng điểm chính thức của Ca thi (`syncArenaGrades`).
+
 ---
 
 *Tài liệu phân tích này được xây dựng từ `SYSTEM_BLUEPRINT.md v3.3` và cập nhật theo phiên bản mới nhất của ExamGuard AI & Assessment Studio v3.5.*

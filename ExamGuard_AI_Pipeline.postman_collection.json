@@ -561,6 +561,130 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "06. Đấu Trường Quiz Arena (Gamification & Soạn Đề Studio)",
+			"item": [
+				{
+					"name": "6.1 Soạn đề thi Quiz Arena trong Assessment Studio (POST /api/exam/papers)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{teacher_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"[Quiz] Đấu Trường Lập Trình Web & JavaScript Modern\",\n  \"code\": \"QUIZ-JS-2026\",\n  \"durationMinutes\": 15,\n  \"totalScore\": 10.0,\n  \"paperType\": \"STRUCTURED_QUIZ\",\n  \"submissionMode\": \"ONLINE_ONLY\",\n  \"structureType\": \"PURE_MCQ\",\n  \"isQuizArena\": true,\n  \"quizSettings\": {\n    \"defaultTimePerQuestion\": 20,\n    \"speedBonus\": true\n  },\n  \"totalQuestions\": 3,\n  \"questions\": [\n    {\n      \"stt\": 1,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.0,\n      \"prompt\": \"Biến khai báo bằng const trong JavaScript có đặc điểm gì?\",\n      \"options\": [\n        \"Có thể gán lại giá trị bất kỳ lúc nào\",\n        \"Bắt buộc phải khởi tạo giá trị khi khai báo và không thể re-assign\",\n        \"Có phạm vi function-scope giống var\",\n        \"Tự động gán undefined nếu chưa có giá trị\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [1],\n      \"timeLimitSeconds\": 15,\n      \"explanation\": \"const yêu cầu khởi tạo ngay khi khai báo và không thể gán lại (re-assign).\"\n    },\n    {\n      \"stt\": 2,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Phương thức nào chuyển đổi đối tượng JavaScript thành chuỗi JSON?\",\n      \"options\": [\n        \"JSON.parse()\",\n        \"JSON.toString()\",\n        \"JSON.stringify()\",\n        \"Object.toJSON()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [2],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"JSON.stringify() dùng để serialize đối tượng JS thành chuỗi JSON chuẩn.\"\n    },\n    {\n      \"stt\": 3,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Toán tử Promise nào chờ TẤT CẢ các promise hoàn thành hoặc bị reject đầu tiên?\",\n      \"options\": [\n        \"Promise.all()\",\n        \"Promise.race()\",\n        \"Promise.any()\",\n        \"Promise.allSettled()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [0],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"Promise.all() chờ tất cả promise resolve, hoặc reject ngay khi 1 promise thất bại.\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url_core}}/api/exam/papers",
+							"host": ["{{base_url_core}}"],
+							"path": ["api", "exam", "papers"]
+						},
+						"description": "Lưu đề thi trắc nghiệm Quiz Arena với thời gian đếm ngược từng câu, speed bonus và đáp án chuẩn vào MongoDB"
+					},
+					"response": []
+				},
+				{
+					"name": "6.2 Giảng viên khởi tạo phòng Quiz Arena kèm Custom Rules (POST /api/quiz-arena/create-room)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{teacher_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Đấu trường Quiz 15p - Lập Trình Web Cạnh Tranh\",\n  \"examPaperId\": \"{{quiz_paper_id}}\",\n  \"gameRules\": {\n    \"scoringType\": \"SPEED_BONUS\",\n    \"timerType\": \"PER_QUESTION_TIMER\",\n    \"secondsPerQuestion\": 20,\n    \"enableHearts\": true,\n    \"maxHearts\": 3,\n    \"showLeaderboard\": true\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url_core}}/api/quiz-arena/create-room",
+							"host": ["{{base_url_core}}"],
+							"path": ["api", "quiz-arena", "create-room"]
+						},
+						"description": "Giảng viên tạo phòng chơi Đấu trường Quiz, tự động sinh mã PIN 6 số và thiết lập luật chơi tùy biến (3 tim, speed bonus, timer)"
+					},
+					"response": []
+				},
+				{
+					"name": "6.3 Giảng viên cập nhật Luật chơi tùy biến Realtime (PUT /api/quiz-arena/rules/:sessionId)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{teacher_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scoringType\": \"SPEED_BONUS\",\n  \"timerType\": \"PER_QUESTION_TIMER\",\n  \"secondsPerQuestion\": 15,\n  \"enableHearts\": true,\n  \"maxHearts\": 3,\n  \"showLeaderboard\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url_core}}/api/quiz-arena/rules/{{session_id}}",
+							"host": ["{{base_url_core}}"],
+							"path": ["api", "quiz-arena", "rules", "{{session_id}}"]
+						},
+						"description": "Điều chỉnh luật chơi của sàn đấu ngay trong lúc sảnh chờ hoặc giữa các câu hỏi"
+					},
+					"response": []
+				},
+				{
+					"name": "6.4 Lấy trạng thái sàn đấu thời gian thực (GET /api/quiz-arena/state/:sessionId)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{teacher_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url_core}}/api/quiz-arena/state/{{session_id}}",
+							"host": ["{{base_url_core}}"],
+							"path": ["api", "quiz-arena", "state", "{{session_id}}"]
+						},
+						"description": "Host lấy thông tin sàn đấu: Mã PIN, số thí sinh đã vào phòng, phân phối đáp án realtime và Top 10 bảng xếp hạng"
+					},
+					"response": []
+				},
+				{
+					"name": "6.5 Đồng bộ điểm số đấu trường sang cơ sở dữ liệu chính thức (POST /api/quiz-arena/sync-grades/:sessionId)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{teacher_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url_core}}/api/quiz-arena/sync-grades/{{session_id}}",
+							"host": ["{{base_url_core}}"],
+							"path": ["api", "quiz-arena", "sync-grades", "{{session_id}}"]
+						},
+						"description": "Quy đổi điểm đấu trường Quiz sang thang điểm 10 và lưu vào bảng điểm chính thức của Ca thi"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [

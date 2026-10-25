@@ -28,6 +28,7 @@
 18. [Kiến trúc Đề thi Đa dạng: Đề thi Hỗn hợp, Đề theo File & Quy chế Chấm Đa đáp án](#18-kiến-trúc-đề-thi-đa-dạng-đề-thi-hỗn-hợp-trắc-nghiệm--tự-luận-đề-theo-file--quy-chế-chấm-đa-đáp-án-multi-select--alternative-keys)
 19. [Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification)](#19-danh-mục-toàn-diện-nền-tảng-hệ-thống-công-nghệ--thư-viện-tech-stack--libraries-specification)
 20. [Quy Chế Khảo Thí: Đếm Ngược Giờ Phát Đề (Countdown Waiting Room), Chặn Vào Phòng Khi Đi Muộn & Giám Thị Mở Bàn Đặc Cách](#20-quy-chế-khảo-thí-đếm-ngược-giờ-phát-đề-countdown-waiting-room-chặn-vào-phòng-khi-đi-muộn--giám-thị-mở-bàn-đặc-cách)
+21. [Đấu Trường Quiz Arena (Gamification), Bộ Công Cụ Soạn Đề Studio v3.5 & Custom Rules Engine](#21-đấu-trường-quiz-arena-gamification-bộ-công-cụ-soạn-đề-studio-v35--custom-rules-engine)
 
 ---
 
@@ -4072,6 +4073,74 @@ graph TD
      + Hỗ trợ nút **"Xuất Báo Cáo Kết Quả Thi (PDF/In)"** làm căn cứ lưu trữ và khiếu nại điểm (nếu có).
 
 ---
+
+
+---
+
+## 21. ĐẤU TRƯỜNG QUIZ ARENA (GAMIFICATION), BỘ CÔNG CỤ SOẠN ĐỀ STUDIO v3.5 & CUSTOM RULES ENGINE
+
+### 21.1 Tổng quan & Triết lý Thiết kế
+Nhằm đáp ứng yêu cầu kiểm tra trắc nghiệm tương tác cao (Interactive Gamified Quizzing) theo tinh thần kiểm tra thường xuyên và củng cố kiến thức trên lớp, ExamGuard AI mở rộng phân hệ **Quiz Arena**:
+- **Không áp đặt các quy định thi phòng máy cứng nhắc:** Không yêu cầu đăng ký phòng máy vật lý hay cấp phép từ Hội đồng Khảo thí; Giảng viên toàn quyền chủ động tạo phòng, cấu hình luật chơi và chia sẻ mã PIN 6 số cho sinh viên.
+- **Dữ liệu thật 100% trong CSDL:** Toàn bộ đề thi được tạo và lưu trữ chuẩn hóa trong MongoDB (`exam_papers`), đồng bộ kết quả thi đấu sang bảng điểm chính thức (`syncArenaGrades`).
+
+### 21.2 Bộ Công Cụ Soạn Đề Thi Cho Quiz (Assessment Studio v3.5 SOLID)
+Tích hợp trực tiếp trong Assessment Studio để giảng viên tạo đề thi trắc nghiệm theo chuẩn Đấu trường:
+1. **Ba phương thức nạp đề nhanh:**
+   - **Tab 1 — Bộ Đề Mẫu Chuẩn (Preset Packs):** Kho đề mẫu chất lượng cao biên soạn sẵn cho các môn CNTT: *JavaScript Modern & ES6 (10 câu, 20s)*, *Cấu Trúc Dữ Liệu & Giải Thuật (5 câu, 30s)*, *AI & Sinh Trắc Học ExamGuard (5 câu, 15s)*.
+   - **Tab 2 — Dán Văn Bản Tự Động Bóc Tách (AI Fast Parser):** Trích xuất tự nhiên từ văn bản Word/Notepad: tự động nhận diện câu hỏi, cú pháp thời gian `[15s]`, `[20s]`, nhận diện đáp án đúng bằng dấu `*` hoặc `[đúng]`, và trích xuất lời giải thích chi tiết.
+   - **Tab 3 — Sinh Đề Trống Hàng Loạt (Batch Generator):** Thiết lập cấu trúc khung cố định (5–30 câu) kèm số giây đếm ngược và trọng số điểm mỗi câu.
+2. **Cấu hình Đếm ngược & Huy hiệu Kahoot từng câu:**
+   - Bộ chọn thời gian làm bài riêng biệt cho từng câu: `10s`, `15s`, `20s`, `30s`, `45s`, `60s`, `90s`, `120s`.
+   - 4 khối màu và biểu tượng Kahoot đặc trưng: ▲ Đỏ (A), ◆ Xanh dương (B), ● Vàng (C), ■ Xanh lá (D). Bấm trực tiếp vào chữ cái để chọn đáp án đúng.
+3. **Trình Mô Phỏng Sàn Đấu Trực Tiếp (Live Quiz Arena Simulator):**
+   - Giả lập phòng thi thời gian thực trước khi đưa vào tổ chức thi: Vòng tròn đếm ngược động, nhịp tích tắc âm thanh khi dưới 5s, phản hồi tức thì đúng/sai, mô phỏng điểm thưởng tốc độ (`Speed Bonus`) và chuỗi đúng (`Streak Combo`), tích hợp Web Audio API (fanfare, streak, correct, wrong, tick).
+
+### 21.3 Bộ Động Cơ Luật Chơi Tùy Biến (Custom Game Rules Engine)
+Khi khởi tạo phòng thi tại `/exam-sessions` hoặc điều khiển tại Cockpit Host `/quiz-arena/host/:sessionId`, Giảng viên toàn quyền tùy biến luật chơi thời gian thực:
+- **Cơ chế tính điểm (`scoringType`):**
+  - `SPEED_BONUS`: Điểm cơ bản 500đ + Điểm thưởng tốc độ tối đa 500đ (thí sinh trả lời càng nhanh điểm càng cao) + Điểm chuỗi Streak (50đ * chuỗi).
+  - `STANDARD`: Điểm cố định theo trọng số câu hỏi, không phụ thuộc tốc độ bấm.
+- **Cơ chế Sinh tồn / Trái tim (`enableHearts`):**
+  - BẬT: Thí sinh có 3 Quả Tim. Mỗi lần trả lời sai bị trừ 1 tim. Hết 3 tim sẽ chuyển sang Chế độ Khán giả (Spectator) không còn được bấm đáp án nhưng vẫn theo dõi được diễn biến trận đấu.
+  - TẮT: Không giới hạn mạng, thí sinh tham gia liên tục đến hết bài.
+- **Cơ chế Bấm giờ (`timerType`):**
+  - `PER_QUESTION_TIMER`: Đồng hồ đếm ngược tự động theo thời gian cấu hình của từng câu hỏi (`timeLimitSeconds`).
+  - `MANUAL_HOST`: Giảng viên chủ động bấm chuyển câu sau khi sinh viên hoàn thành hoặc sau khi giảng bài.
+- **Bảng Xếp Hạng Trực Tiếp (`showLeaderboard`):**
+  - BẬT: Socket.IO tự động cập nhật và hiển thị Top 10 thí sinh dẫn đầu sau mỗi câu hỏi.
+  - TẮT: Giữ bí mật điểm số đến khi kết thúc trận đấu và công bố Bục vinh danh Podium Top 3 (Vàng, Bạc, Đồng).
+
+### 21.4 Mô Hình Dữ Liệu CSDL (MongoDB Schema Updates)
+```javascript
+// examPaper.model.js
+QuestionSchema.add({
+  timeLimitSeconds: { type: Number, default: 20 }
+});
+
+ExamPaperSchema.add({
+  isQuizArena: { type: Boolean, default: false },
+  quizSettings: {
+    defaultTimePerQuestion: { type: Number, default: 20 },
+    speedBonus: { type: Boolean, default: true }
+  }
+});
+
+// examSession.model.js
+ExamSessionSchema.add({
+  isGamifiedQuiz: { type: Boolean, default: false },
+  quizPin: { type: String, unique: true, sparse: true },
+  gameRules: {
+    scoringType: { type: String, enum: ['SPEED_BONUS', 'STANDARD'], default: 'SPEED_BONUS' },
+    timerType: { type: String, enum: ['PER_QUESTION_TIMER', 'MANUAL_HOST'], default: 'PER_QUESTION_TIMER' },
+    secondsPerQuestion: { type: Number, default: 20 },
+    enableHearts: { type: Boolean, default: true },
+    maxHearts: { type: Number, default: 3 },
+    showLeaderboard: { type: Boolean, default: true }
+  }
+});
+```
+
 
 *Blueprint version 3.3 — Cập nhật toàn diện: 2026-10-20*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
