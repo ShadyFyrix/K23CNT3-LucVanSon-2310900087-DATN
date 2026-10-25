@@ -21,9 +21,13 @@ import { toast } from 'react-hot-toast';
 import { apiClient } from '../api/apiClient';
 import { FaceRegistrationModal } from '../components/FaceRegistrationModal';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function FaceKyc() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = hasRole('admin') || hasRole('superadmin') || hasRole('academic');
+
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,8 +62,38 @@ export default function FaceKyc() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAdmin) {
+      fetchData();
+    }
+  }, [isAdmin]);
+
+  // Nếu không phải Admin, chặn hoàn toàn giao diện và không cho xem danh sách sinh viên khác
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[65vh] flex flex-col items-center justify-center text-center p-8">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
+            Giới Hạn Quyền Quản Trị Khảo Thí
+          </span>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white mt-3">
+            Khu Vực Quản Trị Viên (Admin Only)
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
+            Theo quy chế khảo thí, sinh viên không được phép xem dữ liệu và trạng thái sinh trắc học Face ID của thí sinh khác. Việc đăng ký và xác minh khuôn mặt chỉ được thực hiện tại bảng điều khiển của <strong>Quản trị viên Khảo thí (Admin)</strong>.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-blue-600/20 cursor-pointer active:scale-95"
+          >
+            Quay lại Cổng Thí Sinh
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Filtered List
   const targetList = activeTab === 'STUDENT' ? students : teachers;

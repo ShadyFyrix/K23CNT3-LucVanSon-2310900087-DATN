@@ -51,7 +51,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
+const defaultNavGroups: NavGroup[] = [
   {
     title: 'Tổng quan',
     items: [
@@ -135,7 +135,7 @@ const getRoleDisplayName = (user: any): string => {
 };
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user, logout, can, loading } = useAuth();
+  const { user, logout, can, hasRole, loading } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
   const location = useLocation();
@@ -147,7 +147,7 @@ export function Layout({ children }: { children: ReactNode }) {
     return saved === 'true';
   });
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(navGroups.map(g => g.title));
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
@@ -169,22 +169,87 @@ export function Layout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const filteredNavGroups = useMemo(() => {
+  // Xác định danh sách menu theo vai trò người dùng (Student, Teacher, Admin/Academic)
+  const roleNavGroups = useMemo<NavGroup[]>(() => {
     if (loading || !user) return [];
 
-    return navGroups
-      .map(group => {
-        const allowedItems = group.items.filter(item => {
-          if (!item.permission) return true;
-          return can(item.permission);
-        });
-        return {
-          ...group,
-          items: allowedItems
-        };
-      })
+    const isStudent = hasRole('student') && !hasRole('admin');
+    const isTeacher = hasRole('teacher') && !hasRole('admin');
+
+    if (isStudent) {
+      return [
+        {
+          title: 'Cổng Thí Sinh',
+          items: [
+            { name: 'Sảnh Sinh viên', path: '/', icon: LayoutDashboard },
+            { name: 'Hồ sơ & Lịch thi cá nhân', path: '/student', icon: GraduationCap },
+            { name: 'Vào Buồng thi AI', path: '/exam/take', icon: Monitor, badge: 'WORKSPACE' },
+            { name: 'Kết quả & Bảng điểm', path: '/exam/result?view=student', icon: ClipboardCheck },
+          ]
+        },
+        {
+          title: 'Thông Tin & Quy Chế',
+          items: [
+            { name: 'Bản tin & Quy chế thi', path: '/newsfeed', icon: Newspaper },
+          ]
+        }
+      ];
+    }
+
+    if (isTeacher) {
+      return [
+        {
+          title: 'Bàn làm việc Giảng viên',
+          items: [
+            { name: 'Trạm làm việc GV', path: '/', icon: LayoutDashboard },
+            { name: 'Hồ sơ & Nhiệm vụ Coi thi', path: '/teacher', icon: UserSquare2 },
+            { name: 'Bản tin & Quy chế', path: '/newsfeed', icon: Newspaper },
+          ]
+        },
+        {
+          title: 'Coi thi & Khảo thí',
+          items: [
+            { name: 'Giám thị Phòng 3D', path: '/live-proctor', icon: Eye, badge: 'LIVE' },
+            { name: 'Rà soát & Duyệt điểm', path: '/grading-review', icon: FileCheck2 },
+            { name: 'Ngân hàng Đề thi', path: '/exam-papers', icon: BookOpen },
+            { name: 'Lịch thi & Ca thi', path: '/exam-sessions', icon: Calendar, badge: 'GANTT' },
+            { name: 'Bảng điểm & Phổ điểm GV', path: '/exam/result?view=lecturer', icon: Award },
+          ]
+        },
+        {
+          title: 'Học thuật & Đào tạo',
+          items: [
+            { name: 'Lớp học phần', path: '/classes', icon: Presentation },
+            { name: 'Danh sách Sinh viên', path: '/students', icon: GraduationCap },
+          ]
+        }
+      ];
+    }
+
+    // Admin / Academic / Khảo thí toàn trường
+    return defaultNavGroups;
+  }, [user, loading, hasRole]);
+
+  // Khởi tạo mở rộng tất cả các group khi roleNavGroups thay đổi
+  useEffect(() => {
+    if (roleNavGroups.length > 0) {
+      setExpandedGroups(roleNavGroups.map(g => g.title));
+    }
+  }, [roleNavGroups]);
+
+  const filteredNavGroups = useMemo(() => {
+    if (!searchQuery.trim()) return roleNavGroups;
+
+    const q = searchQuery.toLowerCase().trim();
+    return roleNavGroups
+      .map(group => ({
+        ...group,
+        items: group.items.filter(
+          item => item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q)
+        )
+      }))
       .filter(group => group.items.length > 0);
-  }, [user, loading, can]);
+  }, [roleNavGroups, searchQuery]);
 
   const toggleGroup = (title: string) => {
     setExpandedGroups(prev =>
@@ -258,7 +323,11 @@ export function Layout({ children }: { children: ReactNode }) {
                   ExamGuard <span className="text-blue-600 dark:text-blue-400">AI</span>
                 </span>
                 <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-teal-600 dark:text-teal-400 block truncate">
-                  Khảo Thí Bảo Mật
+                  {hasRole('student') && !hasRole('admin')
+                    ? 'Cổng Thí Sinh AI'
+                    : hasRole('teacher') && !hasRole('admin')
+                    ? 'Bàn Giám Thị AI'
+                    : 'Khảo Thí Bảo Mật'}
                 </span>
               </div>
             )}
@@ -577,7 +646,13 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Status indicator */}
             <div className="hidden lg:flex items-center space-x-2 px-3 py-1 rounded-full text-[11px] font-mono border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Cụm Khảo Thí: ONLINE</span>
+              <span>
+                {hasRole('student') && !hasRole('admin')
+                  ? 'Cổng Thí Sinh: SẴN SÀNG'
+                  : hasRole('teacher') && !hasRole('admin')
+                  ? 'Buồng Giám Thị 3D: ONLINE'
+                  : 'Cụm Khảo Thí: ONLINE'}
+              </span>
             </div>
 
             {/* Chuyển đổi Sáng / Tối */}

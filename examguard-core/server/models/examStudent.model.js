@@ -70,7 +70,20 @@ const ExamStudentSchema = new mongoose.Schema({
   isLateUnlocked: { type: Boolean, default: false },
   lateUnlockedAt: { type: Date, default: null },
   lateUnlockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  lateUnlockReason: { type: String, default: '' }
+  lateUnlockReason: { type: String, default: '' },
+  
+  // ── CHỈ SỐ THI ĐẤU QUIZ ARENA THỜI GIAN THỰC ──
+  arenaStats: {
+    currentScore: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    maxStreak: { type: Number, default: 0 },
+    heartsRemaining: { type: Number, default: 3 },
+    totalSpeedBonus: { type: Number, default: 0 },
+    currentRank: { type: Number, default: 1 },
+    usedPowerUps: [{ type: String }],
+    badgesEarned: [{ type: String }],
+    answersPerQuestion: { type: Map, of: Object, default: {} }
+  }
 }, { timestamps: true });
 
 // Index đảm bảo mỗi sinh viên chỉ có 1 chỗ ngồi trong 1 ca thi

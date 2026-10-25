@@ -48,6 +48,7 @@ router.use('/academic-batches', academicBatchRoutes);
 // 3. Khảo thí: Ca thi, Ngân hàng đề thi, Làm bài thi & Nộp bài
 const examRoutes = require('./exam.route');
 router.use('/exam', examRoutes);
+router.use('/exams', examRoutes);
 
 // 4. Chấm thi: Tự động chấm, Rà soát 1 lần, Duyệt điểm & Công bố đáp án
 const gradingRoutes = require('./grading.route');
@@ -68,6 +69,8 @@ const postRoutes = require('./post.route');
 
 router.use('/dashboard', dashboardRoutes);
 router.use('/audit-logs', auditLogRoutes);
-router.use('/posts', postRoutes);
+// 8. Đấu trường Quiz Tương tác (Gamified Quiz Arena & Live Leaderboard)
+const quizArenaRoutes = require('./quizArena.route');
+router.use('/quiz-arena', quizArenaRoutes);
 
 module.exports = router;

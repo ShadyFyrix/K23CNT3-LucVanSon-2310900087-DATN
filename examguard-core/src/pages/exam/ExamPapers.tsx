@@ -41,7 +41,8 @@ import {
   UploadCloud,
   ChevronLeft,
   ChevronRight,
-  ClipboardPaste
+  ClipboardPaste,
+  SplitSquareVertical
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -101,7 +102,7 @@ export default function ExamPapers() {
         code: paperData.code,
         durationMinutes: paperData.duration,
         totalScore: paperData.totalScore,
-        courseId: paperData.courseId || selectedCourseId || (courses[0]?._id),
+        subject: paperData.courseId || selectedCourseId || (courses[0]?._id),
         paperType: 'STRUCTURED_QUIZ',
         submissionMode: 'ONLINE_ONLY',
         structureType: 'HYBRID',
@@ -110,18 +111,37 @@ export default function ExamPapers() {
           stt: i + 1,
           type: q.type,
           score: q.score,
-          options: q.options,
-          correctAnswers: q.correctAnswers,
-          selectionMode: q.selectionMode,
-          content: q.prompt,
-          explanation: q.explanation,
-          image: q.image
+          options: q.options || [],
+          correctAnswers: q.correctAnswers || [],
+          selectionMode: q.selectionMode || 'SINGLE',
+          content: q.prompt || q.content,
+          explanation: q.explanation || '',
+          image: q.imageUrl || q.image || null,
+          blankTemplate: q.blankTemplate || '',
+          blankAnswers: q.blankAnswers || [],
+          audioUrl: q.audioUrl || null,
+          audioName: q.audioName || null,
+          playLimit: q.playLimit || 2,
+          geometryData: q.geometryType ? {
+            geometryType: q.geometryType,
+            targetUnknown: q.targetUnknown,
+            expectedAnswer: q.expectedAnswer,
+            proofGuidelines: q.proofGuidelines
+          } : (q.geometryData || null),
+          codeLanguage: q.codeLanguage || 'cpp',
+          buggyCode: q.buggyCode || '',
+          fixedCode: q.fixedCode || '',
+          starterCode: q.starterCode || '',
+          testCases: q.testCases || []
         }))
       };
 
-      const res = await apiClient.post('/exam-papers', payload);
+      const res = paperData.id 
+        ? await apiClient.put(`/exams/papers/${paperData.id}`, payload)
+        : await apiClient.post('/exams/papers', payload);
+
       if (res.data?.success || res.status === 200 || res.status === 201) {
-        toast.success('Đã tạo đề thi EduTech thành công!');
+        toast.success(paperData.id ? 'Đã cập nhật đề thi thành công!' : 'Đã tạo đề thi EduTech thành công!');
         setShowCreateModal(false);
         fetchPapers();
       }
@@ -866,16 +886,26 @@ export default function ExamPapers() {
             </h1>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={() => {
                 setBuilderMode('EDUTECH');
                 handleOpenCreateModal();
               }}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
+              className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>SOẠN ĐỀ THI MỚI (EDUTECH)</span>
+              <Sparkles className="w-4 h-4" />
+              <span>SOẠN ĐỀ TRỰC QUAN (STUDIO)</span>
+            </button>
+            <button
+              onClick={() => {
+                setBuilderMode('DUAL_VIEW');
+                handleOpenCreateModal();
+              }}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-cyan-300 font-bold rounded-xl text-xs border border-slate-200 dark:border-cyan-500/30 transition active:scale-95 cursor-pointer"
+            >
+              <SplitSquareVertical className="w-4 h-4 text-cyan-500" />
+              <span>CHẾ ĐỘ KÉP PDF & SNIPPING</span>
             </button>
           </div>
         </div>
@@ -1116,6 +1146,8 @@ export default function ExamPapers() {
             onClose={() => setShowCreateModal(false)}
             onSave={handleSaveEduTechPaper}
             courses={courses}
+            onOpenDualView={() => setBuilderMode('DUAL_VIEW')}
+            onTriggerSnippingTool={() => setShowCropModal(true)}
           />
         ) : (
           <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
@@ -1144,8 +1176,17 @@ export default function ExamPapers() {
               <div className="flex items-center space-x-2">
                 <button
                   type="button"
+                  onClick={() => setBuilderMode('EDUTECH')}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                  title="Chuyển sang Studio Trực Quan Đa Khối"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Studio Trực Quan (EduTech)</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>

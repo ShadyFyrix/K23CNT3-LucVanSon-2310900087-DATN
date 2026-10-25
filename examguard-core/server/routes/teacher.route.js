@@ -33,6 +33,8 @@ router.put(
 );
 
 
+router.post('/bulk-create-accounts', authMiddleware, teacherController.bulkCreateAccounts);
+
 /**
  * Create teacher
  */

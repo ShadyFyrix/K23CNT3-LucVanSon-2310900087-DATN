@@ -2,8 +2,17 @@ const teacherService = require('../services/teacher.service');
 
 exports.getMyTeacherProfile = async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
-    const teacher = await require('../models/teacher.model').findOne({ userId });
+    const userId = req.user?._id || req.user?.id;
+    const email = req.user?.email;
+    const Teacher = require('../models/teacher.model');
+
+    const conditions = [];
+    if (userId) conditions.push({ userId });
+    if (email) conditions.push({ email });
+
+    const teacher = await Teacher.findOne(conditions.length > 0 ? { $or: conditions } : {})
+      .populate('department');
+
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên liên kết với tài khoản này.' });
     }
@@ -192,5 +201,21 @@ exports.updateLandingConfig = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.bulkCreateAccounts = async (req, res) => {
+  try {
+    const result = await teacherService.bulkCreateTeacherAccounts();
+    res.json({
+      success: true,
+      message: `Đã cấp tài khoản thành công cho toàn bộ Giảng viên! Mật khẩu mặc định: ${result.defaultPassword}`,
+      data: result
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };

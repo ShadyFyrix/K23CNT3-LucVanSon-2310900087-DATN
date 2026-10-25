@@ -26,7 +26,7 @@ const ExamSessionSchema = new mongoose.Schema({
   room: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'ExamRoom',
-    required: true 
+    required: false // Không bắt buộc với các phòng Quiz trực tuyến
   },
   startTime: { 
     type: Date, 
@@ -88,6 +88,63 @@ const ExamSessionSchema = new mongoose.Schema({
   reviewNotes: { 
     type: String, 
     default: '' // Ghi chú rà soát của giảng viên chấm thi
+  },
+  
+  // ── ĐẤU TRƯỜNG QUIZ GAMIFICATION (ARENA MODE) ──
+  isGamifiedQuiz: { 
+    type: Boolean, 
+    default: false 
+  },
+  quizPin: { 
+    type: String, 
+    trim: true, 
+    default: null // Mã PIN phòng đấu 6 số (VD: '839201')
+  },
+  currentQuestionIndex: { 
+    type: Number, 
+    default: 0 // Câu hỏi đang được trình chiếu
+  },
+  arenaStatus: { 
+    type: String, 
+    enum: ['LOBBY', 'QUESTION_ACTIVE', 'QUESTION_REVEALED', 'FINISHED'], 
+    default: 'LOBBY' 
+  },
+  gameRules: {
+    scoringType: { 
+      type: String, 
+      enum: ['CLASSIC', 'SPEED_BONUS', 'STREAK_MULTIPLIER'], 
+      default: 'SPEED_BONUS' 
+    },
+    timerType: { 
+      type: String, 
+      enum: ['PER_EXAM_TIMER', 'PER_QUESTION_TIMER'], 
+      default: 'PER_QUESTION_TIMER' 
+    },
+    secondsPerQuestion: { 
+      type: Number, 
+      default: 30 
+    },
+    enableHearts: { 
+      type: Boolean, 
+      default: true 
+    },
+    maxHearts: { 
+      type: Number, 
+      default: 3 
+    },
+    enablePowerUps: { 
+      type: Boolean, 
+      default: true 
+    },
+    feedbackTiming: { 
+      type: String, 
+      enum: ['INSTANT_REVEAL', 'POST_EXAM_REVEAL'], 
+      default: 'INSTANT_REVEAL' 
+    },
+    showLeaderboard: { 
+      type: Boolean, 
+      default: true 
+    }
   }
 }, { timestamps: true });
 

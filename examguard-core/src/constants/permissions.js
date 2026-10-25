@@ -37,6 +37,10 @@ export const PERMISSIONS = {
     VIEW: 'courses.view',
     MANAGE: 'courses.manage',
   },
+  SYLLABUS: {
+    VIEW: 'courses.view',
+    MANAGE: 'courses.manage',
+  },
   STUDENTS: {
     VIEW: 'students.view',
     MANAGE: 'students.manage',

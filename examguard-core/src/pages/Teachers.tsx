@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserSquare2, Star, Calendar, Clock, Search, Plus,
-  MoreHorizontal, Mail, Phone, Trash2, Edit2, Loader2, Award, Briefcase, Globe, ShieldCheck, ScanFace, CheckCircle, AlertCircle
+  MoreHorizontal, Mail, Phone, Trash2, Edit2, Loader2, Award, Briefcase, Globe, ShieldCheck, ScanFace, CheckCircle, AlertCircle,
+  KeyRound, Sparkles
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { TeacherForm } from '../components/forms/TeacherForm';
@@ -9,8 +10,17 @@ import { UserForm } from '../components/forms/UserForm';
 import { FaceRegistrationModal } from '../components/FaceRegistrationModal';
 import { apiClient } from '../api/apiClient';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import TeacherPortalPage from './teacher/TeacherPortalPage';
 
 export default function Teachers() {
+  const { hasRole } = useAuth();
+
+  // Nếu là giảng viên đăng nhập, hiển thị Cổng Giảng Viên / Bàn làm việc cá nhân
+  if (hasRole('teacher') && !hasRole('admin')) {
+    return <TeacherPortalPage />;
+  }
+
   const [teachers, setTeachers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +31,7 @@ export default function Teachers() {
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
   const [selectedForUser, setSelectedForUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -76,6 +87,43 @@ export default function Teachers() {
     } catch (error) { toast.error("Lỗi xóa dữ liệu"); }
   };
 
+  // Cấp tài khoản hàng loạt cho tất cả giảng viên
+  const handleBulkCreateAccounts = async () => {
+    if (!window.confirm("Hệ thống sẽ đồng bộ và cấp tài khoản coi thi với MẬT KHẨU MẶC ĐỊNH là 123456 cho toàn bộ giảng viên. Bạn có muốn thực hiện ngay?")) {
+      return;
+    }
+    try {
+      setBulkLoading(true);
+      const res = await apiClient.post('/teachers/bulk-create-accounts');
+      if (res.data?.success) {
+        toast.success(res.data.message || "Đã cấp tài khoản coi thi thành công! Mật khẩu mặc định: 123456");
+        fetchTeachers();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi khi cấp tài khoản hàng loạt");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Đặt lại mật khẩu về mặc định 123456 cho giảng viên
+  const handleResetPassword = async (teacher: any) => {
+    if (!window.confirm(`Bạn có chắc muốn đặt lại mật khẩu coi thi của giảng viên "${teacher.fullName}" (${teacher.email}) về mặc định "123456"?`)) {
+      return;
+    }
+    try {
+      const res = await apiClient.put(`/teachers/${teacher._id}`, {
+        password: '123456'
+      });
+      if (res.data?.success) {
+        toast.success(`Đã đặt lại mật khẩu cho giảng viên ${teacher.fullName} thành "123456"!`);
+        fetchTeachers();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi khi đặt lại mật khẩu");
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -85,12 +133,24 @@ export default function Teachers() {
             Quản lý danh sách giảng viên, chuyên môn, hợp đồng đào tạo và định danh sinh trắc học Coi thi.
           </p>
         </div>
-        <button
-          onClick={() => { setEditingTeacher(null); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-600/20 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" /> Thêm giảng viên
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleBulkCreateAccounts}
+            disabled={bulkLoading}
+            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 text-xs uppercase tracking-wider cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Đồng bộ & cấp tài khoản coi thi (Pass: 123456) cho tất cả giảng viên"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{bulkLoading ? 'Đang cấp TK...' : '⚡ Cấp TK coi thi (Pass: 123456)'}</span>
+          </button>
+
+          <button
+            onClick={() => { setEditingTeacher(null); setIsModalOpen(true); }}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-600/20 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" /> Thêm giảng viên
+          </button>
+        </div>
       </header>
 
       <div className="bg-white dark:bg-slate-900/90 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex gap-4 backdrop-blur-md">
@@ -218,15 +278,31 @@ export default function Teachers() {
                   </button>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setSelectedForUser({ fullName: teacher.fullName, email: teacher.email, department: 'training', role: roles.find(r => r.name.toLowerCase() === 'teacher')?._id });
-                    setIsUserModalOpen(true);
-                  }}
-                  className="w-full py-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/40 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" /> Kích hoạt tài khoản hệ thống
-                </button>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Pass: 123456</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleResetPassword(teacher)}
+                      className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] font-bold rounded-xl transition-all cursor-pointer"
+                      title="Đặt lại mật khẩu về mặc định 123456"
+                    >
+                      Reset MK
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedForUser({ fullName: teacher.fullName, email: teacher.email, department: 'training', role: roles.find(r => r.name.toLowerCase() === 'teacher')?._id });
+                        setIsUserModalOpen(true);
+                      }}
+                      className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-500 rounded-xl transition-all cursor-pointer"
+                      title="Phân quyền tài khoản User"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

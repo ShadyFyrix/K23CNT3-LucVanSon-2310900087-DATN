@@ -14,10 +14,14 @@ import ExamResult from './pages/exam/ExamResult';
 import LiveProctor from './pages/exam/LiveProctor';
 import ExamSessions from './pages/exam/ExamSessions';
 import ExamPapers from './pages/exam/ExamPapers';
+import QuizArenaHost from './pages/exam/QuizArenaHost';
+import QuizArenaPlayer from './pages/exam/QuizArenaPlayer';
 
 // Academic & System Modules
 import Students from './pages/Students';
 import Teachers from './pages/Teachers';
+import StudentPortalPage from './pages/student/StudentPortalPage';
+import TeacherPortalPage from './pages/teacher/TeacherPortalPage';
 import Classes from './pages/Classes';
 import Courses from './pages/Courses';
 import Campuses from './pages/Campuses';
@@ -75,6 +79,11 @@ export default function App() {
           <Route path="/exam-result/:sessionStudentId" element={<ProtectedRoute><ExamResult /></ProtectedRoute>} />
           <Route path="/exam-result" element={<ProtectedRoute><ExamResult /></ProtectedRoute>} />
 
+          {/* Đấu trường Quiz Gamification — Host & Player */}
+          <Route path="/quiz-arena/host/:sessionId" element={<ProtectedRoute><QuizArenaHost /></ProtectedRoute>} />
+          <Route path="/quiz-arena/play/:sessionId" element={<ProtectedRoute><QuizArenaPlayer /></ProtectedRoute>} />
+          <Route path="/quiz-arena/play" element={<ProtectedRoute><QuizArenaPlayer /></ProtectedRoute>} />
+
           <Route
             path="/*"
             element={
@@ -90,6 +99,14 @@ export default function App() {
                     <Route path="/live-proctor" element={<LiveProctor />} />
                     <Route path="/grading-review/:sessionId" element={<GradingReview />} />
                     <Route path="/grading-review" element={<GradingReview />} />
+
+                    {/* Cổng Cá nhân Chuyên biệt Sinh viên & Giảng viên */}
+                    <Route path="/student" element={<StudentPortalPage />} />
+                    <Route path="/student-portal" element={<StudentPortalPage />} />
+                    <Route path="/teacher" element={<TeacherPortalPage />} />
+                    <Route path="/teacher-portal" element={<TeacherPortalPage />} />
+                    <Route path="/lecturer" element={<TeacherPortalPage />} />
+                    <Route path="/lecturer-portal" element={<TeacherPortalPage />} />
 
                     {/* Quản lý Đào tạo theo Phân cấp */}
                     <Route path="/students" element={<Students />} />

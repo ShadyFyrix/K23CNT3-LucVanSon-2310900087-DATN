@@ -355,4 +355,67 @@ const getIpLocation = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe, getAllUsers, deleteUserById, refresh, logout, forceLogoutUser, forceLogoutAll, getIpLocation };
+// [PUT] Cập nhật thông tin cá nhân (Họ tên, SĐT)
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const { fullName, phone } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'Người dùng không tồn tại' });
+    if (fullName) user.fullName = fullName;
+    await user.save();
+
+    // Đồng bộ sang model Student nếu người dùng là sinh viên
+    const Student = require('../models/student.model');
+    await Student.findOneAndUpdate(
+      { $or: [{ userId }, { email: user.email }] },
+      { $set: { ...(fullName ? { fullName } : {}), ...(phone ? { phone } : {}) } }
+    );
+
+    res.json({ success: true, message: 'Cập nhật thông tin thành công!', data: user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// [PUT] Đổi mật khẩu cá nhân
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mật khẩu cũ và mới' });
+    }
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'Người dùng không tồn tại' });
+
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không chính xác' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  getAllUsers,
+  deleteUserById,
+  refresh,
+  logout,
+  forceLogoutUser,
+  forceLogoutAll,
+  getIpLocation,
+  updateProfile,
+  changePassword
+};

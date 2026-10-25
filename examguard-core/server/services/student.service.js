@@ -1,7 +1,39 @@
 const Student = require('../models/student.model');
 const Class = require('../models/class.model');
+const User = require('../models/user.model');
+const Role = require('../models/role.model');
+const bcrypt = require('bcryptjs');
 
 exports.createStudent = async (data) => {
+  const studentEmail = data.email?.toLowerCase().trim();
+  const passwordToSet = data.password ? data.password.trim() : '123456';
+
+  if (studentEmail) {
+    let studentRole = await Role.findOne({ name: { $regex: /^student$/i } });
+    let existingUser = await User.findOne({ email: studentEmail });
+    if (!existingUser) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(passwordToSet, salt);
+      const studentUser = await User.create({
+        fullName: data.fullName,
+        email: studentEmail,
+        password: hashedPassword,
+        role: studentRole ? studentRole._id : null,
+        roles: studentRole ? [studentRole._id] : [],
+        department: 'student',
+        status: 'active'
+      });
+      data.userId = studentUser._id;
+    } else {
+      data.userId = existingUser._id;
+      if (data.password && data.password.trim()) {
+        const salt = await bcrypt.genSalt(10);
+        existingUser.password = await bcrypt.hash(data.password.trim(), salt);
+        await existingUser.save();
+      }
+    }
+  }
+
   const student = await Student.create(data);
 
   // Nếu có gán lớp học trực tiếp lúc tạo, thêm sinh viên vào danh sách lớp
@@ -72,6 +104,61 @@ exports.getStudentById = async (id) => {
 exports.updateStudent = async (id, data) => {
   const oldStudent = await Student.findById(id);
 
+  // Đồng bộ hoặc tạo User account khi Admin cập nhật mật khẩu/email
+  const targetEmail = (data.email || oldStudent?.email)?.toLowerCase().trim();
+  if (targetEmail) {
+    let userDoc = await User.findOne({
+      $or: [
+        ...(oldStudent?.userId ? [{ _id: oldStudent.userId }] : []),
+        { email: targetEmail }
+      ]
+    });
+
+    if (data.password && data.password.trim()) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(data.password.trim(), salt);
+      if (userDoc) {
+        userDoc.password = hashedPassword;
+        if (data.fullName) userDoc.fullName = data.fullName;
+        if (data.email) userDoc.email = targetEmail;
+        await userDoc.save();
+        data.userId = userDoc._id;
+      } else {
+        let studentRole = await Role.findOne({ name: { $regex: /^student$/i } });
+        const newUser = await User.create({
+          fullName: data.fullName || oldStudent?.fullName,
+          email: targetEmail,
+          password: hashedPassword,
+          role: studentRole ? studentRole._id : null,
+          roles: studentRole ? [studentRole._id] : [],
+          department: 'student',
+          status: 'active'
+        });
+        data.userId = newUser._id;
+      }
+    } else if (!userDoc && targetEmail) {
+      // Nếu chưa có tài khoản, tự động tạo tài khoản với mật khẩu mặc định 123456
+      let studentRole = await Role.findOne({ name: { $regex: /^student$/i } });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('123456', salt);
+      const newUser = await User.create({
+        fullName: data.fullName || oldStudent?.fullName,
+        email: targetEmail,
+        password: hashedPassword,
+        role: studentRole ? studentRole._id : null,
+        roles: studentRole ? [studentRole._id] : [],
+        department: 'student',
+        status: 'active'
+      });
+      data.userId = newUser._id;
+    } else if (userDoc) {
+      if (data.fullName) userDoc.fullName = data.fullName;
+      if (data.email) userDoc.email = targetEmail;
+      await userDoc.save();
+      data.userId = userDoc._id;
+    }
+  }
+
   const updatedStudent = await Student.findByIdAndUpdate(
     id,
     data,
@@ -87,6 +174,43 @@ exports.updateStudent = async (id, data) => {
   }
 
   return updatedStudent;
+};
+
+exports.bulkCreateStudentAccounts = async () => {
+  const students = await Student.find({});
+  let studentRole = await Role.findOne({ name: { $regex: /^student$/i } });
+  const salt = await bcrypt.genSalt(10);
+  const defaultHash = await bcrypt.hash('123456', salt);
+
+  let createdCount = 0;
+  let linkedCount = 0;
+
+  for (const st of students) {
+    if (!st.email) continue;
+    const email = st.email.toLowerCase().trim();
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        fullName: st.fullName,
+        email,
+        password: defaultHash,
+        role: studentRole ? studentRole._id : null,
+        roles: studentRole ? [studentRole._id] : [],
+        department: 'student',
+        status: 'active'
+      });
+      createdCount++;
+    }
+
+    if (!st.userId || String(st.userId) !== String(user._id)) {
+      st.userId = user._id;
+      await st.save();
+      linkedCount++;
+    }
+  }
+
+  return { total: students.length, createdCount, linkedCount, defaultPassword: '123456' };
 };
 
 exports.deleteStudent = async (id) => {

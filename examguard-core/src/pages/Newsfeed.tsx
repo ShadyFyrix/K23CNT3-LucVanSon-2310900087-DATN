@@ -26,7 +26,8 @@ const DEPARTMENTS = [
 ];
 
 export default function Newsfeed() {
-  const { user, can } = useAuth();
+  const { user, can, hasRole } = useAuth();
+  const canCreatePost = hasRole('admin') || hasRole('superadmin') || hasRole('academic') || hasRole('teacher') || can('create_post');
   const [posts, setPosts] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -190,20 +191,22 @@ export default function Newsfeed() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 text-white p-8 rounded-3xl shadow-xl border border-blue-500/20 dark:border-slate-800 relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-emerald-300 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2">
-            <Sparkles className="w-4 h-4 animate-pulse" /> Truyền thông Nội bộ & Tin tức
+            <Sparkles className="w-4 h-4 animate-pulse" /> Truyền thông & Thông báo Khảo thí
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Bản Tin Doanh Nghiệp</h1>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Bản Tin Khảo Thí & Quy Chế Thi</h1>
           <p className="text-blue-100 dark:text-slate-300 text-sm mt-1 max-w-xl">
-            Cập nhật những hoạt động, thông báo chính thức và định hướng chiến lược của công ty.
+            Cập nhật những thông báo khảo thí, lịch thi chính thức và nội quy phòng thi trực tuyến ExamGuard AI.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="relative z-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 shrink-0 hover:scale-105 cursor-pointer"
-        >
-          <Plus className="w-5 h-5 stroke-[3]" /> Đăng Bản Tin Mới
-        </button>
+        {canCreatePost && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="relative z-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 shrink-0 hover:scale-105 cursor-pointer"
+          >
+            <Plus className="w-5 h-5 stroke-[3]" /> Đăng Bản Tin Mới
+          </button>
+        )}
       </header>
 
       {/* PINNED ANNOUNCEMENT BANNER */}

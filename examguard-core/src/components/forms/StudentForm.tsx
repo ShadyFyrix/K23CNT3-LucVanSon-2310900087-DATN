@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/apiClient';
-import { User, Mail, Phone, Calendar, Hash, Building2, BookOpen, Layers, FileText } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Hash, Building2, BookOpen, Layers, FileText, KeyRound, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
 
 interface StudentFormProps {
   onSubmit: (data: any) => void;
@@ -9,6 +9,7 @@ interface StudentFormProps {
 }
 
 export function StudentForm({ onSubmit, onCancel, initialData }: StudentFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     studentCode: '',
     fullName: '',
@@ -20,7 +21,8 @@ export function StudentForm({ onSubmit, onCancel, initialData }: StudentFormProp
     batch: '',
     class: '',
     status: 'active',
-    note: ''
+    note: '',
+    password: ''
   });
 
   const [departments, setDepartments] = useState<any[]>([]);
@@ -67,7 +69,8 @@ export function StudentForm({ onSubmit, onCancel, initialData }: StudentFormProp
         batch: initialData.batch?._id || initialData.batch || '',
         class: initialData.class?._id || initialData.class || '',
         status: initialData.status || 'active',
-        note: initialData.note || ''
+        note: initialData.note || '',
+        password: ''
       });
     }
   }, [initialData]);
@@ -276,6 +279,73 @@ export function StudentForm({ onSubmit, onCancel, initialData }: StudentFormProp
               placeholder="Ghi chú thêm về thí sinh..."
               className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. TÀI KHOẢN ĐĂNG NHẬP DỰ THI */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-1.5 h-5 bg-indigo-600 rounded-full"></div>
+          <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">Tài khoản & Mật khẩu đăng nhập thi</h3>
+        </div>
+
+        <div className="bg-indigo-50/60 dark:bg-indigo-950/30 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-indigo-900 dark:text-indigo-200">
+              <span className="font-bold">Quy chế đăng nhập:</span> Sinh viên sẽ đăng nhập vào hệ thống bằng <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">Email thí sinh</span> ở trên và <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">Mật khẩu</span> được cấp ở đây.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                  Mật khẩu tài khoản
+                </span>
+                <span className="text-[10px] font-normal text-slate-400">
+                  {initialData ? '(Bỏ trống = Giữ nguyên pass cũ)' : '(Mặc định nếu để trống: 123456)'}
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={initialData ? 'Nhập mật khẩu mới (hoặc để trống)...' : 'Mặc định: 123456'}
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer p-0.5"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, password: '123456' }))}
+                className="flex-1 py-2.5 px-3 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Gán "123456"
+              </button>
+              {initialData && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, password: '' }))}
+                  className="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                >
+                  Xóa ô
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

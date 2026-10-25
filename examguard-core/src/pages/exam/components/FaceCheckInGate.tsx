@@ -9,7 +9,8 @@ import {
   LayoutGrid,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { EXAMGUARD_COLORS } from '../../../constants/theme.constants';
@@ -47,6 +48,7 @@ interface FaceCheckInGateProps {
   faceCheckinError: string | null;
   faceSimilarity: number | null;
   onFaceCheckIn: () => void;
+  onBackToLobby?: () => void;
 }
 
 /**
@@ -61,7 +63,8 @@ export const FaceCheckInGate: React.FC<FaceCheckInGateProps> = ({
   isFaceCheckingIn,
   faceCheckinError,
   faceSimilarity,
-  onFaceCheckIn
+  onFaceCheckIn,
+  onBackToLobby
 }) => {
   const { isDark, toggleTheme } = useTheme();
 
@@ -123,11 +126,26 @@ export const FaceCheckInGate: React.FC<FaceCheckInGateProps> = ({
             <span>Phòng: <b className="text-teal-600 dark:text-teal-400">{examData.session.roomName || examData.session.roomCode}</b></span>
           </div>
 
+          {/* Back to lobby button */}
+          {onBackToLobby && (
+            <button
+              onClick={onBackToLobby}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                isDark
+                  ? 'border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Phòng Chờ Ca Thi</span>
+            </button>
+          )}
+
           {/* Theme switcher */}
           <button
             onClick={toggleTheme}
             title={isDark ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
-            className={`p-2 rounded-xl border transition ${
+            className={`p-2 rounded-xl border transition cursor-pointer ${
               isDark
                 ? 'border-slate-800 text-amber-400 hover:bg-slate-900'
                 : 'border-slate-200 text-blue-600 hover:bg-slate-100'

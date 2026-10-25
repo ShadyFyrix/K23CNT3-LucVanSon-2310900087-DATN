@@ -18,13 +18,18 @@ import {
   Lock,
   CheckCircle2,
   LayoutGrid,
-  CalendarRange
+  CalendarRange,
+  Trophy,
+  Sparkles,
+  X,
+  Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
 import { CandidateManagerModal } from './CandidateManagerModal';
 import { ResourceTimelineView } from './ResourceTimelineView';
 import { CreateSessionModal } from './CreateSessionModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface ExamSessionItem {
   _id: string;
@@ -44,6 +49,7 @@ interface ExamSessionItem {
 
 export default function ExamSessions() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<ExamSessionItem[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,10 +60,67 @@ export default function ExamSessions() {
   const [selectedSessionForCandidates, setSelectedSessionForCandidates] = useState<ExamSessionItem | null>(null);
   const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
 
-  // State Modal Thêm Ca Thi
+  // State Modal Thêm Ca Thi (Dành riêng cho Admin)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createPresetRoomId, setCreatePresetRoomId] = useState<string | undefined>(undefined);
   const [createPresetStartTime, setCreatePresetStartTime] = useState<string | undefined>(undefined);
+
+  // Phân quyền: Admin tạo được phòng thi chính khóa; Giảng viên & Admin tạo được phòng Quiz
+  const isAdmin = (user as any)?.role?.name === 'admin' || (user as any)?.role === 'admin' || (user as any)?.department === 'admin';
+  const isTeacher = (user as any)?.role?.name === 'teacher' || (user as any)?.role === 'teacher' || (user as any)?.department === 'teacher';
+
+  // State Modal Tạo Phòng Quiz Nhanh (Dành cho Giảng viên & Admin)
+  const [isCreateQuizModalOpen, setIsCreateQuizModalOpen] = useState(false);
+  const [quizTitle, setQuizTitle] = useState('');
+  const [selectedPaperId, setSelectedPaperId] = useState('');
+  const [availablePapers, setAvailablePapers] = useState<any[]>([]);
+  const [quizSeconds, setQuizSeconds] = useState(30);
+  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
+
+  const openCreateQuizModal = async () => {
+    try {
+      const res = await apiClient.get('/api/exam/papers');
+      if (res.data && res.data.success) {
+        const papers = res.data.data || [];
+        setAvailablePapers(papers);
+        if (papers.length > 0) setSelectedPaperId(papers[0]._id);
+      }
+    } catch (err) {
+      console.warn('Lỗi lấy đề thi:', err);
+    }
+    setIsCreateQuizModalOpen(true);
+  };
+
+  const handleCreateQuickQuiz = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPaperId) {
+      toast.error('Vui lòng chọn một đề thi từ ngân hàng!');
+      return;
+    }
+    setIsCreatingQuiz(true);
+    try {
+      const res = await apiClient.post('/api/quiz-arena/create-room', {
+        title: quizTitle || undefined,
+        examPaperId: selectedPaperId,
+        gameRules: {
+          scoringType: 'SPEED_BONUS',
+          timerType: 'PER_QUESTION_TIMER',
+          secondsPerQuestion: quizSeconds,
+          enableHearts: true,
+          maxHearts: 3
+        }
+      });
+      if (res.data && res.data.success) {
+        toast.success('Đã tạo phòng Quiz thành công!');
+        setIsCreateQuizModalOpen(false);
+        navigate(`/quiz-arena/host/${res.data.data._id}`);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi tạo phòng Quiz');
+    } finally {
+      setIsCreatingQuiz(false);
+    }
+  };
 
   const fetchRooms = async () => {
     try {
@@ -173,17 +236,34 @@ export default function ExamSessions() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => {
-                setCreatePresetRoomId(undefined);
-                setCreatePresetStartTime(undefined);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>+ Thêm Ca Thi Mới</span>
-            </button>
+            {/* 1. Chỉ ADMIN mới có quyền tạo Ca thi / Phòng thi chính thức */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setCreatePresetRoomId(undefined);
+                  setCreatePresetStartTime(undefined);
+                  setIsCreateModalOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
+                title="Admin Khảo thí: Lên lịch ca thi chính khóa phòng P302"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>+ Thêm Ca Thi (Admin)</span>
+              </button>
+            )}
+
+            {/* 2. GIẢNG VIÊN & ADMIN: Được quyền tạo nhanh Phòng Quiz Arena */}
+            {(isTeacher || isAdmin) && (
+              <button
+                onClick={openCreateQuizModal}
+                className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+                title="Giảng viên: Tạo nhanh phòng Quiz Arena cho lớp học"
+              >
+                <Zap className="w-4 h-4 fill-slate-950" />
+                <span>⚡ Tạo Phòng Quiz</span>
+              </button>
+            )}
+
             <button
               onClick={() => navigate('/take-exam')}
               className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 cursor-pointer"
@@ -417,6 +497,26 @@ export default function ExamSessions() {
                       </button>
                     )}
 
+                    {/* Nút Khởi động / Tham gia Đấu trường Quiz Gamification */}
+                    <button
+                      onClick={() => {
+                        const isStudent = (user as any)?.role?.name === 'student' || (user as any)?.role === 'student';
+                        if (isStudent) {
+                          navigate(`/quiz-arena/play/${s._id}`);
+                        } else {
+                          navigate(`/quiz-arena/host/${s._id}`);
+                        }
+                      }}
+                      className="w-full py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
+                    >
+                      <Trophy className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                      <span>
+                        {(user as any)?.role?.name === 'student' || (user as any)?.role === 'student' 
+                          ? '⚡ Vào Đấu Trường Quiz' 
+                          : '🏆 Mở Đấu Trường Quiz Arena'}
+                      </span>
+                    </button>
+
                     {/* Nút Kết thúc ca thi & Thu bài (Dành cho Cán bộ coi thi khi ca thi chưa đóng) */}
                     {!statusInfo.isEnded && (
                       <button
@@ -474,7 +574,7 @@ export default function ExamSessions() {
         />
       )}
 
-      {/* Modal Lên Lịch / Thêm Ca Thi Mới */}
+      {/* Modal Lên Lịch / Thêm Ca Thi Mới (Dành riêng cho Admin) */}
       <CreateSessionModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -482,6 +582,119 @@ export default function ExamSessions() {
         initialRoomId={createPresetRoomId}
         initialStartTime={createPresetStartTime}
       />
+
+      {/* Modal Tạo Nhanh Phòng Quiz Arena (Dành cho Giảng viên & Admin) */}
+      {isCreateQuizModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative">
+            <button
+              onClick={() => setIsCreateQuizModalOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                <Zap className="w-6 h-6 fill-amber-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Tạo Nhanh Phòng Quiz Arena
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Giảng viên chủ động tạo phòng tương tác gameshow, tự động sinh mã PIN
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateQuickQuiz} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Tên Phòng Quiz
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Đấu trường Quiz 15p - Kỹ thuật Lập trình C"
+                  value={quizTitle}
+                  onChange={e => setQuizTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Chọn Đề Thi từ Ngân Hàng <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  required
+                  value={selectedPaperId}
+                  onChange={e => setSelectedPaperId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  {availablePapers.length === 0 ? (
+                    <option value="">Chưa có đề thi nào trong ngân hàng</option>
+                  ) : (
+                    availablePapers.map((p: any) => (
+                      <option key={p._id} value={p._id}>
+                        {p.code} - {p.title} ({p.questions?.length || 0} câu)
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    Thời Gian / Câu
+                  </label>
+                  <select
+                    value={quizSeconds}
+                    onChange={e => setQuizSeconds(Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value={15}>15 giây / câu (Nhanh)</option>
+                    <option value={30}>30 giây / câu (Chuẩn)</option>
+                    <option value={45}>45 giây / câu (Vừa)</option>
+                    <option value={60}>60 giây / câu (Code)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    Chế Độ Luật Chơi
+                  </label>
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-amber-500 font-bold flex items-center space-x-1.5">
+                    <span>⚡ Thưởng Tốc Độ + 3 Tim</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                💡 <strong>Dành riêng cho Giảng viên:</strong> Phòng Quiz là hoạt động tương tác linh hoạt trên lớp, không đòi hỏi đăng ký phòng máy vật lý hay cấp phép từ Ban Khảo thí. Sau khi tạo, bạn sẽ được đưa ngay vào màn hình điều khiển Host Cockpit!
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateQuizModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingQuiz || availablePapers.length === 0}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {isCreatingQuiz ? 'Đang Khởi Tạo...' : '🚀 Bắt Đầu Đấu Trường Ngay'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

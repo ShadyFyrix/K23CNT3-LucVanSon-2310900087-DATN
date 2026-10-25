@@ -16,7 +16,12 @@ function initSocket(server) {
     maxHttpBufferSize: 5e6 // 5MB for frame transmissions if needed
   });
 
+  const { registerQuizArenaHandlers } = require('./quizArenaSocket.service');
+
   io.on('connection', (socket) => {
+    // 0. Tích hợp Đấu trường Quiz Gamification Realtime
+    registerQuizArenaHandlers(io, socket);
+
     // 1. Thí sinh hoặc Giám thị tham gia vào phòng thi (room)
     socket.on('join_session', ({ sessionId, role, studentId, candidateCode }) => {
       if (!sessionId) return;

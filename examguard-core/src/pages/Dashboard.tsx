@@ -38,6 +38,8 @@ import { apiClient } from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import StudentDashboard from './dashboard/StudentDashboard';
+import LecturerDashboard from './dashboard/LecturerDashboard';
 
 const VIOLATION_COLORS: { [key: string]: string } = {
   LOOK_AWAY: '#f59e0b',
@@ -62,7 +64,8 @@ const VIOLATION_LABELS: { [key: string]: string } = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
+  const [adminViewOverride, setAdminViewOverride] = useState<'AUTO' | 'ADMIN' | 'LECTURER' | 'STUDENT'>('AUTO');
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
 
@@ -104,6 +107,58 @@ export default function Dashboard() {
     { name: 'Nhắc nhở thủ công', count: 1, color: '#64748b' }
   ];
 
+  // Phân quyền hiển thị theo vai trò người dùng
+  const isStudent = hasRole('student') && !hasRole('admin');
+  const isTeacher = hasRole('teacher') && !hasRole('admin');
+
+  if (isStudent && adminViewOverride === 'AUTO') {
+    return <StudentDashboard />;
+  }
+
+  if (isTeacher && adminViewOverride === 'AUTO') {
+    return <LecturerDashboard />;
+  }
+
+  if (adminViewOverride === 'STUDENT') {
+    return (
+      <div className="space-y-4">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-blue-500/10 to-teal-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 flex items-center justify-between text-xs font-bold shadow-sm">
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+            <span>Chế độ Xem trước dành cho Quản trị viên: <strong>Cổng Sinh Viên / Thí Sinh Dự Thi</strong></span>
+          </div>
+          <button
+            onClick={() => setAdminViewOverride('ADMIN')}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition"
+          >
+            Quay lại Khảo thí Toàn trường
+          </button>
+        </div>
+        <StudentDashboard />
+      </div>
+    );
+  }
+
+  if (adminViewOverride === 'LECTURER') {
+    return (
+      <div className="space-y-4">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/15 via-blue-500/10 to-teal-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 flex items-center justify-between text-xs font-bold shadow-sm">
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
+            <span>Chế độ Xem trước dành cho Quản trị viên: <strong>Bàn Làm Việc Giảng Viên / Giám Thị 3D</strong></span>
+          </div>
+          <button
+            onClick={() => setAdminViewOverride('ADMIN')}
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition"
+          >
+            Quay lại Khảo thí Toàn trường
+          </button>
+        </div>
+        <LecturerDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
       {/* ─── ExamGuard AI Hero Header ─── */}
@@ -129,7 +184,33 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* View Switcher for Admin preview */}
+            <div className="flex items-center bg-black/25 backdrop-blur-md p-1 rounded-xl border border-white/10 text-xs font-bold text-white">
+              <button
+                onClick={() => setAdminViewOverride('ADMIN')}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  adminViewOverride === 'ADMIN' || adminViewOverride === 'AUTO'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                Toàn trường
+              </button>
+              <button
+                onClick={() => setAdminViewOverride('LECTURER')}
+                className="px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition"
+              >
+                Bàn Giảng viên
+              </button>
+              <button
+                onClick={() => setAdminViewOverride('STUDENT')}
+                className="px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition"
+              >
+                Cổng Thí sinh
+              </button>
+            </div>
+
             <button
               onClick={fetchDashboardStats}
               className="p-2.5 bg-white/5 hover:bg-white/10 text-white backdrop-blur-md rounded-xl transition-all flex items-center gap-2 text-xs font-semibold border border-white/10"

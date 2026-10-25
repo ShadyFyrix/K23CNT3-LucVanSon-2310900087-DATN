@@ -42,6 +42,7 @@ router.post('/upload-paper-file', upload.single('file'), examController.uploadPa
 router.post('/papers', examController.createExamPaper);
 router.get('/papers', examController.getExamPapers);
 router.get('/papers/:id', examController.getExamPaperDetail);
+router.put('/papers/:id', examController.updateExamPaper);
 
 // Phòng thi (Exam Rooms)
 router.get('/rooms', examController.getExamRooms);

@@ -146,8 +146,8 @@ exports.createExamPaper = async (req, res) => {
         return {
           stt: q.stt || (idx + 1),
           type: q.type || 'MULTIPLE_CHOICE',
-          content: q.content || `Câu ${idx + 1}`,
-          image: q.image || null,
+          content: q.content || q.prompt || `Câu ${idx + 1}`,
+          image: q.image || q.imageUrl || null,
           options: isEssay ? [] : (q.options || ['A', 'B', 'C', 'D']),
           correctAnswer: corrAns,
           correctAnswers: corrList,
@@ -157,7 +157,18 @@ exports.createExamPaper = async (req, res) => {
           minWords: q.minWords || 0,
           submissionMethod: q.submissionMethod || 'TEXT_EDITOR',
           allowAttachment: Boolean(q.allowAttachment),
-          explanation: q.explanation || (isEssay ? 'Câu hỏi tự luận' : `Đáp án câu số ${idx + 1}`)
+          explanation: q.explanation || (isEssay ? 'Câu hỏi tự luận' : `Đáp án câu số ${idx + 1}`),
+          blankTemplate: q.blankTemplate || '',
+          blankAnswers: q.blankAnswers || [],
+          audioUrl: q.audioUrl || null,
+          audioName: q.audioName || null,
+          playLimit: q.playLimit || 2,
+          geometryData: q.geometryData || null,
+          buggyCode: q.buggyCode || '',
+          fixedCode: q.fixedCode || '',
+          codeLanguage: q.codeLanguage || 'cpp',
+          starterCode: q.starterCode || '',
+          testCases: q.testCases || []
         };
       });
     } else if (paperType === 'FILE_ATTACHED' && Number(totalQuestions) > 0) {
@@ -277,6 +288,80 @@ exports.getExamPaperDetail = async (req, res) => {
 
     return res.json({ success: true, data: paper });
   } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Cập nhật đề thi (Dành cho Giảng viên/Admin lưu chỉnh sửa từ Builder)
+exports.updateExamPaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      code,
+      subject,
+      durationMinutes,
+      totalScore,
+      questions,
+      shuffleQuestions,
+      shuffleOptions,
+      paperType,
+      submissionMode
+    } = req.body;
+
+    const paper = await ExamPaper.findById(id);
+    if (!paper) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đề thi cần cập nhật!' });
+    }
+
+    if (title) paper.title = title.trim();
+    if (code) paper.code = code.trim().toUpperCase();
+    if (durationMinutes) paper.durationMinutes = durationMinutes;
+    if (totalScore) paper.totalScore = totalScore;
+    if (subject && mongoose.Types.ObjectId.isValid(subject)) paper.subject = subject;
+    if (shuffleQuestions !== undefined) paper.shuffleQuestions = shuffleQuestions;
+    if (shuffleOptions !== undefined) paper.shuffleOptions = shuffleOptions;
+    if (paperType) paper.paperType = paperType;
+    if (submissionMode) paper.submissionMode = submissionMode;
+
+    if (Array.isArray(questions)) {
+      paper.questions = questions.map((q, idx) => {
+        const isEssay = q.type === 'ESSAY' || q.type === 'CODING_PROBLEM';
+        const corrList = Array.isArray(q.correctAnswers)
+          ? q.correctAnswers.map(Number)
+          : (q.correctAnswer !== undefined && q.correctAnswer !== null ? [Number(q.correctAnswer)] : []);
+
+        return {
+          stt: q.stt || (idx + 1),
+          type: q.type || 'MULTIPLE_CHOICE',
+          score: Number(q.score) > 0 ? Number(q.score) : 1.0,
+          content: q.content || q.prompt || `Câu hỏi ${idx + 1}`,
+          explanation: q.explanation || '',
+          options: isEssay ? [] : (q.options || ['A', 'B', 'C', 'D']),
+          correctAnswers: corrList,
+          correctAnswer: corrList.length > 0 ? corrList[0] : null,
+          selectionMode: q.selectionMode || (corrList.length > 1 ? 'MULTIPLE' : 'SINGLE'),
+          image: q.image || q.imageUrl || null,
+          blankTemplate: q.blankTemplate || '',
+          blankAnswers: q.blankAnswers || [],
+          audioUrl: q.audioUrl || null,
+          audioName: q.audioName || null,
+          playLimit: q.playLimit || 2,
+          geometryData: q.geometryData || null,
+          buggyCode: q.buggyCode || '',
+          fixedCode: q.fixedCode || '',
+          codeLanguage: q.codeLanguage || 'cpp',
+          starterCode: q.starterCode || '',
+          testCases: q.testCases || []
+        };
+      });
+      paper.totalQuestions = paper.questions.length;
+    }
+
+    await paper.save();
+    return res.json({ success: true, message: 'Cập nhật đề thi thành công!', data: paper });
+  } catch (error) {
+    console.error('Lỗi updateExamPaper:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -497,15 +582,27 @@ async function autoSubmitRemainingStudents(sessionId) {
 // Lấy danh sách ca thi kèm tự động đánh giá vòng đời ca thi (Lifecycle Evaluation)
 exports.getExamSessions = async (req, res) => {
   try {
-    const { status, gradingStatus, search } = req.query;
+    const { status, gradingStatus, search, proctorId } = req.query;
     const filter = {};
     if (status && status !== 'ALL') filter.status = status;
     if (gradingStatus && gradingStatus !== 'ALL') filter.gradingStatus = gradingStatus;
-    if (search) {
+    if (proctorId) {
       filter.$or = [
+        { proctor1: proctorId },
+        { proctor2: proctorId }
+      ];
+    }
+    if (search) {
+      const searchConditions = [
         { code: { $regex: search, $options: 'i' } },
         { title: { $regex: search, $options: 'i' } }
       ];
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchConditions;
+      }
     }
 
     const sessions = await ExamSession.find(filter)
@@ -1599,10 +1696,16 @@ exports.getStudentExamSchedule = async (req, res) => {
   try {
     const now = new Date();
     let studentId = req.query.studentId;
+    const queryEmail = req.query.email;
+    const queryCode = req.query.studentCode;
 
-    if (!studentId && req.user && req.user.email) {
+    if (!studentId && (queryEmail || queryCode || (req.user && req.user.email))) {
       const Student = mongoose.model('Student');
-      const st = await Student.findOne({ email: req.user.email });
+      const searchCriteria = [];
+      if (queryEmail) searchCriteria.push({ email: queryEmail });
+      if (queryCode) searchCriteria.push({ studentCode: queryCode });
+      if (req.user && req.user.email) searchCriteria.push({ email: req.user.email });
+      const st = await Student.findOne({ $or: searchCriteria });
       if (st) studentId = st._id;
     }
 

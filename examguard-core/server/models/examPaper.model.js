@@ -4,7 +4,16 @@ const QuestionSchema = new mongoose.Schema({
   stt: { type: Number, required: true },
   type: { 
     type: String, 
-    enum: ['MULTIPLE_CHOICE', 'ESSAY', 'CODING_PROBLEM'], 
+    enum: [
+      'MULTIPLE_CHOICE', 
+      'ESSAY', 
+      'CODING_PROBLEM',
+      'FILL_IN_BLANK',
+      'IMAGE_MCQ',
+      'AUDIO_LISTENING',
+      'GEOMETRY_CANVAS',
+      'CODE_DEBUG'
+    ], 
     default: 'MULTIPLE_CHOICE' 
   },
   content: { type: String, required: true },
@@ -33,6 +42,22 @@ const QuestionSchema = new mongoose.Schema({
     default: '' // Lời giải thích chi tiết vì sao đáp án đúng (công bố cho SV sau duyệt)
   },
 
+  // Dành riêng cho FILL_IN_BLANK
+  blankTemplate: { type: String, default: '' },
+  blankAnswers: [{ type: String }],
+
+  // Dành riêng cho AUDIO_LISTENING
+  audioUrl: { type: String, default: null },
+  audioName: { type: String, default: null },
+  playLimit: { type: Number, default: 2 },
+
+  // Dành riêng cho GEOMETRY_CANVAS
+  geometryData: { type: mongoose.Schema.Types.Mixed, default: null },
+
+  // Dành riêng cho CODE_DEBUG
+  buggyCode: { type: String, default: '' },
+  fixedCode: { type: String, default: '' },
+
   // Dành riêng cho ESSAY
   submissionMethod: {
     type: String,
@@ -44,8 +69,10 @@ const QuestionSchema = new mongoose.Schema({
   suggestedKeywords: [{ type: String }],
   minWords: { type: Number, default: 0 },
 
-  // Dành riêng cho CODING_PROBLEM
+  // Dành riêng cho CODING_PROBLEM & CODE_DEBUG
   languages: [{ type: String }], // ['c', 'cpp', 'python', 'java']
+  codeLanguage: { type: String, default: 'cpp' },
+  starterCode: { type: String, default: '' },
   testCases: [{
     input: { type: String, default: '' },
     expectedOutput: { type: String, default: '' },

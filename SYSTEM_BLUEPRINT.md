@@ -120,8 +120,8 @@ Hệ thống ExamGuard AI áp dụng kết hợp **RBAC (Role-Based Access Contr
 | | Soạn đề thi kèm đáp án đúng & lời giải thích | ✅ | ✅ *(Môn phụ trách)* | ❌ | Hỗ trợ Excel/Word/JSON |
 | | Phê duyệt đề thi & Mã hóa gán vào Ca thi | ✅ | ❌ | ❌ | Bảo mật tuyệt đối trước giờ thi |
 | **C. Khảo thí & Chuẩn bị Ca thi** | Tạo phòng thi 3D, cấu hình số dãy/cột bàn | ✅ | ❌ | ❌ | Khảo thí |
-| | Gắn camera CCTV RTSP, vẽ ROI Polygon bàn ngồi | ✅ | ❌ | ❌ | |
-| | Tạo Ca thi, chọn môn, hình thức (LAB/BYOD/QUIZ) | ✅ | ❌ | ❌ | |
+| | Tạo Ca thi / Phòng thi chính thức (`LAB_PC` / `BYOD_LAPTOP`) | ✅ | ❌ | ❌ | Admin Khảo thí điều phối cơ sở vật chất, phòng máy P302 |
+| | **Tạo nhanh Phòng Quiz Đấu trường (`ONLINE_QUIZ` / `ARENA`)** | ✅ | ✅ *(Chủ động tạo cho lớp)* | ❌ | **Giảng viên toàn quyền tạo phòng Quiz bất kỳ lúc nào để đố vui 15p/gameshow mà không cần xin phép Khảo thí** |
 | | Xếp chỗ sinh viên & cấp Số Báo Danh (SBD) | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ xếp chỗ SV đã KYC APPROVED** |
 | | Phân công Giám thị 1, Giám thị 2, Thanh tra | ✅ | ❌ | ❌ | **Chặn tự động: Chỉ gán GV đã KYC APPROVED** |
 | | Xem lịch thi cá nhân, số báo danh, vị trí bàn | ✅ | ✅ *(Lịch coi thi)* | ✅ *(Lịch thi của mình)* | |
@@ -1489,6 +1489,78 @@ Giảng viên bộ môn có thể nhập đề trực tiếp trên UI hoặc upl
 - **Điểm số câu hỏi (`diem`)**: Mặc định chia đều hoặc gán trọng số riêng.
 - **Lời giải thích chi tiết (`giai_thich`)**: Diễn giải lý do vì sao đáp án đó đúng, căn cứ vào giáo trình/tài liệu nào (phục vụ sinh viên đối chiếu sau khi thi).
 
+#### 11.3.1 Studio Kéo Thả Khối Đề Thi Đa Phương Tiện & Nút Video Hướng Dẫn (Drag-and-Drop Authoring Studio)
+Nhằm tối ưu hóa trải nghiệm giảng viên (UI/UX Clean, không dư thừa thông tin, tập trung tuyệt đối vào ra đề), hệ thống tích hợp **8 Khối Câu Hỏi Kéo Thả Chuyên Biệt**:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                   8 KHỐI CÂU HỎI KÉO THẢ TRỰC QUAN & NÚT VIDEO HƯỚNG DẪN 1-CHẠM                  │
+├───────────────────────────────────┬──────────────────────────────────────────────────────────────┤
+│ 1. Trắc Nghiệm Chuẩn (MCQ)        │ 4 thẻ lựa chọn A-B-C-D, radio đáp án đúng, đảo ngẫu nhiên.   │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 2. Điền Chỗ Trống (FILL_BLANK)    │ Đoạn văn bản có [blank_1], hệ thống tự động so khớp từ khóa. │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 3. Khối Trắc Nghiệm Ảnh (IMAGE)   │ Ô tải/cắt ảnh sơ đồ, đồ thị + 4 thẻ lựa chọn A-B-C-D với     │
+│                                   │ nút radio đáp án đúng, ô nhập điểm và giải thích chi tiết.   │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 4. Khối Bài Nghe (AUDIO_VOICE)    │ Tải file .mp3/.wav, hiển thị sóng âm (Waveform Player),      │
+│                                   │ cấu hình khóa số lần nghe (Play Limit = 1 hoặc 2 lượt),      │
+│                                   │ tích hợp chùm câu hỏi trắc nghiệm / điền từ gắn liền.        │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 5. Khối Hình Học Canvas (GEOMETRY)│ Đặt bài toán tìm x, tính góc α; tích hợp công cụ vẽ vector   │
+│                                   │ hình học (điểm, đoạn, góc, đường tròn) hoặc tải ảnh;         │
+│                                   │ khung soạn thảo lời giải có hỗ trợ LaTeX cho sinh viên.      │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 6. Khối Sửa Lỗi Code (CODE_DEBUG) │ Nhập đoạn mã lỗi (C/C++, Python), tích hợp Monaco Editor     │
+│                                   │ và cấu hình bộ testcases (Input / Expected Output) tự chấm.  │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 7. Viết Code Lập Trình (CODING)   │ Khung hàm khởi tạo, cấu hình bộ Test Cases tự động biên dịch │
+│                                   │ và chấm điểm thuật toán trực tiếp trên máy chủ.              │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ 8. Tự Luận Văn Bản (ESSAY)        │ Soạn câu hỏi phân tích, cấu hình số từ tối thiểu & barem.    │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ ★ Nút [▶ Video Hướng Dẫn]         │ Mỗi khối có 1 nút bấm góc trên: Bấm để mở video popover 20s  │
+│                                   │ hướng dẫn cách giảng viên cấu hình và cách sinh viên làm bài.│
+└───────────────────────────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+#### 11.3.2 Kiến trúc Thanh Công Cụ Đa Năng, Tab 'Thêm Vào Đề' & Kéo Thả Trực Quan (EduTech Drag-and-Drop Palette & Insert Drawer Architecture)
+Phiên bản EduTech Assessment Studio v3.5 nâng cấp trải nghiệm biên soạn đề thi lên cấp độ chuyên nghiệp:
+
+1. **Nguyên tắc Tương Tác: Chống Chèn Mù Quáng (Anti-Blind Insertion UX):**
+   - Trước đây: Nhấp 1 chạm vào biểu tượng công cụ bên trái sẽ tự động chèn ngay lập tức vào cuối đề thi mà người dùng không kịp xem trước mẫu khối hay cấu hình điểm số.
+   - Nâng cấp v3.5:
+     * Nhấp vào biểu tượng bất kỳ trên Thanh công cụ bên trái (Palette) sẽ **kích hoạt Tool đó và mở Drawer / Tab "Thêm Vào Đề"**.
+     * Giảng viên được xem trước trực quan (Live Visual Preview), chọn điểm số khởi tạo (`0.5đ`, `1.0đ`, `1.5đ`, `2.0đ`), và chọn vị trí chèn:
+       - `Cuối đề thi (Vị trí #${questions.length + 1})`
+       - `Sau câu đang chọn #${selectedQuestionStt} (Vị trí #${currentSelectedIdx + 2})`
+       - `Đầu đề thi (Vị trí #1)`
+     * Nhấn nút `[ + Xác Nhận Thêm Vào Đề ]` để hoàn tất chèn khối.
+
+2. **Cơ chế Kéo Thả Hai Chiều (Native HTML5 Drag and Drop Engine):**
+   - **Kéo Thả Khối Mới vào Canvas / Danh Sách:**
+     * Thẻ công cụ trên Palette hoặc Thẻ xem trước trong Drawer có thuộc tính `draggable={true}`.
+     * Khi kéo và thả vào **Center Canvas Stage**: Khung làm việc hiển thị viền neon đứt nét (Glow Drop Target) và chèn khối ngay sau câu hỏi hiện tại.
+     * Khi kéo và thả vào **Layers List** (Cột bên phải): Khối được chèn chính xác tại vị trí chuột thả xuống.
+   - **Kéo Thả Sắp Xếp Lại Thứ Tự Đề Thi (Layers Reordering):**
+     * Mỗi hàng trong bảng Layers có tay cầm `⠿` (Grip Handle). Giảng viên có thể kéo bất kỳ câu hỏi nào thả lên trên hoặc xuống dưới để thay đổi thứ tự đề thi. Hệ thống tự động đánh số lại STT từ 1 đến N mà không làm mất dữ liệu.
+
+3. **Tuân Thủ Bộ Nguyên Lý SOLID Trong Mã Nguồn:**
+   - **Single Responsibility Principle (SRP):** Tách bạch rõ rệt giữa:
+     * `BLOCK_CATALOG`: Quản lý siêu dữ liệu, màu sắc, phím tắt và hàm sinh dữ liệu mẫu.
+     * `EduTechExamBuilder`: Quản lý trạng thái Studio, Zoom, chia màn hình và lưu CSDL.
+     * Các Sub-component chuyên biệt: Canvas Viewer, Layers Inspector, Code Test Runner, Audio Player Simulator.
+   - **Open/Closed Principle (OCP):** Khi cần bổ sung dạng câu hỏi mới (ví dụ: `FILL_AUDIO_GAP`, `MATH_LATEX`), lập trình viên chỉ cần khai báo thêm một phần tử vào `BLOCK_CATALOG` mà không cần viết lại mã nguồn điều khiển của Canvas hay Layers.
+   - **Liskov Substitution Principle (LSP):** Tất cả 8 loại câu hỏi đều tuân thủ chặt chẽ interface `BuilderQuestion`. Bất kỳ câu hỏi nào cũng có thể được render qua bộ duyệt Layers, tính điểm tổng, nhân bản hoặc xóa bỏ mà không phát sinh ngoại lệ.
+   - **Interface Segregation Principle (ISP):** Các trường đặc thù (`geometryType`, `starterCode`, `audioUrl`, `blankTemplate`) được định nghĩa tùy chọn (`optional`), tránh ép buộc khối câu hỏi này phải chứa các trường dữ liệu thừa của khối khác.
+   - **Dependency Inversion Principle (DIP):** Mọi thao tác tải file, nạp ảnh, phân tích OCR, lấy danh mục môn học hay lưu đề thi đều thông qua tầng dịch vụ trừu tượng `apiClient` (`/api/exams/upload-paper-file`, `/api/exams/papers`, `/api/courses`).
+
+4. **Kết Nối 100% Nghiệp Vụ & API Thật (Zero Mock Data):**
+   - **AI OCR Document Extraction:** Gọi `POST /api/exams/upload-paper-file` với `FormData` (hỗ trợ .docx, .pdf). Bộ phân tích phía server tự động trích xuất nội dung, phương án trắc nghiệm, đáp án chuẩn và đẩy thẳng vào danh sách `questions`.
+   - **Tải Ảnh Thật & Audio Thật:** Tích hợp bộ đọc FileReader/ObjectURL nội suy vào thẻ bài thi; Audio player đếm chính xác số lượt nghe (`playLimit`) và tự động khóa phát khi vượt quá số lần quy định.
+   - **Interactive Geometry Math Engine:** Tính toán động hệ thức lượng tam giác vuông `AH = sqrt(BH * CH)` theo tham số người dùng nhập và vẽ lại vector SVG tức thì.
+   - **Code IDE & Testcases Runner:** Kiểm thử trực tiếp mã nguồn của giảng viên với danh sách testcases (Input / Output), phản hồi trạng thái `PASSED` / `FAILED` trực quan.
+
 **Bảo mật Đề thi trong lúc làm bài (Zero-Knowledge Payload):**
 ```
 Khi Client Sinh viên gọi GET /api/exam/questions:
@@ -1918,6 +1990,209 @@ Nhằm tối ưu hóa trải nghiệm kiểm tra trắc nghiệm online tương 
 4. **Nộp bài & Chấm điểm tức thì 100%:**
    - Khi bấm "Nộp bài", hệ thống đối chiếu đáp án với Ngân hàng đề thi và xuất ngay kết quả: Điểm số, xếp loại, số câu đúng/sai/bỏ trống.
    - Bắn hiệu ứng pháo hoa ăn mừng (Confetti) tạo cảm giác phấn khởi và khích lệ người học.
+
+### 12.6 CHẾ ĐỘ ĐẤU TRƯỜNG QUIZ GAMIFICATION — TÙY BIẾN LUẬT CHƠI, LIVE LEADERBOARD & CẠNH TRANH TƯƠNG TÁC CAO (GAMIFIED QUIZ ARENA)
+
+Bên cạnh các kỳ thi chính khóa mang tính kỷ luật và bảo mật nghiêm ngặt (`LAB_PC`, `BYOD_LAPTOP`), hệ thống **ExamGuard AI** mở rộng Chế độ **Đấu trường Quiz Tương tác Cao (Gamified Quiz Arena)**. Chế độ này được thiết kế chuyên biệt cho các bài kiểm tra 15 phút, đố vui đầu giờ, ôn tập trước kỳ thi hoặc các cuộc thi học thuật của khoa/trường, nhằm **tăng tối đa tính trải nghiệm, kích thích cạnh tranh lành mạnh và sự vui nhộn cho sinh viên**, trong khi vẫn kế thừa 100% công nghệ Face AI và chống gian lận nền tảng.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🏆 EXAMGUARD AI — ĐẤU TRƯỜNG QUIZ TRỰC TIẾP (ARENA MODE)           [⛶ Toàn màn hình]    │
+│ Môn: Kỹ thuật Lập trình C • Phòng thi: P302 • Sĩ số: 38/40 SV • Vòng: 8 / 20 Câu        │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│   ┌─ THẺ CÂU HỎI TRỰC TIẾP ─────────────────────┐  ┌─ BẢNG XẾP HẠNG THỜI GIAN THỰC ───┐ │
+│   │ ⏱️ ĐẾM NGƯỢC CÂU: [ 12s ]  ❤️❤️❤️ [3 Mạng]  │  │ 🥇 1. Lục Văn Sơn   • 8,450 đ 🔥x6│ │
+│   │ Điểm cơ bản: 500 đ • Thưởng tốc độ: +350 đ   │  │ 🥈 2. Trần Văn Quang • 7,920 đ 🔥x4│ │
+│   │                                             │  │ 🥉 3. Đặng Thanh Hằng• 7,610 đ 🔥x3│ │
+│   │ Câu 8: Toán tử nào trong C dùng để lấy địa  │  │  4. Lê Thị Thu       • 7,200 đ ⬆️+2│ │
+│   │ chỉ ô nhớ của một biến?                     │  │  5. Hoàng Gia Bảo    • 6,850 đ ⬇️-1│ │
+│   │                                             │  │ ─────────────────────────────────│ │
+│   │ ┌───────────────────┐ ┌───────────────────┐ │  │ 🎖️ VỊ TRÍ CỦA BẠN: HẠNG 1 (TOP 2%) │ │
+│   │ │ [A] * (Dấu sao)   │ │ [B] & (Dấu và)  ⭐ │ │  │ Chuỗi đúng (Streak): 6 câu liên tiếp│ │
+│   │ └───────────────────┘ └───────────────────┘ │  └──────────────────────────────────┘ │
+│   │ ┌───────────────────┐ ┌───────────────────┐ │                                       │
+│   │ │ [C] -> (Mũi tên)  │ │ [D] % (Phần trăm) │ │  ┌─ TRỢ GIÚP ĐẤU TRƯỜNG (POWER-UPS) ─┐ │
+│   │ └───────────────────┘ └───────────────────┘ │  │ [🪄 50:50]   [🧊 Đóng băng time]   │ │
+│   │                                             │  │ [🛡️ Khiên cứu mạng] [🚀 Nhân đôi] │ │
+│   │ [⚡ Trả lời trong 3.2s: +280 đ Speed Bonus!] │  └──────────────────────────────────┘ │
+│   └─────────────────────────────────────────────┘                                       │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### A. Kiến trúc Bộ Luật chơi Tùy biến (Custom Game Rules Engine)
+
+Giảng viên hoặc Trưởng bộ môn khi khởi tạo Ca thi Quiz có thể linh hoạt cấu hình bộ tham số `gameRules` trong cơ sở dữ liệu:
+
+| Tham số luật chơi | Tùy chọn cấu hình (Options) | Ý nghĩa nghiệp vụ & Trải nghiệm sinh viên |
+|:---|:---|:---|
+| **1. Hệ thống tính điểm (Scoring Engine)** | • `CLASSIC`: Điểm chuẩn đều (0.5đ/câu)<br>• `SPEED_BONUS`: Điểm tốc độ<br>• `STREAK_MULTIPLIER`: Hệ số chuỗi đúng liên tiếp | Trả lời đúng càng nhanh trong thời gian đếm ngược thì điểm thưởng càng cao. Nếu đúng liên tiếp từ câu 3 trở đi, hệ số điểm nhân lên $x1.2, x1.5, x2.0$ (kích thích tinh thần tập trung cao độ). |
+| **2. Chế độ đồng hồ bấm giờ (Timer Mode)** | • `PER_EXAM_TIMER`: 15–45 phút toàn bài<br>• `PER_QUESTION_TIMER`: 15s – 60s / từng câu (kiểu Kahoot/Quizizz) | Khi bật đếm ngược từng câu, sinh viên cùng đối mặt với 1 câu hỏi tại cùng thời điểm. Hết giờ, hệ thống tự động khóa nhận đáp án và công bố thống kê lựa chọn của cả lớp. |
+| **3. Mạng sống & Trụ hạng (Survival / Hearts Mode)** | • `UNLIMITED`: Không giới hạn<br>• `HEARTS_LIMIT` (3 tim hoặc 5 tim) | Sinh viên bắt đầu với 3 trái tim (❤️❤️❤️). Mỗi câu trả lời sai bị trừ 1 tim. Khi cạn tim, sinh viên bị "Đóng băng" tạm thời 30 giây hoặc chuyển sang chế độ Quan sát (Spectator), tạo sự hồi hộp như game đối kháng. |
+| **4. Quyền trợ giúp (Power-ups / Lifelines)** | • Bật / Tắt theo từng môn<br>• Danh mục: `50:50`, `TIME_FREEZE` (+10s), `DOUBLE_SCORE` ($x2$), `SHIELD` (khiên hộ mệnh) | Cho phép sinh viên sử dụng tối đa 1–2 lần trợ giúp trong suốt bài quiz. Giúp sinh viên lật ngược thế cờ khi gặp các câu hỏi cực khó. |
+| **5. Thời điểm lộ đáp án (Feedback Timing)** | • `INSTANT_REVEAL`: Hiện Đúng/Sai & Lời giải ngay sau mỗi câu<br>• `POST_EXAM_REVEAL`: Giấu đáp án đến khi kết thúc ca | `INSTANT_REVEAL` mang lại sự thỏa mãn tức thì (Instant Gratification), giúp sinh viên ghi nhớ kiến thức sâu sắc ngay tại thời điểm trả lời. |
+| **6. Hiển thị Bảng xếp hạng (Leaderboard Visibility)** | • `PUBLIC_PODIUM`: Hiện thứ hạng trên máy chiếu & điện thoại<br>• `ANONYMOUS`: Ẩn danh (hiển thị biệt danh Nickname ngẫu nhiên)<br>• `PRIVATE`: Chỉ thấy thứ hạng cá nhân | Giảng viên có thể chiếu màn hình Live Leaderboard lên máy chiếu giảng đường để cả lớp cùng reo hò, cổ vũ khi có bạn bứt phá lên Top 1. |
+
+---
+
+#### B. Công thức Tính điểm Tốc độ & Chuỗi Thắng (Speed & Streak Formula)
+
+Để bảo đảm tính công bằng tuyệt đối giữa tốc độ và độ chính xác:
+
+$$\text{Tổng Điểm} = \text{Điểm Cơ Bản} + \left( \text{Điểm Thưởng Tốc Độ} \times \frac{T_{\text{còn lại}}}{T_{\text{tổng}}} \right) \times \text{Hệ Số Streak}$$
+
+*Ví dụ:*
+- Câu hỏi có thời gian $T_{\text{tổng}} = 20\text{ giây}$, điểm cơ bản $= 500\text{ điểm}$, thưởng tốc độ tối đa $= 500\text{ điểm}$.
+- Thí sinh trả lời đúng chỉ sau $4\text{ giây}$ (còn lại $16\text{ giây}$), và đang có chuỗi đúng 4 câu liên tiếp ($\text{Hệ số Streak} = 1.5$):
+$$\text{Điểm Nhận Được} = \left[ 500 + \left( 500 \times \frac{16}{20} \right) \right] \times 1.5 = [500 + 400] \times 1.5 = \mathbf{1,350\text{ điểm}}$$
+- Nếu trả lời sai: $\text{Điểm Nhận Được} = 0$, Chuỗi Streak lập tức **Reset về 0** (kèm hiệu ứng vỡ kính và rung màn hình).
+
+---
+
+#### C. Bảng Xếp Hạng Thời Gian Thực (Realtime Live Leaderboard & WebSocket)
+
+1. **Kiến trúc Luồng Sự kiện WebSocket (`/ws/quiz-arena`):**
+```mermaid
+sequenceDiagram
+    autonumber
+    actor SV as Thí sinh (Client React)
+    participant Core as Core Server (:3011)
+    participant AI as Face AI (:8000)
+    actor GV as Máy chiếu Giảng viên / Lớp học
+
+    SV->>Core: socket.emit("quiz:submit_answer", { questionId, selectedOption, timeSpentMs })
+    Core->>Core: Tính điểm Cơ bản + Speed Bonus + Streak Multiplier
+    Core->>AI: Đối chiếu vi phạm gian lận (Webcam Face & Anti-Tab)
+    Note over Core: Nếu vi phạm TAB_SWITCH -> Trừ 30% điểm thưởng tốc độ!
+    Core->>Core: Cập nhật Bảng tổng sắp InMemory / Redis Cache
+    Core-->>SV: socket.emit("quiz:answer_result", { correct: true, pointsEarned, currentRank: 1, streak: 6 })
+    Core->>GV: socket.broadcast("quiz:leaderboard_update", { top10, podiumChanges })
+    GV-->>GV: Hoạt họa đẩy thẻ sinh viên thăng hạng (Rank Shift Animation)
+```
+
+2. **Podium Vinh danh Chung cuộc (Ceremony Podium):**
+   - Khi câu hỏi cuối cùng kết thúc, màn hình tự động chuyển sang bục vinh danh 3 bậc:
+     - 🥇 **Top 1 (Bậc Vàng ở giữa):** Đội vương miện, cúp vàng, bắn pháo hoa Confetti rực rỡ và phát nhạc chiến thắng Fanfare.
+     - 🥈 **Top 2 (Bậc Bạc bên trái):** Huy chương bạc, hiệu ứng ánh sáng neon xanh lam.
+     - 🥉 **Top 3 (Bậc Đồng bên phải):** Huy chương đồng, hiệu ứng ánh sáng cam hổ phách.
+   - Bên dưới hiển thị bảng thống kê chi tiết: Tỷ lệ trả lời đúng của cả lớp, Top 3 câu hỏi khiến lớp "toang" nhiều nhất (Most Difficult Questions) để Giảng viên chữa bài trực tiếp trên lớp.
+
+---
+
+#### D. Hệ thống Danh hiệu & Huy hiệu Thành tích (Badges & Gamification Rewards)
+
+Sinh viên đạt được các thành tích xuất sắc trong trận đấu Quiz sẽ được tự động mở khóa các Huy hiệu danh dự gắn vào Hồ sơ cá nhân:
+
+| Huy hiệu | Tên danh hiệu | Điều kiện đạt được | Hiệu ứng kích hoạt |
+|:---:|:---|:---|:---|
+| ⚡ | **Tia Chớp Tri Thức** | Trả lời đúng trong vòng dưới 3.0 giây | Hiệu ứng viền phát sáng tia điện xanh neon |
+| 🔥 | **Bất Khả Chiến Bại** | Duy trì chuỗi đúng liên tiếp từ 8 câu trở lên | Icon ngọn lửa cháy bùng rực rỡ bên cạnh tên |
+| 🛡️ | **Thần Hộ Mệnh AI** | Hoàn thành trận Quiz với trọn vẹn 100/100 điểm uy tín Face AI | Huy hiệu khiên chắn phát quang bảo mật |
+| 🎯 | **Xạ Thủ Bách Phát** | Trả lời đúng 100% tất cả các câu hỏi của trận đấu | Mưa pháo hoa vàng óng (Golden Fireworks) |
+| 🧗 | **Cú Lội Ngược Dòng** | Bứt phá từ nửa dưới bảng xếp hạng leo thẳng lên Top 3 chung cuộc | Âm thanh hiệu ứng tên lửa cất cánh (Rocket Sound) |
+
+---
+
+#### E. Mở rộng Cấu trúc Dữ liệu Schema (Polyglot Data Models)
+
+1. **Mở rộng Model `ExamSession` trong MongoDB:**
+```javascript
+// models/examSession.model.js
+const examSessionSchema = new mongoose.Schema({
+  // ... các trường ca thi hiện hữu ...
+  isGamifiedQuiz: { type: Boolean, default: false }, // Bật chế độ Đấu trường Quiz
+  gameRules: {
+    scoringType: { type: String, enum: ['CLASSIC', 'SPEED_BONUS', 'STREAK_MULTIPLIER'], default: 'SPEED_BONUS' },
+    timerType: { type: String, enum: ['PER_EXAM_TIMER', 'PER_QUESTION_TIMER'], default: 'PER_QUESTION_TIMER' },
+    secondsPerQuestion: { type: Number, default: 30 }, // Số giây mỗi câu
+    enableHearts: { type: Boolean, default: true },
+    maxHearts: { type: Number, default: 3 },            // 3 mạng sống
+    enablePowerUps: { type: Boolean, default: true },   // Cho phép dùng trợ giúp
+    feedbackTiming: { type: String, enum: ['INSTANT_REVEAL', 'POST_EXAM_REVEAL'], default: 'INSTANT_REVEAL' },
+    showLeaderboard: { type: Boolean, default: true }
+  }
+});
+```
+
+2. **Mở rộng Model `ExamStudent` để lưu trữ Chỉ số Thi đấu Realtime:**
+```javascript
+// models/examStudent.model.js
+const examStudentSchema = new mongoose.Schema({
+  // ... các trường thí sinh hiện hữu ...
+  arenaStats: {
+    currentScore: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    maxStreak: { type: Number, default: 0 },
+    heartsRemaining: { type: Number, default: 3 },
+    totalSpeedBonus: { type: Number, default: 0 },
+    currentRank: { type: Number, default: 1 },
+    usedPowerUps: [{ type: String }],                  // ['50_50', 'FREEZE_TIME']
+    badgesEarned: [{ type: String }]                   // ['LIGHTNING_SPEED', 'STREAK_MASTER']
+  }
+});
+```
+
+---
+
+#### F. Trung Tâm Điều Hành & Giám Sát Cuộc Chơi Của Giảng Viên (Teacher Host Cockpit)
+
+Để trận đấu Quiz diễn ra hấp dẫn, mượt mà và kiểm soát tuyệt đối, Giảng viên đóng vai trò là **"Host Điều Phối / Game Master"** với hệ thống giao diện 2 màn hình độc lập (Dual-Screen Presentation Mode) cùng bảng điều khiển quyền năng:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🎛️ BẢNG ĐIỀU KHIỂN ĐẤU TRƯỜNG QUIZ — DÀNH CHO GIẢNG VIÊN (HOST COCKPIT)                │
+│ Ca thi: CA-QUIZ-INT101 • Phòng: P302 • Sĩ số: 38/40 SV • Mã PIN: [ 839-201 ] [🔒 Khóa] │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│  ┌─ ĐIỀU KHIỂN NHỊP ĐỘ (PACING) ────────┐ ┌─ TIẾN ĐỘ & PHỔ TRẢ LỜI CỦA CẢ LỚP ────────┐ │
+│  │ Câu 8 / 20 • Đang đếm ngược: [ 14s ] │ │ Đã trả lời: 35/38 SV (92%) • Còn lại: 3 SV │ │
+│  │                                      │ │                                            │ │
+│  │ [⏸️ TẠM DỪNG]  [⏭️ CÂU KẾ]  [⏩ BỎ QUA]│ │ [A] ▅▅▅▅▅▅▅▅▅▅▅▅▅▅ (14 SV - 40%)          │ │
+│  │                                      │ │ [B] ▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅ (20 SV - 57%) ⭐ ĐÚNG│ │
+│  │ [⏱️ +15s Bù giờ] [📢 Rung chuông chú ý]│ │ [C] ▅ (1 SV - 3%)                        │ │
+│  │ [⭐ Công nhận thêm đáp án A hợp lệ]  │ │ [D]  (0 SV - 0%)                         │ │
+│  └──────────────────────────────────────┘ └────────────────────────────────────────────┘ │
+│                                                                                         │
+│  ┌─ GIÁM SÁT GIAN LẬN AI THỜI GIAN THỰC ─┐ ┌─ CANH ME & XỬ PHẠT (HOST ACTIONS) ─────────┐ │
+│  │ 🟢 35 SV Uy tín tuyệt đối (100đ)      │ │ Thí sinh chọn: [ Vũ Đức Thịnh - Bàn 12 ]   │ │
+│  │ 🟡 2 SV Nghiêng đầu nhiều (Cảnh báo)  │ │ Vi phạm: Chuyển tab sang Chrome tìm kiếm   │ │
+│  │ 🔴 1 SV Đang chuyển Tab: Vũ Đức Thịnh │ │                                            │ │
+│  │    (Rời màn hình 4.2s tại 20:31:12)   │ │ [💬 Gửi Cảnh báo Popup]  [💔 Trừ 1 Tim]   │ │
+│  │                                       │ │ [⚡ Phạt 50% điểm câu]   [🚫 Trục xuất]    │ │
+│  └───────────────────────────────────────┘ └────────────────────────────────────────────┘ │
+│                                                                                         │
+│  [🎥 BẬT CHẾ ĐỘ MÁY CHIẾU LỚP HỌC]  [📊 XUẤT EXCEL NGAY]  [🔄 ĐỒNG BỘ ĐIỂM VÀO HỆ THỐNG] │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+##### 1. Chế Độ Hiển Thị Kép (Dual-Screen Presentation Architecture)
+* **Màn hình Trình chiếu (Projector / Stage View):**
+  * Dành cho màn hình lớn của giảng đường hoặc chia sẻ màn hình Zoom/Google Meet.
+  * Chỉ hiển thị: Câu hỏi font chữ to, mã PIN / QR Code vào phòng, đồng hồ đếm ngược với hiệu ứng âm thanh hồi hộp, biểu đồ cột A/B/C/D nảy số trực tiếp khi sinh viên chọn, và Bục vinh danh Podium Top 1–3 khi kết thúc.
+  * *Bảo mật:* Tuyệt đối không để lộ đáp án đúng hay danh sách vi phạm của từng cá nhân lên màn hình chung.
+* **Bảng Điều khiển Riêng tư của Giảng viên (Teacher Cockpit):**
+  * Hiển thị trên Laptop hoặc iPad của Giảng viên.
+  * Tích hợp toàn bộ nút quyền năng quản trị, chi tiết ai đã trả lời, ai chưa trả lời, camera giám sát AI và bảng phạt vi phạm.
+
+##### 2. Ba Giai Đoạn Quản Trị Trận Đấu Của Giảng Viên
+
+| Giai đoạn | Thao tác của Giảng viên | Tính năng hệ thống hỗ trợ |
+|:---|:---|:---|
+| **P1. Sảnh chờ (Game Lobby)** | • Chiếu mã QR & mã PIN phòng thi.<br>• Quan sát sinh viên điểm danh vào phòng.<br>• Kick các tài khoản đặt tên không hợp lệ hoặc người lạ.<br>• Bấm **[🚀 BẮT ĐẦU TRẬN ĐẤU]**. | • Realtime Participant Grid: Hiện avatar, tên SV, trạng thái Face KYC chuẩn.<br>• Nút **[🔒 Khóa phòng]**: Ngăn chặn người ngoài nhảy vào phá đám.<br>• Tùy chọn phát nhạc nền sảnh chờ (Lobby BGM) tăng không khí háo hức. |
+| **P2. Trong trận đấu (Live Orchestration)** | • **Điều khiển nhịp độ:** Bấm tạm dừng `[⏸️]` để dừng đồng hồ nếu cần giảng giải; bấm `[⏭️]` để qua câu tiếp theo.<br>• **Bù giờ tức thì:** Bấm `[+15s]` nếu thấy câu hỏi dài cần thêm thời gian suy nghĩ.<br>• **Sửa đề nóng (Hot-fix):** Nếu câu hỏi có tranh cãi, bấm `[⭐ Công nhận thêm đáp án A]` $\rightarrow$ Hệ thống tự cộng điểm bù tức thì cho sinh viên chọn A.<br>• **Xử phạt gian lận:** Bấm phạt trừ mạng hoặc trục xuất các trường hợp cố tình mở tab tra tài liệu. | • Biểu đồ phổ câu trả lời (Live Response Distribution Bar Chart): Nhìn thấy ngay lớp hiểu bài hay không.<br>• Cảnh báo phân hóa: Nếu tỷ lệ đúng $< 20\%$ $\rightarrow$ Báo động đỏ **"⚠️ Câu hỏi khó bất thường"** để giảng viên dừng lại chữa bài.<br>• AI Anti-Cheat Monitor: Báo cờ đỏ thời gian thực các hành vi chuyển tab hoặc quay đầu khỏi webcam. |
+| **P3. Kết thúc & Tổng kết (Post-Game Wrap-up)** | • Kích hoạt Bục vinh danh Podium Top 1, 2, 3 kèm pháo hoa và nhạc trao giải.<br>• Phân tích Top 3 câu hỏi sinh viên làm sai nhiều nhất để chữa bài trọng tâm.<br>• Bấm **[🔄 Đồng bộ điểm vào Hệ thống]** để chuyển điểm Quiz Arena thành điểm kiểm tra 15 phút hoặc điểm cộng chuyên cần. | • Tự động tính toán điểm trung bình, độ phân hóa đề thi.<br>• Xuất file bảng điểm chi tiết dạng Excel / CSV chỉ trong 1 cú click.<br>• Tự động đồng bộ sang bảng điểm môn học chính thức trong cơ sở dữ liệu MySQL `examguard_db`. |
+
+##### 3. Các Lệnh Điều Khiển Socket Thời Gian Thực Giữa Host & Sinh Viên
+* `host:game_start` $\rightarrow$ Phát lệnh bắt đầu đếm ngược câu hỏi đầu tiên tới toàn bộ máy sinh viên.
+* `host:pause_timer` $\rightarrow$ Đóng băng đồng hồ toàn bộ màn hình thí sinh (không thể chọn tiếp).
+* `host:resume_timer` $\rightarrow$ Tiếp tục đếm ngược bài thi.
+* `host:next_question` $\rightarrow$ Đóng câu hiện tại, hiển thị đồ thị thống kê và chuyển sang câu tiếp theo.
+* `host:hotfix_answer` $\rightarrow$ Sửa/thêm đáp án đúng và phát lệnh tính lại điểm Live Leaderboard.
+* `host:kick_player` $\rightarrow$ Ngắt kết nối WebSocket và đẩy sinh viên vi phạm ra khỏi phòng đấu.
+
+---
 
 ## 13. XỬ LÝ GIÁM THỊ ĐI QUANH LỚP — FALSE POSITIVE DETECTION
 

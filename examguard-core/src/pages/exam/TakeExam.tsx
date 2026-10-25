@@ -58,7 +58,8 @@ import {
   Sun,
   Moon,
   LogOut,
-  BookOpen
+  BookOpen,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -68,6 +69,7 @@ import { useQuizSound } from './hooks/useQuizSound';
 import { useAntiCheat } from './hooks/useAntiCheat';
 import { TopWarningBanner } from './components/TopWarningBanner';
 import { FaceCheckInGate } from './components/FaceCheckInGate';
+import { ExamWaitingLobby } from './components/ExamWaitingLobby';
 import { MathSymbolKeyboard } from './components/MathSymbolKeyboard';
 import { NovageniusQuestionMatrix } from './components/NovageniusQuestionMatrix';
 import { useTheme } from '../../context/ThemeContext';
@@ -334,17 +336,55 @@ export default function TakeExam() {
   const [lateMinutes, setLateMinutes] = useState(0);
   const [isSessionEnded, setIsSessionEnded] = useState(false);
 
+  // Quản lý Phòng Chờ Vào Thi & Danh Sách Ca Thi (Exam Waiting Lobby & Schedule)
+  const [showLobby, setShowLobby] = useState<boolean>(!sessionStudentId);
+  const [scheduleSessions, setScheduleSessions] = useState<StudentSessionItem[]>([]);
+  const [activeScheduleSession, setActiveScheduleSession] = useState<StudentSessionItem | null>(null);
+  const [isScheduleLoading, setIsScheduleLoading] = useState<boolean>(false);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(sessionStudentId || null);
+
+  const fetchSchedule = useCallback(async () => {
+    try {
+      setIsScheduleLoading(true);
+      const res = await apiClient.get('/exams/student-schedule');
+      if (res.data?.success) {
+        setScheduleSessions(res.data.sessions || []);
+        setActiveScheduleSession(res.data.activeSession || null);
+      }
+    } catch (err: any) {
+      console.warn('Lỗi tải lịch thi của thí sinh:', err.message);
+    } finally {
+      setIsScheduleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
+
+  const handleSelectSessionFromLobby = (sessionItem: StudentSessionItem) => {
+    setSelectedCandidateId(sessionItem.id);
+    setHasFaceCheckedIn(false);
+    setFaceSimilarity(null);
+    setFaceCheckinError(null);
+    setShowLobby(false);
+    fetchExam(false, sessionItem.id);
+  };
+
   // 1. Tải đề thi đã lọc bảo mật & Kiểm tra Phòng chờ / Chặn muộn / Ca thi kết thúc
   const fetchExam = async (silent = false, customStudentId?: string) => {
     try {
       if (!silent) {
         setLoading(true);
       }
-      const targetId = customStudentId || sessionStudentId || 'fallback_student';
+      const targetId = customStudentId || selectedCandidateId || sessionStudentId || 'fallback_student';
       const res = await apiClient.get(`/api/exam/questions/${targetId}`);
       if (res.data && res.data.success) {
         const data: ExamData = res.data.data;
         setExamData(data);
+        if (data.todaySessions && data.todaySessions.length > 0) {
+          setScheduleSessions(data.todaySessions);
+        }
 
         // Trường hợp 0: Ca thi đã kết thúc -> Khóa phòng thi & Hiển thị màn hình kết thúc
         if (data.isSessionEnded) {
@@ -402,7 +442,14 @@ export default function TakeExam() {
   };
 
   useEffect(() => {
-    fetchExam();
+    if (sessionStudentId) {
+      setSelectedCandidateId(sessionStudentId);
+      setShowLobby(false);
+      fetchExam(false, sessionStudentId);
+    } else {
+      setShowLobby(true);
+      fetchExam(true);
+    }
   }, [sessionStudentId]);
 
   // Bộ đếm ngược tự động giờ phát đề thi (Pre-Exam Countdown Timer)
@@ -1060,15 +1107,38 @@ export default function TakeExam() {
       .map(({ idx }) => idx);
   }, [examData, answers, flagged, filterTab]);
 
-  if (loading) {
+  // ── MÀN HÌNH 0: PHÒNG CHỜ VÀO THI & DANH SÁCH CA THI (EXAM WAITING LOBBY) ──
+  if (showLobby) {
+    return (
+      <ExamWaitingLobby
+        studentProfile={{
+          name: examData?.student?.name,
+          fullName: examData?.student?.name,
+          studentCode: examData?.student?.studentCode,
+          className: examData?.student?.className
+        }}
+        sessions={scheduleSessions.length > 0 ? scheduleSessions : (examData?.todaySessions || [])}
+        activeSession={activeScheduleSession || (scheduleSessions.find(s => s.isHappening) || null)}
+        isLoading={isScheduleLoading || (loading && scheduleSessions.length === 0)}
+        onSelectSession={handleSelectSessionFromLobby}
+        onRefresh={() => {
+          fetchSchedule();
+          fetchExam(true);
+        }}
+        onBackToPortal={() => navigate('/')}
+      />
+    );
+  }
+
+  if (loading && !examData) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
         <div className="relative">
           <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin"></div>
           <Zap className="w-8 h-8 text-cyan-400 absolute inset-0 m-auto" />
         </div>
-        <p className="mt-4 text-slate-300 font-medium">Đang tải phòng thi Quiz ExamGuard AI...</p>
-        <span className="text-xs text-slate-500 mt-1">Đang mã hóa dữ liệu & nạp thuật toán chống gian lận</span>
+        <p className="mt-4 text-slate-300 font-medium">Đang chuẩn bị buồng thi ExamGuard AI...</p>
+        <span className="text-xs text-slate-500 mt-1">Đang kiểm tra an ninh khảo thí & đối chiếu sinh trắc học</span>
       </div>
     );
   }
@@ -1177,16 +1247,20 @@ export default function TakeExam() {
               <button
                 onClick={() => fetchExam()}
                 disabled={loading}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-2"
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 <span>Kiểm Tra Lại Trạng Thái Bàn Thi</span>
               </button>
               <button
-                onClick={() => navigate('/')}
-                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+                onClick={() => {
+                  setShowLobby(true);
+                  setIsLateBlocked(false);
+                }}
+                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-1.5 cursor-pointer"
               >
-                Về Trang Chủ
+                <ArrowLeft className="w-4 h-4" />
+                <span>Phòng Chờ Ca Thi</span>
               </button>
             </div>
           </div>
@@ -1238,6 +1312,16 @@ export default function TakeExam() {
               <span className="text-slate-400 block">{examData?.session?.roomName}</span>
               <span className="text-cyan-400 font-bold">Mã ca: {examData?.session?.code}</span>
             </div>
+            <button
+              onClick={() => {
+                setShowLobby(true);
+                setIsPreExamWaiting(false);
+              }}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-semibold transition cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Phòng Chờ Ca Thi</span>
+            </button>
           </div>
         </div>
 
@@ -1669,11 +1753,15 @@ export default function TakeExam() {
               </button>
 
               <button
-                onClick={() => navigate('/exam-sessions')}
-                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                type="button"
+                onClick={() => {
+                  setShowLobby(true);
+                  setIsSessionEnded(false);
+                }}
+                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5 cursor-pointer"
               >
-                <ArrowRight className="w-4 h-4" />
-                <span>Danh Sách Ca Thi</span>
+                <ArrowLeft className="w-4 h-4" />
+                <span>Phòng Chờ & Danh Sách Ca Thi</span>
               </button>
             </div>
           </div>
@@ -1733,6 +1821,10 @@ export default function TakeExam() {
         faceCheckinError={faceCheckinError}
         faceSimilarity={faceSimilarity}
         onFaceCheckIn={handleFaceCheckIn}
+        onBackToLobby={() => {
+          setShowLobby(true);
+          setHasFaceCheckedIn(false);
+        }}
       />
     );
   }
@@ -3244,11 +3336,12 @@ export default function TakeExam() {
                 type="button"
                 onClick={() => {
                   setShowExitConfirmModal(false);
-                  navigate('/student/dashboard');
+                  setShowLobby(true);
+                  setHasFaceCheckedIn(false);
                 }}
-                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-600/20 transition"
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-600/20 transition cursor-pointer"
               >
-                Rời phòng thi
+                Rời về Phòng Chờ
               </button>
             </div>
           </div>

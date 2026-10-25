@@ -80,7 +80,7 @@ export default function Permissions() {
     }
 
     // ĐẶC BIỆT: Quyền Syllabus.MANAGE chỉ dành cho Admin (Không cho gán cho role khác)
-    if (permId === PERMISSIONS.SYLLABUS.MANAGE) {
+    if (permId === PERMISSIONS?.SYLLABUS?.MANAGE) {
       toast.error("Chỉ duy nhất Admin được phép có quyền điều chỉnh Khung chương trình (Syllabus)");
       return;
     }
@@ -109,7 +109,7 @@ export default function Permissions() {
     if (selectAll) {
       groupPermIds.forEach(id => {
         // Chỉ duy nhất Admin được Syllabus.MANAGE
-        if (id === PERMISSIONS.SYLLABUS.MANAGE && selectedRole?.name?.toLowerCase() !== 'admin') {
+        if (id === PERMISSIONS?.SYLLABUS?.MANAGE && selectedRole?.name?.toLowerCase() !== 'admin') {
           return;
         }
         if (!updatedPerms.includes(id)) {
@@ -403,7 +403,7 @@ export default function Permissions() {
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  {perm.id === PERMISSIONS.SYLLABUS.MANAGE && (
+                                  {perm.id === PERMISSIONS?.SYLLABUS?.MANAGE && (
                                     <span className="text-[9px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-250/80 dark:border-amber-900/50 px-1.5 py-0.5 rounded uppercase tracking-wider scale-90">
                                       Chỉ Admin
                                     </span>
