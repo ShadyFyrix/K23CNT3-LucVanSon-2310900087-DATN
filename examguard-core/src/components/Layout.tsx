@@ -79,8 +79,8 @@ const defaultNavGroups: NavGroup[] = [
       { name: 'Giám thị Phòng 3D', path: '/live-proctor', icon: Eye, badge: 'LIVE', category: 'Giám sát 3D' },
       { name: 'Rà soát & Duyệt điểm', path: '/grading-review', icon: FileCheck2, category: 'Khảo thí' },
       { name: 'Phòng thi Thí sinh', path: '/exam/take', icon: Monitor, badge: 'WORKSPACE', category: 'Thí sinh' },
-      { name: 'Bảng điểm & Đáp án GV', path: '/exam/result?view=lecturer', icon: Award, category: 'Kết quả' },
-      { name: 'Tra cứu Điểm & Bài thi SV', path: '/exam/result?view=student', icon: ClipboardCheck, category: 'Kết quả' },
+      { name: 'Bảng điểm & Phổ điểm Ca thi', path: '/exam/result?view=lecturer', icon: Award, category: 'Kết quả' },
+      { name: 'Thanh tra & Bài thi Thí sinh', path: '/exam/result?view=student', icon: ClipboardCheck, category: 'Kết quả' },
     ]
   },
   {
@@ -235,6 +235,7 @@ export function Layout({ children }: { children: ReactNode }) {
             { name: 'Ngân hàng Đề thi', path: '/exam-papers', icon: BookOpen, category: 'Khảo thí' },
             { name: 'Lịch thi & Ca thi', path: '/exam-sessions', icon: Calendar, badge: 'GANTT', category: 'Khảo thí' },
             { name: 'Bảng điểm & Phổ điểm GV', path: '/exam/result?view=lecturer', icon: Award, category: 'Kết quả' },
+            { name: 'Thanh tra Bài thi Thí sinh', path: '/exam/result?view=student', icon: ClipboardCheck, category: 'Kết quả' },
           ]
         },
         {

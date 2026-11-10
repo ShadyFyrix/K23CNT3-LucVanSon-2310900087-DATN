@@ -152,6 +152,8 @@ export default function ExamResult() {
     return !!(user as any)?.studentCode;
   }, [user]);
 
+  const isAdminOrLecturer = !isStudentRole;
+
   // ViewMode: 'lecturer' (Giảng viên / Ban Khảo thí) hoặc 'student' (Sinh viên)
   const [viewMode, setViewMode] = useState<'lecturer' | 'student'>(() => {
     const qView = searchParams.get('view');
@@ -198,7 +200,8 @@ export default function ExamResult() {
   const [highlightedStudentId, setHighlightedStudentId] = useState<string | null>(null);
   const querySessionStudentId = searchParams.get('sessionStudentId');
   const [studentSubTab, setStudentSubTab] = useState<'TRANSCRIPT' | 'PERSONAL' | 'CLASS_GRADEBOOK'>(() => {
-    return (querySessionStudentId || sessionStudentId) ? 'PERSONAL' : 'TRANSCRIPT';
+    if (querySessionStudentId || sessionStudentId) return 'PERSONAL';
+    return isStudentRole ? 'TRANSCRIPT' : 'CLASS_GRADEBOOK';
   });
   const [studentClassSearch, setStudentClassSearch] = useState('');
   const [studentAllExams, setStudentAllExams] = useState<any[]>([]);
@@ -283,7 +286,7 @@ export default function ExamResult() {
     }
   };
 
-  // 2. Tải bảng điểm & thống kê ca thi cho Giảng viên
+  // 2. Tải bảng điểm & thống kê ca thi cho Giảng viên & Admin
   const fetchLecturerWorkspace = async (sessionId?: string) => {
     const targetSessionId = sessionId || selectedSessionId || 'fallback_session';
     try {
@@ -291,6 +294,21 @@ export default function ExamResult() {
       const res = await apiClient.get(`/api/grading/review/${targetSessionId}`);
       if (res.data && res.data.success) {
         setWorkspaceData(res.data.data);
+        // Tự động gán thí sinh mặc định cho Cán bộ Khảo thí / Giảng viên nếu chưa chọn hoặc đổi ca thi
+        if (!isStudentRole && res.data.data?.students?.length > 0) {
+          const students = res.data.data.students;
+          const currentId = previewStudentInfo?.id;
+          const stillInList = currentId && students.some((s: any) => (s.examStudentId || s.id) === currentId);
+          if (!stillInList) {
+            const defaultSt = students.find((s: any) => s.candidateCode === 'SBD-001') || students[0];
+            setPreviewStudentInfo({
+              id: defaultSt.examStudentId || defaultSt.id,
+              name: defaultSt.studentName,
+              code: defaultSt.studentCode || defaultSt.candidateCode
+            });
+            fetchStudentResult(defaultSt.examStudentId || defaultSt.id);
+          }
+        }
       }
     } catch (err: any) {
       console.error('Lỗi tải bảng điểm ca thi:', err);
@@ -367,12 +385,23 @@ export default function ExamResult() {
 
   useEffect(() => {
     if (viewMode === 'student') {
-      fetchStudentResult();
-      if (user?.email) {
-        fetchStudentTranscript();
+      if (isStudentRole) {
+        fetchStudentResult();
+        if (user?.email) {
+          fetchStudentTranscript();
+        }
+      } else {
+        // Chế độ Admin/Thanh tra: Tải bài thi của thí sinh được chọn (nếu có)
+        if (previewStudentInfo?.id) {
+          fetchStudentResult(previewStudentInfo.id);
+        } else if (sessionStudentId || querySessionStudentId) {
+          fetchStudentResult(querySessionStudentId || sessionStudentId);
+        } else if (selectedSessionId) {
+          fetchLecturerWorkspace(selectedSessionId);
+        }
       }
     }
-  }, [viewMode, sessionStudentId, previewStudentInfo, user?.email]);
+  }, [viewMode, sessionStudentId, previewStudentInfo, user?.email, isStudentRole]);
 
   // Thống kê GPA & kết quả học kỳ của sinh viên
   const transcriptStats = useMemo(() => {
@@ -596,7 +625,7 @@ export default function ExamResult() {
               }`}
             >
               <UserSquare2 className="w-4 h-4 text-white" />
-              <span>Chế độ Giảng viên (Ca thi)</span>
+              <span>{isStudentRole ? 'Chế độ Giảng viên (Ca thi)' : '📊 Bảng Điểm & Quản Lý Ca Thi'}</span>
               <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[10px] font-mono font-bold">
                 GV
               </span>
@@ -611,9 +640,9 @@ export default function ExamResult() {
               }`}
             >
               <GraduationCap className="w-4 h-4 text-white" />
-              <span>Chế độ Sinh viên (Cá nhân)</span>
+              <span>{isStudentRole ? 'Chế độ Sinh viên (Cá nhân)' : '🔍 Thanh Tra & Bài Thi Thí Sinh'}</span>
               <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[10px] font-mono font-bold">
-                SV
+                {isStudentRole ? 'SV' : 'AUDIT'}
               </span>
             </button>
           </div>
@@ -1008,12 +1037,88 @@ export default function ExamResult() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════ */}
-        {/* PHÂN HỆ 2: CHẾ ĐỘ SINH VIÊN (STUDENT VIEW)                                */}
+        {/* PHÂN HỆ 2: CHẾ ĐỘ SINH VIÊN HOẶC THANH TRA BÀI THI THÍ SINH (STUDENT/AUDIT VIEW) */}
         {/* ══════════════════════════════════════════════════════════════════════════ */}
         {viewMode === 'student' && (
           <div className="space-y-6 animate-in fade-in-50 duration-300">
-            {/* Banner nếu Giảng viên đang xem trước bài của thí sinh */}
-            {previewStudentInfo && (
+            {/* THANH ĐIỀU HÀNH DÀNH CHO CÁN BỘ KHẢO THÍ / ADMIN KHI THANH TRA BÀI THI */}
+            {isAdminOrLecturer && (
+              <div className="bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/40 border border-purple-500/30 rounded-3xl p-5 shadow-2xl backdrop-blur space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-black text-white">TRẠM THANH TRA & TRA CỨU BÀI THI THÍ SINH</span>
+                        <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold uppercase border border-purple-500/30">
+                          AUDIT WORKSPACE
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Cán bộ Khảo thí & Giảng viên kiểm tra bài làm, ma trận đáp án và xử lý đơn phúc khảo cho từng thí sinh
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bộ chọn Ca thi & Thí sinh */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Chọn Ca thi */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Ca thi:</span>
+                      </span>
+                      <select
+                        value={selectedSessionId}
+                        onChange={(e) => {
+                          const newSid = e.target.value;
+                          setSelectedSessionId(newSid);
+                          fetchLecturerWorkspace(newSid);
+                        }}
+                        className="bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/40 max-w-[200px] truncate"
+                      >
+                        {sessionList.map(s => (
+                          <option key={s._id} value={s._id}>
+                            [{s.code}] {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Chọn Thí sinh */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                        <UserSquare2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Thí sinh:</span>
+                      </span>
+                      <select
+                        value={previewStudentInfo?.id || ''}
+                        onChange={(e) => {
+                          const targetId = e.target.value;
+                          const found = workspaceData?.students?.find(s => (s.examStudentId || s.id) === targetId);
+                          if (found) {
+                            handleInspectCandidate(found);
+                            setStudentSubTab('PERSONAL');
+                          }
+                        }}
+                        className="bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500/40 max-w-[240px] truncate"
+                      >
+                        {(workspaceData?.students || []).map(st => (
+                          <option key={st.id || st.examStudentId} value={st.examStudentId || st.id}>
+                            [{st.candidateCode}] {st.studentName} — {st.officialScore ?? st.autoGradeScore ?? 0}đ
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Banner nếu Giảng viên / Admin đang xem trước bài của thí sinh */}
+            {previewStudentInfo && !isAdminOrLecturer && (
               <div className="bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 rounded-2xl p-4 flex items-center justify-between shadow-lg">
                 <div className="flex items-center space-x-3 text-xs">
                   <Eye className="w-5 h-5 text-[var(--color-azure)]" />
@@ -1039,9 +1144,10 @@ export default function ExamResult() {
               </div>
             )}
 
-            {/* ── BỘ CHUYỂN TAB CHÍNH CỦA SINH VIÊN ── */}
-            {!previewStudentInfo && (
-              <div className="flex items-center space-x-2 border-b border-slate-800 pb-3 overflow-x-auto">
+            {/* ── BỘ CHUYỂN TAB CHÍNH CỦA SINH VIÊN / KHẢO THÍ ── */}
+            <div className="flex items-center space-x-2 border-b border-slate-800 pb-3 overflow-x-auto">
+              {/* Tab Bảng điểm tổng hợp chỉ dành cho sinh viên thật (Admin không đi thi nên không có bảng điểm cá nhân) */}
+              {isStudentRole && (
                 <button
                   type="button"
                   onClick={() => setStudentSubTab('TRANSCRIPT')}
@@ -1052,41 +1158,45 @@ export default function ExamResult() {
                   }`}
                 >
                   <BookOpen className="w-4 h-4 text-[var(--color-azure)]" />
-                  <span>📊 Bảng Điểm Tổng Hợp ({studentAllExams.length} Môn Thi)</span>
+                  <span>📊 Bảng Điểm Cá Nhân & GPA ({studentAllExams.length} Môn Thi)</span>
                 </button>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => setStudentSubTab('PERSONAL')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
-                    studentSubTab === 'PERSONAL'
-                      ? 'eg-glass-pill shadow-xs text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-4 h-4 text-emerald-400" />
-                  <span>📝 Chi Tiết Bài Làm & Đối Chiếu Đáp Án</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => setStudentSubTab('PERSONAL')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
+                  studentSubTab === 'PERSONAL'
+                    ? 'eg-glass-pill shadow-xs text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span>
+                  {isStudentRole
+                    ? '📝 Chi Tiết Bài Làm & Đối Chiếu Đáp Án'
+                    : `📝 Bài Làm Thí Sinh (${previewStudentInfo?.name || studentResult?.student?.name || 'Đang chọn'})`}
+                </span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentSubTab('CLASS_GRADEBOOK');
-                    if (!workspaceData?.students && studentResult?.session?.code) {
-                      fetchLecturerWorkspace(studentResult.session.code);
-                    }
-                  }}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
-                    studentSubTab === 'CLASS_GRADEBOOK'
-                      ? 'eg-glass-pill shadow-xs text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Award className="w-4 h-4 text-amber-400" />
-                  <span>📋 Bảng Điểm Ca Thi ({classStudentsList.length} Thí Sinh)</span>
-                </button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setStudentSubTab('CLASS_GRADEBOOK');
+                  if (!workspaceData?.students && (studentResult?.session?.code || selectedSessionId)) {
+                    fetchLecturerWorkspace(selectedSessionId || studentResult?.session?.code);
+                  }
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
+                  studentSubTab === 'CLASS_GRADEBOOK'
+                    ? 'eg-glass-pill shadow-xs text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>📋 Bảng Điểm Ca Thi ({classStudentsList.length} Thí Sinh)</span>
+              </button>
+            </div>
 
             {/* TAB CON 1: BẢNG ĐIỂM TỔNG HỢP CÁC MÔN THI ĐÃ HOÀN THÀNH */}
             {studentSubTab === 'TRANSCRIPT' && !previewStudentInfo && (
@@ -1356,19 +1466,27 @@ export default function ExamResult() {
                 <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-[var(--color-royal)]/20 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div>
-                      <span className="text-xs font-bold text-[var(--color-azure)] uppercase tracking-wider">HỌC KỲ HIỆN TẠI</span>
+                      <span className="text-xs font-bold text-[var(--color-azure)] uppercase tracking-wider">
+                        {isStudentRole ? 'HỌC KỲ HIỆN TẠI' : '🛡️ THANH TRA KHẢO THÍ: BÀI LÀM THÍ SINH'}
+                      </span>
                       <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
                         {studentResult.session.title}
                       </h2>
                       <p className="text-xs text-slate-400 mt-2 flex items-center space-x-4">
-                        <span>Thí sinh: <b className="text-slate-200">{studentResult.student.name}</b></span>
+                        <span>Thí sinh: <b className="text-white font-bold">{studentResult.student.name}</b></span>
                         <span>•</span>
-                        <span>SBD: <b className="text-slate-200 font-mono">{studentResult.student.candidateCode}</b></span>
+                        <span>SBD: <b className="text-cyan-400 font-mono font-bold">{studentResult.student.candidateCode}</b></span>
+                        {(studentResult.student as any).studentCode && (
+                          <>
+                            <span>•</span>
+                            <span>MSSV: <b className="text-slate-200 font-mono">{(studentResult.student as any).studentCode}</b></span>
+                          </>
+                        )}
                       </p>
 
-                      {/* Bộ chuyển nhanh môn thi & Nút quay lại Bảng điểm tổng hợp */}
+                      {/* Bộ chuyển nhanh môn thi & Nút quay lại Bảng điểm tổng hợp / Bảng điểm ca thi */}
                       <div className="mt-3 flex items-center flex-wrap gap-2 text-xs">
-                        {studentAllExams.length > 1 && (
+                        {isStudentRole && studentAllExams.length > 1 && (
                           <div className="flex items-center space-x-1.5">
                             <span className="text-slate-400">Đổi môn thi:</span>
                             <select
@@ -1389,13 +1507,24 @@ export default function ExamResult() {
                             </select>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setStudentSubTab('TRANSCRIPT')}
-                          className="px-3 py-1 rounded-xl eg-glass-pill text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
-                        >
-                          ← Bảng điểm tổng hợp ({studentAllExams.length} môn)
-                        </button>
+                        {isStudentRole ? (
+                          <button
+                            type="button"
+                            onClick={() => setStudentSubTab('TRANSCRIPT')}
+                            className="px-3 py-1 rounded-xl eg-glass-pill text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                          >
+                            ← Bảng điểm tổng hợp ({studentAllExams.length} môn)
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setStudentSubTab('CLASS_GRADEBOOK')}
+                            className="px-3 py-1.5 rounded-xl eg-glass-pill text-xs font-semibold text-amber-300 hover:text-white transition cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Award className="w-3.5 h-3.5 text-amber-400" />
+                            <span>← Bảng điểm ca thi ({classStudentsList.length} thí sinh)</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1427,7 +1556,7 @@ export default function ExamResult() {
                         <span className="text-[10px] text-emerald-400 font-semibold mt-1 block">XUẤT SẮC</span>
                       </div>
 
-                      {previewStudentInfo && (
+                      {(!isStudentRole || previewStudentInfo) && (
                         <div className="flex flex-col justify-center">
                           <button
                             onClick={() => {
@@ -1435,7 +1564,7 @@ export default function ExamResult() {
                               setShowOverrideModal(true);
                             }}
                             className="px-4 py-3 eg-btn-gradient text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
-                            title="Giảng viên duyệt phúc khảo điều chỉnh điểm chính thức"
+                            title="Giảng viên / Admin duyệt phúc khảo điều chỉnh điểm chính thức"
                           >
                             <SlidersHorizontal className="w-4 h-4" />
                             <span>Sửa Điểm Thí Sinh</span>
@@ -1453,12 +1582,25 @@ export default function ExamResult() {
                     <span>Hạn chót nộp đơn phúc khảo: <b>{new Date(studentResult.session.appealDeadline || Date.now() + 7 * 86400000).toLocaleDateString('vi-VN')}</b></span>
                   </div>
 
-                  <button
-                    onClick={() => setShowAppealModal(true)}
-                    className="px-4 py-2 eg-glass-pill text-xs font-bold transition shadow-xs cursor-pointer"
-                  >
-                    Gửi yêu cầu phúc khảo
-                  </button>
+                  {isStudentRole ? (
+                    <button
+                      onClick={() => setShowAppealModal(true)}
+                      className="px-4 py-2 eg-glass-pill text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      Gửi yêu cầu phúc khảo
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setOverrideScoreInput(String(studentResult.scores.officialScore ?? 0));
+                        setShowOverrideModal(true);
+                      }}
+                      className="px-4 py-2 eg-btn-gradient text-white text-xs font-bold rounded-xl transition shadow-md flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>⚖️ Duyệt & Sửa Điểm Phúc Khảo</span>
+                    </button>
+                  )}
                 </div>
 
 
@@ -1468,7 +1610,7 @@ export default function ExamResult() {
                 <div className="space-y-4">
                   <h3 className="text-base font-bold text-white flex items-center space-x-2 pt-2">
                     <FileText className="w-5 h-5 text-[var(--color-azure)]" />
-                    <span>CHI TIẾT BÀI LÀM & ĐỐI CHIẾU ĐÁP ÁN:</span>
+                    <span>{isStudentRole ? 'CHI TIẾT BÀI LÀM & ĐỐI CHIẾU ĐÁP ÁN:' : `CHI TIẾT BÀI LÀM CỦA THÍ SINH ${studentResult.student.name?.toUpperCase()}:`}</span>
                   </h3>
 
                   {studentResult.questions.map((q, idx) => {
@@ -1516,7 +1658,7 @@ export default function ExamResult() {
                           </div>
 
                           <div className="flex items-center space-x-2">
-                            {previewStudentInfo && (
+                            {(!isStudentRole || previewStudentInfo) && (
                               <div className="flex items-center space-x-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
                                 <span className="text-[10px] text-slate-400 font-medium">GV sửa:</span>
                                 <button
@@ -1579,7 +1721,7 @@ export default function ExamResult() {
                                   <span className="flex-1 truncate">{opt}</span>
                                   {isUserPicked && (
                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                      {previewStudentInfo ? 'Thí sinh chọn' : 'Lựa chọn của bạn'}
+                                      {(!isStudentRole || previewStudentInfo) ? 'Thí sinh chọn' : 'Lựa chọn của bạn'}
                                     </span>
                                   )}
                                   {isActualCorrect && (
@@ -1593,7 +1735,7 @@ export default function ExamResult() {
 
                         <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1.5 border border-slate-800/60 mt-3">
                           <div className="flex justify-between">
-                            <span className="text-slate-400">{previewStudentInfo ? 'Lựa chọn của thí sinh:' : 'Lựa chọn của bạn:'}</span>
+                            <span className="text-slate-400">{(!isStudentRole || previewStudentInfo) ? 'Lựa chọn của thí sinh:' : 'Lựa chọn của bạn:'}</span>
                             <span className={`font-bold ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
                               {letterStudent}
                             </span>
@@ -1639,24 +1781,26 @@ export default function ExamResult() {
                             onKeyDown={e => {
                               if (e.key === 'Enter') handleHighlightStudent();
                             }}
-                            placeholder="Tìm tên bạn, MSSV hoặc SBD trong ca thi..."
+                            placeholder={isStudentRole ? "Tìm tên bạn, MSSV hoặc SBD trong ca thi..." : "Tìm tên thí sinh, MSSV hoặc SBD..."}
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[var(--color-azure)]"
                           />
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const myTerm = user?.fullName || studentResult?.student?.name || studentResult?.student?.candidateCode || '';
-                            setStudentClassSearch(myTerm);
-                            handleHighlightStudent(myTerm);
-                          }}
-                          className="px-3 py-2 eg-glass-pill text-[var(--color-azure)] rounded-xl text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 cursor-pointer shrink-0"
-                          title="Tự động tìm kiếm và highlight vị trí của bạn trong bảng điểm"
-                        >
-                          <UserSquare2 className="w-3.5 h-3.5" />
-                          <span>Định Vị Bài Của Tôi</span>
-                        </button>
+                        {isStudentRole && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const myTerm = user?.fullName || studentResult?.student?.name || studentResult?.student?.candidateCode || '';
+                              setStudentClassSearch(myTerm);
+                              handleHighlightStudent(myTerm);
+                            }}
+                            className="px-3 py-2 eg-glass-pill text-[var(--color-azure)] rounded-xl text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 cursor-pointer shrink-0"
+                            title="Tự động tìm kiếm và highlight vị trí của bạn trong bảng điểm"
+                          >
+                            <UserSquare2 className="w-3.5 h-3.5" />
+                            <span>Định Vị Bài Của Tôi</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"
@@ -1697,6 +1841,7 @@ export default function ExamResult() {
                             <th className="py-3 px-4 text-center">Xếp Loại</th>
                             <th className="py-3 px-4 text-center">Uy Tín AI</th>
                             <th className="py-3 px-4 text-center">Trạng Thái</th>
+                            {!isStudentRole && <th className="py-3 px-4 text-right">Xem Bài Làm</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60 font-sans">
@@ -1706,12 +1851,12 @@ export default function ExamResult() {
                             const currentCandidateCode = studentResult?.student?.candidateCode?.trim().toLowerCase();
                             const currentStudentCode = (studentResult?.student as any)?.studentCode?.trim().toLowerCase();
 
-                            // Nhận diện dòng bài thi của sinh viên hiện tại chính xác duy nhất
-                            const isMe = currentUserName
+                            // Nhận diện dòng bài thi của sinh viên hiện tại chính xác duy nhất (chỉ áp dụng cho sinh viên)
+                            const isMe = isStudentRole && (currentUserName
                               ? (st.studentName?.trim().toLowerCase() === currentUserName)
                               : (currentCandidateCode
                                   ? st.candidateCode?.trim().toLowerCase() === currentCandidateCode
-                                  : (currentStudentCode ? st.studentCode?.trim().toLowerCase() === currentStudentCode : false));
+                                  : (currentStudentCode ? st.studentCode?.trim().toLowerCase() === currentStudentCode : false)));
 
                             const scoreNum = Number(st.score);
 
@@ -1767,6 +1912,21 @@ export default function ExamResult() {
                                 <td className="py-3 px-4 text-center text-slate-400 text-xs">
                                   {st.status}
                                 </td>
+                                {!isStudentRole && (
+                                  <td className="py-3 px-4 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleInspectCandidate(st);
+                                        setStudentSubTab('PERSONAL');
+                                      }}
+                                      className="px-3 py-1.5 rounded-full eg-btn-gradient text-white font-bold text-[11px] transition inline-flex items-center space-x-1 cursor-pointer shadow-xs active:scale-95"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                      <span>Xem bài</span>
+                                    </button>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
