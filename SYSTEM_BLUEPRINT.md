@@ -1,4 +1,4 @@
-# EXAMGUARD AI — SYSTEM BLUEPRINT v3.4
+# EXAMGUARD AI — SYSTEM BLUEPRINT v3.6
 ## Tài liệu Phân tích Nghiệp vụ & Kỹ thuật Toàn diện
 
 > **Mục đích:** Tài liệu này là nguồn tham chiếu duy nhất (Single Source of Truth) cho toàn bộ quá trình phát triển.  
@@ -34,6 +34,7 @@
 24. [Đặc Tả Chi Tiết 10 Workflow Toàn Diện Của Toàn Bộ Hệ Thống (End-to-End System Workflows)](#24-đặc-tả-chi-tiết-10-workflow-toàn-diện-của-toàn-bộ-hệ-thống-end-to-end-system-workflows-specification)
 25. [Đấu Trường Quiz Arena (Gamification), Bộ Công Cụ Soạn Đề Studio v3.5 & Custom Rules Engine](#25-đấu-trường-quiz-arena-gamification-bộ-công-cụ-soạn-đề-studio-v35--custom-rules-engine)
 26. [Hệ Thống Giám Sát Tư Thế & Bất Động Thời Gian Thực (Real-Time Pose & Immobility Surveillance Microservice — MediaPipe, OpenCV & Flask)](#26-hệ-thống-giám-sát-tư-thế--bất-động-thời-gian-thực-real-time-pose--immobility-surveillance-microservice--mediapipe-opencv--flask)
+27. [Kiến Trúc Tra Cứu Điểm & Thanh Tra Bài Thi Dual-Mode, Bộ Điều Phối 14 Ca Thi & Tối Ưu Controller](#27-kiến-trúc-tra-cứu-điểm--thanh-tra-bài-thi-dual-mode-bộ-điều-phối-14-ca-thi--tối-ưu-controller-v36)
 
 ---
 
@@ -151,10 +152,11 @@ Hệ thống ExamGuard AI áp dụng kết hợp **RBAC (Role-Based Access Contr
 | | Rà soát bảng điểm tự động & kiểm tra phân tích đề | ✅ | ✅ *(GV chấm thi)* | ❌ | Kiểm tra 1 lần trước khi chốt |
 | | Phê duyệt bảng điểm chính thức (Approve) | ✅ | ✅ *(Trưởng bộ môn/GV chấm)* | ❌ | Chốt điểm không cho sửa tự do |
 | | Công bố Điểm đi kèm Đáp án & Lời giải cho SV | ✅ | ❌ | ❌ | Kích hoạt quyền tra cứu của SV |
-| | Xem kết quả thi chi tiết kèm đối chiếu đáp án | ❌ | ❌ | ✅ *(Chính mình)* | Sau khi ca thi được công bố |
+| | Xem kết quả thi chi tiết kèm đối chiếu đáp án | ❌ | ❌ | ✅ *(Chính mình)* | Sau khi ca thi được công bố (3 Tab: GPA, Chi tiết, Ca thi) |
+| | **Thanh tra & Tra cứu bài thi thí sinh (Audit & Inspect Submission)** | ✅ *(Toàn trường)* | ✅ *(Ca thi phụ trách)* | ❌ | Tra cứu bài làm chi tiết, đối chiếu đáp án, can thiệp sửa điểm phúc khảo |
 | **F. Hậu kiểm, Audit Log & Phúc khảo** | Xem Integrity Report (Báo cáo vi phạm toàn vẹn) | ✅ | ✅ *(Chỉ ca mình coi)* | ❌ | Gồm timeline + video/ảnh S3 + Log KYC |
 | | Gửi đơn phúc khảo bài thi / Điểm uy tín | ❌ | ❌ | ✅ | Trong thời hạn 7 ngày sau công bố |
-| | Thẩm tra phúc khảo (Xem lại video CCTV/Webcam) | ✅ *(Khảo thí)* | ✅ *(Hội đồng chấm)* | ❌ | Đối soát toàn bộ log AI & Vector Gốc |
+| | **Thẩm tra phúc khảo & Duyệt sửa điểm (Score Override)** | ✅ *(Khảo thí)* | ✅ *(Hội đồng chấm)* | ❌ | Can thiệp sửa điểm chính thức hoặc từng câu trắc nghiệm |
 | | Xuất dữ liệu báo cáo (Excel, PDF Biên bản ca thi) | ✅ | ✅ *(Biên bản ca coi)* | ❌ | |
 
 ---
@@ -1794,38 +1796,126 @@ Nếu phát hiện câu hỏi có sai sót trong file đề gốc (nhầm đáp 
 
 ---
 
-### 11.7 Giao diện Sinh viên Tra cứu Kết quả & Đối Chiếu Đáp Án (Post-Exam Feedback)
+### 11.7 Phân Hệ Tra Cứu Kết Quả & Thanh Tra Bài Thi Hai Chế Độ (Dual-Mode Post-Exam Workspace: `ExamResult.tsx`)
 
-Sau khi ca thi được công bố, Sinh viên đăng nhập vào hệ thống và mở mục **"Chi tiết Kết quả Thi"**:
+Phân hệ tra cứu kết quả thi được kiến trúc theo mô hình **Dual-Mode RBAC (Role-Based Access Control)**, phân định tuyệt đối giữa quyền hạn của **Thí sinh (Sinh viên)** và **Cán bộ Khảo thí (Admin / Giảng viên)**, loại bỏ triệt để nghịch lý vai trò khi người quản trị truy cập trang tra cứu bài thi.
+
+#### 11.7.1 Chế độ Thí sinh Dự thi (Student View — `view=student` với vai trò Sinh viên)
+
+Sau khi ca thi được công bố chính thức, Sinh viên đăng nhập vào hệ thống và mở mục **"Kết quả & Bảng điểm"** (`/exam/result?view=student`). Giao diện sinh viên được tổ chức thành cấu trúc **3 Tab chuyên sâu**:
+
+##### Tab 1: 📊 Bảng Điểm Tổng Hợp & GPA Học Kỳ (Transcript Overview)
+* **Bảng chỉ số KPI học kỳ thời gian thực:**
+  - Điểm trung bình GPA (thang điểm 10).
+  - Tổng số học phần/môn thi đã hoàn thành.
+  - Số môn thi đạt chuẩn ($\text{Điểm} \ge 5.0$) và tỷ lệ đậu môn.
+  - Điểm uy tín AI trung bình qua các ca thi ($\text{Reputation Score} \ge 80/100$: Đạt chuẩn liêm chính khảo thí).
+* **Bảng Danh mục Học phần & Kết quả thi:** Hiển thị chi tiết Tên môn học, Mã ca thi, Phòng thi, Số báo danh, Ngày thi, Điểm chính thức, Xếp loại (Xuất sắc / Giỏi / Khá / Trung bình / Chưa đạt), Điểm uy tín AI, và 2 nút hành động trực tiếp:
+  - `[📝 Bài làm]`: Chuyển thẳng đến Tab 2 đối chiếu lời giải chi tiết môn đó.
+  - `[📋 Ca thi]`: Chuyển thẳng đến Tab 3 xem bảng điểm cả phòng thi môn đó.
+
+##### Tab 2: 📝 Chi Tiết Bài Làm & Đối Chiếu Đáp Án (Exam Submission & Feedback)
+* Hiển thị bảng điểm chính thức, số câu đúng/tổng số câu, điểm uy tín AI.
+* **Bộ chuyển môn thi nhanh (Course Switcher Dropdown):** Cho phép sinh viên chuyển đổi xem bài làm giữa các môn thi đã hoàn thành trong học kỳ.
+* **Thông báo hạn chót phúc khảo & Nút `[📩 Gửi yêu cầu phúc khảo]`:** Sinh viên chỉ được gửi đơn phúc khảo trong vòng 7 ngày kể từ khi công bố kết quả.
+* **Danh sách câu hỏi trắc nghiệm & Đối chiếu đáp án:**
+  - Xem từng câu hỏi, điểm đạt được của câu.
+  - Nhãn hiển thị: **`Lựa chọn của bạn:`** (hiển thị phương án sinh viên đã tô chọn khi làm bài) đối chiếu với **`Đáp án chính thức:`**.
+  - Màu sắc trực quan: Viền xanh lá cho câu đúng, viền đỏ cho câu sai, viền vàng cho câu chờ chấm tự luận.
+  - Hộp giải thích chi tiết: Lời giải thích học thuật chuẩn từ Giảng viên / Ngân hàng đề thi.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  KẾT QUẢ THI: KỸ THUẬT LẬP TRÌNH — HK1 2026-2027                       │
-│  Thí sinh: Lục Văn Sơn (2310900087) | Lớp: K23CNT3                     │
+│  KẾT QUẢ THI: KỸ THUẬT LẬP TRÌNH C — HK1 2026-2027                     │
+│  Thí sinh: Lục Văn Sơn (2310900087) | SBD: SBD-001 | LAB01             │
 ├────────────────────────────────────────────────────────────────────────┤
-│  🏆 ĐIỂM SỐ CHÍNH THỨC:  8.5 / 10.0   (Đúng 17/20 câu)                  │
-│  🛡️ ĐIỂM UY TÍN CA THI:  95 / 100    (Mức độ tin cậy: XUẤT SẮC)         │
-│  ⏱️ Thời gian làm bài:   42 phút 15 giây                               │
+│  🏆 ĐIỂM SỐ CHÍNH THỨC:  9.5 / 10.0   (Đúng 38/40 câu)                 │
+│  🛡️ ĐIỂM UY TÍN CA THI:  92 / 100    (Mức độ tin cậy: XUẤT SẮC)        │
+│  ⏱️ Thời gian nộp bài:   14:02:15 10/11/2026                           │
 ├────────────────────────────────────────────────────────────────────────┤
 │  CHI TIẾT TỪNG CÂU HỎI & ĐÁP ÁN ĐỐI CHIẾU:                             │
 │                                                                        │
-│  ✅ Câu 1: Kết quả của printf("%d", 5/2) là gì? (+0.5đ)               │
-│     - Lựa chọn của bạn: B. 2 (Đúng)                                    │
-│     - Đáp án chính thức: B. 2                                          │
-│     - 💡 Lời giải thích: Trong ngôn ngữ C, phép chia giữa 2 số nguyên  │
-│       5 và 2 sẽ lấy phần nguyên là 2, bỏ qua phần thập phân.           │
+│  ✅ Câu 1: Trí tuệ nhân tạo (AI) được định nghĩa cơ bản là gì? (+0.25đ)│
+│     - Lựa chọn của bạn: D. Khả năng của máy tính bắt chước... (Đúng)  │
+│     - Đáp án chính thức: D                                             │
+│     - 💡 Lời giải thích: Đáp án chuẩn của đề thi                       │
 │                                                                        │
 │  ❌ Câu 4: Đâu là cấu trúc dữ liệu hoạt động theo cơ chế LIFO? (0đ)   │
 │     - Lựa chọn của bạn: A. Queue (Sai)                                 │
 │     - Đáp án chính thức: C. Stack                                      │
-│     - 💡 Lời giải thích: Stack hoạt động theo nguyên lý Last-In,       │
-│       First-Out (LIFO). Queue hoạt động theo FIFO (First-In First-Out).│
+│     - 💡 Lời giải thích: Stack hoạt động theo nguyên lý Last-In        │
+│       First-Out (LIFO).                                                │
 │                                                                        │
-│  ... (Hiển thị đầy đủ tất cả các câu còn lại) ...                      │
+│  ... (Hiển thị đầy đủ tất cả 40 câu trắc nghiệm) ...                   │
 ├────────────────────────────────────────────────────────────────────────┤
-│  [📩 GỬI YÊU CẦU PHÚC KHẢO] (Hạn chót: đến hết ngày 22/10/2026)        │
+│  [📩 GỬI YÊU CẦU PHÚC KHẢO] (Hạn chót: đến hết ngày 17/11/2026)        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+##### Tab 3: 📋 Bảng Điểm Toàn Ca Thi (Class Gradebook)
+* Xem danh sách toàn bộ thí sinh trong phòng thi, thứ hạng (#1, #2, #3, Top 1 🥇, Top 2 🥈, Top 3 🥉), Số báo danh (SBD), Mã sinh viên, Điểm thi và Điểm uy tín AI.
+* **Thanh tìm kiếm & Nút `[🎯 Định Vị Bài Của Tôi]`:** Nhấn nút sẽ tự động tìm kiếm tên/MSSV của tài khoản sinh viên đang đăng nhập, cuộn mượt và kích hoạt highlight nổi bật dòng bài thi của sinh viên trên bảng điểm.
+
+---
+
+#### 11.7.2 Chế độ Cán bộ Khảo thí / Admin & Giảng viên (Inspector & Audit Workspace)
+
+> **Giải quyết nghịch lý vai trò:** Admin / Giảng viên là người quản lý, ra đề, coi thi và chấm điểm — **không phải thí sinh làm bài thi**. Họ không có SBD, không có bài làm cá nhân và không có nhu cầu "tự gửi đơn phúc khảo". Khi Admin/Giảng viên truy cập URL `/exam/result?view=student`, hệ thống tự động nhận diện danh tính và kích hoạt chế độ **Trạm Thanh Tra Khảo Thí (Audit Workspace)**.
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  🛡️ TRẠM THANH TRA & TRA CỨU BÀI THI THÍ SINH                   [AUDIT WORKSPACE]       │
+│  Cán bộ Khảo thí & Giảng viên kiểm tra bài làm, ma trận đáp án và xử lý đơn phúc khảo   │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  📅 Ca thi: [CA-20261025-P302-300: Kỹ thuật lập trình C ▼]                              │
+│  👤 Thí sinh: [[SBD-001] Lục Văn Sơn — 9.50đ (Xuất sắc) ▼]   🔍 [Tìm tên/MSSV/SBD...]  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+##### Các Đặc tả Nghiệp vụ của Trạm Thanh Tra (Audit Workspace):
+1. **Ẩn hoàn toàn Tab Bảng Điểm Cá Nhân & GPA của Admin:** Hệ thống không truy vấn dữ liệu điểm cá nhân đối với tài khoản không mang vai trò sinh viên.
+2. **Thanh Điều Hành Thanh Tra (Inspector Bar):**
+   - **Bộ chọn Ca thi (14 Ca thi toàn trường):** Cho phép thanh tra viên chọn bất kỳ ca thi nào trong danh mục 14 ca thi đã được khởi tạo.
+   - **Bộ chọn Thí sinh (Candidate Dropdown Selector):** Tự động nạp danh sách toàn bộ thí sinh dự thi trong ca thi đó (ví dụ: 21 thí sinh phòng LAB01). Hiển thị đầy đủ SBD, Họ tên, Điểm chấm.
+   - **Tự động gán thí sinh mặc định:** Khi Admin vào trang, hệ thống tự động chọn thí sinh đầu tiên hoặc thí sinh có SBD-001 để hiển thị đầy đủ bài thi mẫu mà không bị rơi vào trạng thái rỗng.
+3. **Quyền Hạn Can Thiệp Chấm Phúc Khảo của Hội Đồng Khảo Thí:**
+   - **Thay thế nút gửi đơn:** Ẩn nút *"Gửi yêu cầu phúc khảo"* (vì Admin không tự phúc khảo chính mình), thay bằng nút **`[⚖️ Duyệt & Sửa Điểm Phúc Khảo]`**. Bấm vào sẽ mở Modal điều chỉnh điểm chính thức và ghi nhật ký lý do duyệt phúc khảo.
+   - **Sửa Đúng/Sai từng câu hỏi trắc nghiệm:** Trên từng câu hỏi, hiển thị công cụ **`GV sửa: [Đúng] [Sai]`** cho phép Admin / Giảng viên bấm chấm lại câu hỏi bị khiếu nại mà không cần sửa trong cơ sở dữ liệu thủ công.
+   - **Chuẩn hóa nhãn hiển thị:** Đổi nhãn thành **`"Lựa chọn của thí sinh:"`** và thẻ **`"Thí sinh chọn"`**.
+4. **Bảng Điểm Ca Thi Tích Hợp Cột Thao Tác (Action Column):**
+   - Bảng điểm ca thi dành cho Admin/Giảng viên bổ sung cột **"Xem Bài Làm"** với nút **`[👁️ Xem bài]`** trên từng dòng thí sinh.
+   - Khi Admin duyệt danh sách 21 thí sinh, chỉ cần nhấn nút "Xem bài" ở bất kỳ thí sinh nào là hệ thống lập tức mở chi tiết bài thi của thí sinh đó.
+
+---
+
+### 11.8 Bộ Điều Phối Rà Soát & Duyệt Điểm 14 Ca Thi Toàn Trường (`GradingReview.tsx` & Route `/api/grading/publish/:sessionId`)
+
+Để phục vụ quản lý đồng bộ toàn trường trong kỳ thi tập trung, hệ thống nâng cấp giao diện **Rà soát & Duyệt điểm** (`GradingReview.tsx`):
+1. **Tích hợp Bộ chọn Ca thi & Modal Duyệt 14 Ca Thi:**
+   - Dropdown chuyển đổi nhanh ca thi đang rà soát.
+   - Modal trực quan hiển thị danh mục toàn bộ 14 ca thi trong hệ thống kèm trạng thái: `🔒 Đang rà soát`, `✅ Đã phê duyệt`, `📢 Đã công bố điểm`.
+2. **API Endpoint Công Bố Điểm:**
+   - Đăng ký và kết nối chính thức route `POST /api/grading/publish/:sessionId` (body: `{ appealDays: 7 }`).
+   - Cập nhật trạng thái `gradingStatus = 'PUBLISHED'` trong MongoDB `ExamSession` và MySQL `ca_thi`.
+   - Lưu vết thời gian `publishedAt = NOW()`, kích hoạt thời hạn nộp đơn phúc khảo trực tuyến 7 ngày cho toàn bộ thí sinh trong ca thi.
+
+---
+
+### 11.9 Kiến Trúc Phân Tách Controller & Cơ Chế Khử Trùng Lặp 112 Môn Thi
+
+Nhằm đảm bảo hiệu năng và tính toàn vẹn dữ liệu trong môi trường nhiều ca thi lớn:
+1. **Phân rã Controller Monolithic:**
+   Tách file monolithic `exam.controller.js` thành 3 Controller chuyên trách theo nguyên lý Single Responsibility Principle (SRP):
+   - `examPaper.controller.js`: Chuyên trách soạn thảo, ngân hàng đề thi, import câu hỏi và cấu hình ma trận đáp án.
+   - `examSession.controller.js`: Chuyên trách điều phối ca thi, sơ đồ phòng thi, phân bổ thí sinh và giám thị.
+   - `examSubmission.controller.js`: Chuyên trách tiếp nhận bài thi, tự động chấm điểm, lưu tiến độ, tra cứu bảng điểm và đối chiếu đáp án.
+2. **Khắc phục triệt để lỗi truy vấn vô điều kiện (112 Môn Trùng Lặp):**
+   - **Nguyên nhân gốc rễ:** Hàm `getStudentExamSchedule` trước đây sử dụng fallback `ExamStudent.find({})` khi thiếu `studentId`, dẫn đến việc truy vấn toàn bộ 112 bản ghi phân công của 21 sinh viên toàn trường gộp vào bảng điểm của 1 cá nhân.
+   - **Giải pháp xử lý:**
+     * Bắt buộc giải mã Token JWT từ `req.headers.authorization` hoặc `req.cookies.accessToken`.
+     * Trích xuất chính xác `studentId` của tài khoản đăng nhập.
+     * Áp dụng điều kiện lọc nghiêm ngặt `{ student: studentId }`, đảm bảo chỉ trả về chính xác số môn thi thực tế mà sinh viên đó tham gia (ví dụ: đúng 9 môn cho thí sinh Lục Văn Sơn).
+     * Bổ sung cơ chế Deduplicate trên Frontend (`ExamResult.tsx`) dựa trên `session.id` duy nhất, loại bỏ hoàn toàn hiện tượng trùng lặp hàng trên giao diện bảng điểm.
 
 ---
 
@@ -4726,9 +4816,104 @@ end
 @enduml
 ```
 
+## 27. KIẾN TRÚC TRA CỨU ĐIỂM & THANH TRA BÀI THI DUAL-MODE, BỘ ĐIỀU PHỐI 14 CA THI & TỐI ƯU CONTROLLER (v3.6)
+
+### 27.1 Bối Cảnh & Nghịch Lý Vai Trò Cần Giải Quyết
+Trong hệ thống khảo thí tự động, sự phân định quyền hạn giữa **Người Dự Thi (Thí sinh)** và **Hội Đồng Chấm Thi / Cán Bộ Khảo Thí (Admin / Giảng viên)** tại giai đoạn sau thi (Post-Exam Phase) đòi hỏi trải nghiệm UX và dữ liệu hoàn toàn tách biệt:
+1. **Nghịch lý cũ:** Khi Quản trị viên (Admin) hoặc Giảng viên nhấp vào đường dẫn tra cứu kết quả bài thi (`/exam/result?view=student`), hệ thống cũ xử lý mặc định tài khoản hiện tại là thí sinh. Do Admin không có hồ sơ sinh viên hay bài nộp cá nhân, hệ thống rơi vào trạng thái lỗi/rỗng, hoặc hiển thị bài nộp mẫu của sinh viên khác kèm các tính năng vô lý như "Gửi yêu cầu phúc khảo cho chính mình".
+2. **Yêu cầu thực tiễn:** Admin và Giảng viên truy cập giao diện này với tư cách **Thanh tra viên & Giám khảo phúc khảo (Exam Inspector & Auditor)**: Họ cần khả năng duyệt toàn bộ 14 ca thi, chọn bất kỳ thí sinh nào trong ca thi để kiểm tra chi tiết các phương án đã chọn, đối chiếu ma trận đáp án chuẩn, và trực tiếp can thiệp điều chỉnh điểm số khi giải quyết đơn khiếu nại phúc khảo.
+
+### 27.2 Kiến Trúc Dual-Mode RBAC Frontend (`ExamResult.tsx`)
+```
+                          ┌───────────────────────────┐
+                          │   Xác định Vai trò User   │
+                          │   (isStudentRole check)   │
+                          └─────────────┬─────────────┘
+                                        │
+                 ┌──────────────────────┴──────────────────────┐
+                 ▼ (Role: STUDENT)                             ▼ (Role: ADMIN / TEACHER)
+   ┌───────────────────────────┐                 ┌───────────────────────────┐
+   │    STUDENT WORKSPACE      │                 │     AUDIT WORKSPACE       │
+   ├───────────────────────────┤                 ├───────────────────────────┤
+   │ • Tab 1: Bảng Điểm GPA    │                 │ • Ẩn Tab GPA cá nhân      │
+   │ • Tab 2: Bài Thi Cá Nhân  │                 │ • Inspector Bar:          │
+   │   - Lựa chọn của bạn      │                 │   - Dropdown 14 Ca thi    │
+   │   - Nút: Gửi đơn phúc khảo│                 │   - Dropdown chọn Thí sinh│
+   │ • Tab 3: Bảng Điểm Ca Thi │                 │ • Tab 1: Bài Làm Thí Sinh │
+   │   - Nút: Định vị bài tôi  │                 │   - Lựa chọn của thí sinh │
+   │                           │                 │   - Nút: Sửa điểm phúc khảo│
+   │                           │                 │   - Nút: GV Sửa Đúng/Sai  │
+   │                           │                 │ • Tab 2: Bảng Điểm Ca Thi │
+   │                           │                 │   - Nút: [Xem bài] mỗi row│
+   └───────────────────────────┘                 └───────────────────────────┘
+```
+
+### 27.3 Sequence Diagram: Quy Trình Thanh Tra & Can Thiệp Điểm Phúc Khảo
+```plantuml
+@startuml
+skinparam backgroundColor #0B0F17
+skinparam defaultFontColor #E2E8F0
+skinparam sequenceMessageAlign center
+skinparam sequenceLifeLineBorderColor #38BDF8
+skinparam participantBorderColor #A855F7
+skinparam participantBackgroundColor #1E1B4B
+skinparam participantFontColor #F8FAFC
+skinparam boxBackgroundColor #0F172A
+
+actor "Cán bộ Khảo thí / Admin" as Admin
+participant "ExamResult UI\n(Inspector Bar)" as UI
+participant "Node.js Core\n(/api/grading/review)" as Core
+participant "ExamSubmission\nController" as Controller
+database "MongoDB\n(exam_submissions)" as Mongo
+database "MySQL\n(sinh_vien_ca_thi)" as MySQL
+
+== 1. NẠP DỮ LIỆU THANH TRA CA THI ==
+Admin -> UI : Truy cập /exam/result?view=student
+activate UI
+UI -> Core : GET /api/grading/review/:sessionId
+activate Core
+Core -> MySQL : Lấy danh sách thí sinh ca thi
+Core -> Mongo : Lấy tiến độ chấm & ma trận đề thi
+Core --> UI : Trả về workspaceData (21 thí sinh)
+deactivate Core
+
+UI -> UI : Tự động gán Thí sinh SBD-001 vào Inspector Bar
+UI -> Controller : GET /api/exam/results/:sessionStudentId?asLecturer=true
+activate Controller
+Controller -> Mongo : Tìm ExamSubmission của thí sinh
+Controller --> UI : Trả về 40 câu hỏi, lựa chọn của thí sinh, đáp án chính thức
+deactivate Controller
+UI --> Admin : Hiển thị toàn bộ bài thi thí sinh & Công cụ chấm sửa
+
+== 2. CAN THIỆP ĐIỀU CHỈNH ĐIỂM PHÚC KHẢO ==
+Admin -> UI : Bấm "Sửa Điểm Thí Sinh" hoặc sửa câu trắc nghiệm
+Admin -> UI : Nhập Điểm mới: 9.75 & Lý do: "Phúc khảo câu 14 công nhận đáp án C"
+UI -> Core : POST /api/grading/override-student-score\n{ sessionStudentId, officialScore: 9.75, reason }
+activate Core
+Core -> MySQL : UPDATE sinh_vien_ca_thi SET diem_thi = 9.75, ghi_chu = reason
+Core -> Mongo : UPDATE exam_submissions SET officialScore = 9.75
+Core --> UI : HTTP 200 { success: true, message: "Đã cập nhật điểm phúc khảo" }
+deactivate Core
+UI --> Admin : Hiển thị Toast thông báo thành công & Cập nhật thứ hạng tức thì
+deactivate UI
+@enduml
+```
+
+### 27.4 Bảng Đặc Tả Thành Phần & Route Mới Bổ Sung
+
+| Tên Module / Route | Phương thức | Mô tả Chức năng | Phân quyền RBAC |
+|---|---|---|---|
+| `POST /api/grading/publish/:sessionId` | `POST` | Công bố điểm ca thi, cập nhật trạng thái `PUBLISHED`, mở cổng xem bài & nộp đơn phúc khảo trực tuyến 7 ngày | Admin Khảo thí |
+| `POST /api/grading/override-student-score` | `POST` | Điều chỉnh điểm chính thức hoặc thay đổi Đúng/Sai từng câu hỏi trắc nghiệm sau khi hội đồng duyệt phúc khảo | Admin, Giảng viên chấm thi |
+| `GET /api/exam/student-schedule` | `GET` | Tra cứu lịch thi & học phần hoàn thành của sinh viên với xác thực JWT nghiêm ngặt, khử trùng lặp theo `session.id` | Sinh viên (chính mình), Admin |
+| `GET /api/exam/results/:sessionStudentId` | `GET` | Xem chi tiết bài làm, câu trả lời, đáp án chính thức và giải thích (có cờ `asLecturer=true` cho thanh tra) | Sinh viên (khi đã công bố), Admin/GV (mọi lúc) |
+| `examPaper.controller.js` | Service | Quản trị ngân hàng đề thi, upload tài liệu, thiết lập ma trận điểm và phương án đúng | Admin, Giảng viên |
+| `examSession.controller.js` | Service | Điều phối ca thi, phân công phòng máy LAB01/P302, quản lý thí sinh và giám thị | Admin Khảo thí |
+| `examSubmission.controller.js` | Service | Tự động chấm điểm, lưu bài thi, giải mã JWT token và xử lý truy vấn kết quả | Hệ thống, Sinh viên, Admin |
+
 ---
 
-*Blueprint version 3.5 — Cập nhật toàn diện: 2026-11-09 (Tích hợp Kiến trúc Chống Quá Tải Server cho Camera Phòng Thi & Máy Thí Sinh)*  
+*Blueprint version 3.6 — Cập nhật toàn diện: 2026-11-10 (Tích hợp Kiến trúc Tra Cứu Điểm & Thanh Tra Bài Thi Dual-Mode, Bộ Điều Phối 14 Ca Thi & Tối Ưu Controller)*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
-*Kiến trúc bổ sung: **SOLID Principles, Layered Clean Architecture, Two-Tier Edge-Hybrid Load Shedding, Hysteresis Debouncing, High-Concurrency ThreadPool**.*  
+*Kiến trúc bổ sung: **SOLID Principles, Layered Clean Architecture, Dual-Mode RBAC Inspector, Two-Tier Edge-Hybrid Load Shedding, Hysteresis Debouncing, High-Concurrency ThreadPool**.*  
 *Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/src/theme/colors.ts`, `examguard-core/server/services/`, `examguard-core/server/strategies/`*
