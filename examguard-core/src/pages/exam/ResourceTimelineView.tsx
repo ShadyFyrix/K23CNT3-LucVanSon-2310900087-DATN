@@ -56,6 +56,7 @@ interface RoomItem {
 interface ResourceTimelineViewProps {
   sessions: ExamSessionItem[];
   rooms: RoomItem[];
+  canCreateSession?: boolean;
   onOpenCreateModal: (roomId?: string, defaultStartTime?: string) => void;
   onOpenCandidateManager: (session: ExamSessionItem) => void;
   onEndSession: (session: ExamSessionItem) => void;
@@ -64,6 +65,7 @@ interface ResourceTimelineViewProps {
 export function ResourceTimelineView({
   sessions,
   rooms,
+  canCreateSession = true,
   onOpenCreateModal,
   onOpenCandidateManager,
   onEndSession
@@ -188,16 +190,16 @@ export function ResourceTimelineView({
     if (now >= start && now <= end) {
       return {
         bg: isDark
-          ? 'bg-gradient-to-r from-teal-950/90 to-blue-950/90 border-teal-400/80 text-teal-100 ring-2 ring-teal-500/40'
-          : 'bg-gradient-to-r from-teal-50 to-blue-50 border-teal-500 text-teal-950 ring-2 ring-teal-500/30',
-        badge: 'bg-teal-500/30 text-teal-600 dark:text-teal-300 border-teal-400 animate-pulse',
+          ? 'bg-gradient-to-r from-[var(--color-royal)]/40 to-[var(--color-electric)]/40 border-[var(--color-azure)] text-white ring-2 ring-[var(--color-azure)]/40'
+          : 'bg-gradient-to-r from-[var(--color-frosted-ice)] to-white border-[var(--color-azure)] text-[var(--color-royal)] ring-2 ring-[var(--color-azure)]/30',
+        badge: 'bg-[var(--color-electric)]/30 text-[var(--color-azure)] border-[var(--color-azure)] animate-pulse',
         label: '● ĐANG THI',
-        glow: 'shadow-md shadow-teal-500/20'
+        glow: 'shadow-md shadow-[var(--accent-glow)]'
       };
     }
     return {
-      bg: isDark ? 'bg-blue-950/60 border-blue-500/50 text-blue-200' : 'bg-blue-50 border-blue-300 text-blue-900',
-      badge: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30',
+      bg: isDark ? 'bg-[var(--color-royal)]/20 border-[var(--color-azure)]/50 text-white' : 'bg-[var(--color-frosted-ice)]/30 border-[var(--color-azure)]/40 text-[var(--color-royal)]',
+      badge: 'bg-[var(--color-electric)]/20 text-[var(--color-azure)] border-[var(--color-azure)]/30',
       label: 'Sắp thi',
       glow: 'shadow-xs'
     };
@@ -220,7 +222,7 @@ export function ResourceTimelineView({
         }`}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/20 flex items-center justify-center text-[var(--color-azure)]">
             <CalendarIcon className="w-5 h-5" />
           </div>
           <div>
@@ -229,13 +231,13 @@ export function ResourceTimelineView({
                 {formattedDateTitle}
               </h2>
               {isToday && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-600 dark:text-teal-300 border border-teal-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                   HÔM NAY
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-400">
-              Có <b className="text-teal-600 dark:text-teal-400">{sessionsOnDate.length} ca thi</b> tại{' '}
+              Có <b className="text-[var(--color-azure)] font-bold">{sessionsOnDate.length} ca thi</b> tại{' '}
               <b className={isDark ? 'text-white' : 'text-slate-900'}>{displayRooms.length} phòng thi</b>.
             </p>
           </div>
@@ -243,53 +245,53 @@ export function ResourceTimelineView({
 
         {/* Nút lùi/tiến ngày & Range switch */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Switch 24H vs 12H (Image 2 style) */}
+          {/* Switch 24H vs 12H (Capsule Pill Style) */}
           <div
-            className={`flex items-center p-1 rounded-xl border text-xs ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            className={`flex items-center p-1 rounded-full border text-xs ${
+              isDark ? 'bg-slate-950/70 border-white/10' : 'bg-slate-100 border-slate-200'
             }`}
           >
             <button
               type="button"
               onClick={() => setTimeRangeMode('24H')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${
                 timeRangeMode === '24H'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'eg-glass-pill shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              24 Giờ (00-24h)
+              24 Giờ (00–24h)
             </button>
             <button
               type="button"
               onClick={() => setTimeRangeMode('12H')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${
                 timeRangeMode === '12H'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'eg-glass-pill shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Học Thuật (07-19h)
+              Học Thuật (07–19h)
             </button>
           </div>
 
           <div
-            className={`flex items-center space-x-1 p-1 rounded-xl border ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            className={`flex items-center space-x-1 p-1 rounded-full border ${
+              isDark ? 'bg-slate-950/70 border-white/10' : 'bg-slate-100 border-slate-200'
             }`}
           >
             <button
               onClick={handlePrevDay}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
+              className="p-1.5 rounded-full text-slate-400 hover:text-white transition cursor-pointer"
               title="Ngày trước"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={handleToday}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+              className={`px-3.5 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
                 isToday
-                  ? 'bg-blue-600 text-white font-bold'
+                  ? 'eg-glass-pill shadow-xs'
                   : isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -297,7 +299,7 @@ export function ResourceTimelineView({
             </button>
             <button
               onClick={handleNextDay}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
+              className="p-1.5 rounded-full text-slate-400 hover:text-white transition cursor-pointer"
               title="Ngày sau"
             >
               <ChevronRight className="w-4 h-4" />
@@ -308,20 +310,22 @@ export function ResourceTimelineView({
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className={`rounded-xl px-3 py-1.5 text-xs font-mono border cursor-pointer focus:outline-none ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-mono border cursor-pointer focus:outline-none transition-all ${
               isDark
-                ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500'
+                ? 'bg-slate-950/70 border-white/10 text-slate-200 focus:border-[var(--color-azure)]'
                 : 'bg-white border-slate-200 text-slate-800 focus:border-blue-600'
             }`}
           />
 
-          <button
-            onClick={() => onOpenCreateModal()}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Ca Thi</span>
-          </button>
+          {canCreateSession && (
+            <button
+              onClick={() => onOpenCreateModal()}
+              className="flex items-center space-x-1.5 px-4 py-2 eg-btn-gradient text-white rounded-full text-xs font-extrabold shadow-md transition active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm Ca Thi</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -497,24 +501,34 @@ export function ResourceTimelineView({
                   {/* Open Slot Placeholder (+ Open - assign Image 2) */}
                   {roomSessions.length === 0 ? (
                     <div
-                      onClick={() => onOpenCreateModal(room._id, `${selectedDate}T08:00`)}
-                      className="absolute inset-2 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 hover:text-teal-600 hover:border-teal-500/50 transition cursor-pointer select-none"
+                      onClick={() => canCreateSession && onOpenCreateModal(room._id, `${selectedDate}T08:00`)}
+                      className={`absolute inset-2 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 select-none ${
+                        canCreateSession ? 'hover:text-teal-600 hover:border-teal-500/50 transition cursor-pointer' : 'opacity-60 cursor-default'
+                      }`}
                     >
                       <span className="flex items-center space-x-1.5 font-semibold">
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>+ Open - assign (Phòng trống • Nhấp để xếp ca)</span>
+                        {canCreateSession ? (
+                          <>
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Open - assign (Phòng trống • Nhấp để xếp ca)</span>
+                          </>
+                        ) : (
+                          <span>Phòng trống (Không có ca thi nào)</span>
+                        )}
                       </span>
                     </div>
                   ) : (
                     /* Dành thêm khe trống nếu phòng thi còn thời gian rảnh */
-                    <button
-                      type="button"
-                      onClick={() => onOpenCreateModal(room._id, `${selectedDate}T14:00`)}
-                      className="absolute right-2 top-2 bottom-2 w-28 border border-dashed border-slate-300 dark:border-slate-800 hover:border-teal-500/60 rounded-xl text-[10px] text-slate-400 hover:text-teal-500 flex items-center justify-center transition"
-                      title="Lên lịch ca tiếp theo"
-                    >
-                      <span>+ Open - assign</span>
-                    </button>
+                    canCreateSession && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenCreateModal(room._id, `${selectedDate}T14:00`)}
+                        className="absolute right-2 top-2 bottom-2 w-28 border border-dashed border-slate-300 dark:border-slate-800 hover:border-teal-500/60 rounded-xl text-[10px] text-slate-400 hover:text-teal-500 flex items-center justify-center transition"
+                        title="Lên lịch ca tiếp theo"
+                      >
+                        <span>+ Open - assign</span>
+                      </button>
+                    )
                   )}
                 </div>
               </div>
@@ -531,11 +545,11 @@ export function ResourceTimelineView({
           <div className="flex items-center space-x-4">
             <span className="font-semibold text-slate-400">TRẠNG THÁI CA THI:</span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></span>
-              <span className="text-teal-600 dark:text-teal-400 font-medium">Đang thi trực tuyến</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-electric)] animate-pulse"></span>
+              <span className="text-[var(--color-azure)] font-bold">Đang thi trực tuyến</span>
             </span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-azure)]/60"></span>
               <span>Lên lịch / Sắp thi</span>
             </span>
             <span className="flex items-center space-x-1.5">
@@ -543,8 +557,8 @@ export function ResourceTimelineView({
               <span>Đã kết thúc</span>
             </span>
             <span className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-              <span>Đã công bố điểm</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-azure)]"></span>
+              <span className="text-[var(--color-azure)] font-semibold">Đã công bố điểm</span>
             </span>
           </div>
 
@@ -565,7 +579,7 @@ export function ResourceTimelineView({
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)] text-white flex items-center justify-center font-bold">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
@@ -610,7 +624,7 @@ export function ResourceTimelineView({
                   setActiveSessionDetail(null);
                   onOpenCandidateManager(activeSessionDetail);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-sm"
+                className="flex-1 py-2.5 rounded-xl eg-btn-gradient text-white font-bold text-xs transition shadow-sm cursor-pointer"
               >
                 Quản lý Thí sinh
               </button>

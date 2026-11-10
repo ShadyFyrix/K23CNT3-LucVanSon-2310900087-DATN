@@ -39,9 +39,25 @@ const ExamRoomSchema = new mongoose.Schema({
   layoutConfig: {
     aisles: { type: [Number], default: [4] }, // Chỉ số các cột có lối đi ngăn cách (VD: [4] -> lối đi giữa cột 4 và cột 5)
     entrancePosition: { type: String, enum: ['TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT'], default: 'TOP_LEFT' },
+    exitDoorPosition: { type: String, enum: ['TOP_RIGHT', 'BOTTOM_RIGHT', 'NONE'], default: 'TOP_RIGHT' },
     podiumPosition: { type: String, enum: ['TOP_CENTER', 'TOP_LEFT', 'TOP_RIGHT'], default: 'TOP_CENTER' },
-    disabledSeats: { type: [String], default: [] } // Các ghế hỏng hoặc không dùng (VD: ['1-4'])
+    disabledSeats: { type: [String], default: [] }, // Các ghế hỏng hoặc không dùng (VD: ['1-4'])
+    customLabels: { type: mongoose.Schema.Types.Mixed, default: {} }, // Tên tùy biến từng bàn (VD: {'1-1': 'PC-01'})
+    viewMode: { type: String, enum: ['MATRIX', 'OVERLAY'], default: 'MATRIX' }
   },
+  roomPhoto: { 
+    type: String, 
+    default: '' // URL ảnh chụp phòng thi thực tế hoặc data base64
+  },
+  customSeats: [{
+    id: { type: String },
+    label: { type: String },
+    row: { type: Number },
+    col: { type: Number },
+    status: { type: String, enum: ['ACTIVE', 'DISABLED'], default: 'ACTIVE' },
+    x: { type: Number },
+    y: { type: Number }
+  }],
   allowedIpSubnet: { 
     type: String, 
     default: '' // VD: '192.168.30.0/24'

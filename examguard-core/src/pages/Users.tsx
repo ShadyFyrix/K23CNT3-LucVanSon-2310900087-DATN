@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion } from 'motion/react';
 import {
   Search, UserPlus, ShieldCheck, Mail, Clock,
   Lock, Unlock, Key, Briefcase, Trash2, Edit2, Loader2, Shield,
@@ -261,55 +262,72 @@ export default function Users() {
     setSelectedFaceFilter('all');
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } }
+  };
+
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
-      {/* ── HEADER CHÍNH ────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs">
-              <UsersIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Quản lý Tài khoản & Phân quyền
-                <span className="text-xs font-bold px-2.5 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200/50 dark:border-blue-900/50">
-                  {users.length} tài khoản
-                </span>
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
-                Thiết lập thông tin nhân sự, ảnh đại diện, phòng ban và phân công đa vai trò hệ thống.
-              </p>
-            </div>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-[1600px] mx-auto pb-16 font-sans select-none"
+    >
+      {/* ── 1. BENTO HERO HEADER STAGE ────────────────────────── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Hệ Thống Xác Thực & Phân Quyền Nhân Sự
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Quản Lý <span className="eg-text-gradient">Tài Khoản & Định Danh</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Thiết lập hồ sơ nhân sự, đồng bộ vector sinh trắc học ArcFace 512-D và ủy quyền đa nhiệm trên toàn trường.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap shrink-0">
           {/* Trạng thái Face AI Microservice */}
-          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-2 transition-all ${
+          <div className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 border shadow-xs ${
             faceAiStatus?.healthy
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+              : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
           }`}>
             <span className={`w-2 h-2 rounded-full ${faceAiStatus?.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-            <span>{faceAiStatus?.healthy ? 'Face AI (ArcFace 512D): Hoạt động' : 'Face AI: Ngoại tuyến'}</span>
+            <span className="font-mono text-[11px]">{faceAiStatus?.healthy ? 'ArcFace 512D: Live' : 'Face AI: Offline'}</span>
           </div>
 
           {/* Nút Thử nghiệm Face AI */}
           <button
             type="button"
             onClick={() => setIsTestFaceModalOpen(true)}
-            className="px-4 py-2.5 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-xl border border-teal-200 dark:border-teal-800 font-bold flex items-center gap-2 transition-all cursor-pointer text-sm shadow-2xs"
+            className="eg-glass-pill px-4 py-2 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-xs"
             title="Mở camera để nhận diện thử nghiệm với toàn bộ Vector DB"
           >
-            <ScanFace className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span>Thử nghiệm Face AI</span>
+            <ScanFace className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span>Thử nghiệm Face</span>
           </button>
 
           <button
             onClick={() => { fetchData(); checkFaceAiHealth(); }}
             disabled={loading}
-            className="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-2 eg-glass-pill rounded-full transition-all disabled:opacity-50 cursor-pointer text-[var(--color-azure)]"
             title="Làm mới dữ liệu"
           >
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -317,55 +335,56 @@ export default function Users() {
 
           <button
             onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-blue-500/20 cursor-pointer text-sm"
+            className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md"
           >
-            <UserPlus className="w-4 h-4" /> Tạo tài khoản mới
+            <UserPlus className="w-4 h-4 stroke-[3]" />
+            <span>Tạo tài khoản mới</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* ── KPI METRICS THỐNG KÊ ────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+      {/* ── 2. KPI METRICS THỐNG KÊ ────────────────────────────────── */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="eg-cyber-card p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tổng nhân sự</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total}</p>
+            <p className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tổng nhân sự</p>
+            <p className="text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{stats.total}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--color-electric)]/15 text-[var(--color-azure)] flex items-center justify-center border border-[var(--color-azure)]/30">
             <UsersIcon className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="eg-cyber-card p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Đang hoạt động</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.active}</p>
+            <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Đang hoạt động</p>
+            <p className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">{stats.active}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
             <CheckCircle className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="eg-cyber-card p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider">Đang tạm khóa</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.inactive}</p>
+            <p className="text-xs font-mono font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider">Đang tạm khóa</p>
+            <p className="text-3xl font-black font-mono text-rose-600 dark:text-rose-400 mt-1">{stats.inactive}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-100 dark:border-rose-900/50">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
             <Lock className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="eg-cyber-card p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Quản trị & Lãnh đạo</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.adminCount}</p>
+            <p className="text-xs font-mono font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Quản trị & Lãnh đạo</p>
+            <p className="text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{stats.adminCount}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-100 dark:border-teal-900/50">
+          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20">
             <ShieldCheck className="w-6 h-6" />
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── BỘ LỌC & TÌM KIẾM ──────────────────────────────────── */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
@@ -440,9 +459,9 @@ export default function Users() {
             </button>
             <button
               onClick={() => setSelectedStatus('active')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedStatus === 'active'
-                  ? 'bg-emerald-500 text-white shadow-xs'
+                  ? 'eg-btn-gradient text-white shadow-xs'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
@@ -901,6 +920,6 @@ export default function Users() {
           onSuccess={() => fetchData()}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

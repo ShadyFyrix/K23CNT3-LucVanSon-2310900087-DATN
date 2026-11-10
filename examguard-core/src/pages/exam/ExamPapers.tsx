@@ -880,26 +880,25 @@ export default function ExamPapers() {
   });
 
   return (
-    <div className={`min-h-screen p-6 font-sans transition-colors ${
-      isDark ? 'bg-[#0B0F19] text-slate-100' : 'bg-slate-50 text-slate-800'
+    <div className={`min-h-screen font-sans transition-colors ${
+      isDark ? 'bg-transparent text-slate-100' : 'bg-slate-50 text-slate-800'
     }`}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-          isDark ? 'border-slate-800' : 'border-slate-200'
-        }`}>
+      <div className="w-full max-w-[1600px] mx-auto space-y-6">
+        {/* ── 1. HEADER (CYBER-LUXURY GLASS) ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
-            <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
-              <span className="text-teal-600 dark:text-teal-400 font-semibold">ExamGuard AI</span>
-              <span>•</span>
-              <span>Ngân Hàng Khảo Thí & Đề Thi</span>
-            </div>
-            <h1 className={`text-2xl font-bold flex items-center space-x-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              <span>QUẢN LÝ ĐỀ THI TRẮC NGHIỆM & TỰ LUẬN</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                {papers.length} ĐỀ
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight eg-text-gradient">
+                Ngân Hàng Đề Thi & Khảo Thí AI
+              </h1>
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {papers.length} Đề chuẩn hóa
               </span>
-            </h1>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">
+              Soạn thảo đề thi trắc nghiệm, tự luận, trích xuất đề từ PDF/Word và cấu hình phòng Quiz Arena.
+            </p>
           </div>
 
           <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
@@ -909,11 +908,10 @@ export default function ExamPapers() {
                 setIsQuizModeForBuilder(true);
                 handleOpenCreateModal();
               }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-purple-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/25 transition active:scale-95 cursor-pointer"
-              title="Mở Assessment Studio với kho đề trắc nghiệm Quiz, AI parser và chế độ Đấu trường Quiz Arena"
+              className="flex items-center space-x-1.5 px-4 py-2 eg-btn-gradient text-white font-extrabold rounded-full text-xs shadow-md transition active:scale-95 cursor-pointer"
             >
-              <Zap className="w-4 h-4 fill-current text-slate-950 animate-pulse" />
-              <span>⚡ TẠO ĐỀ QUIZ ARENA</span>
+              <Zap className="w-3.5 h-3.5" />
+              <span>Tạo Đề Quiz Arena</span>
             </button>
             <button
               onClick={() => {
@@ -921,10 +919,10 @@ export default function ExamPapers() {
                 setIsQuizModeForBuilder(false);
                 handleOpenCreateModal();
               }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95 cursor-pointer"
+              className="flex items-center space-x-1.5 px-4 py-2 eg-glass-pill text-xs font-bold rounded-full transition active:scale-95 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>SOẠN ĐỀ TRỰC QUAN (STUDIO)</span>
+              <Sparkles className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+              <span>Soạn Đề Trực Quan</span>
             </button>
             <button
               onClick={() => {
@@ -932,30 +930,89 @@ export default function ExamPapers() {
                 setIsQuizModeForBuilder(false);
                 handleOpenCreateModal();
               }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-cyan-300 font-bold rounded-xl text-xs border border-slate-200 dark:border-cyan-500/30 transition active:scale-95 cursor-pointer"
+              className="flex items-center space-x-1.5 px-4 py-2 eg-glass-pill-subtle font-bold rounded-full text-xs transition active:scale-95 cursor-pointer"
             >
-              <SplitSquareVertical className="w-4 h-4 text-cyan-500" />
-              <span>CHẾ ĐỘ KÉP PDF & SNIPPING</span>
+              <SplitSquareVertical className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+              <span>Chế Độ Kép PDF</span>
             </button>
           </div>
         </div>
 
-        {/* Toolbar Search */}
-        <div className={`border rounded-2xl p-4 flex items-center justify-between ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
-        }`}>
+        {/* ── 2. ASYMMETRIC BENTO OVERVIEW BAR ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="eg-cyber-card p-5 shadow-xl flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Kho đề thi khảo thí</span>
+              <div className="p-2 rounded-full eg-glass-pill">
+                <BookOpen className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="my-2">
+              <div className="text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                {papers.length}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Đề thi đã được kiểm duyệt</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-semibold">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">100% Khảo thí số</span>
+              <span className="text-slate-500 dark:text-slate-400 font-mono">Đầy đủ ma trận</span>
+            </div>
+          </div>
+
+          <div className="eg-cyber-card p-5 shadow-xl flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hình thức câu hỏi</span>
+              <div className="p-2 rounded-full eg-glass-pill-emerald">
+                <CheckSquare className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="my-2">
+              <div className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                Trắc nghiệm + Tự luận
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Tự động xáo trộn đề & mã đề</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-semibold">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Trắc nghiệm: Chấm tức thì</span>
+              <span className="text-slate-500 dark:text-slate-400">Tự luận: Rọc phách</span>
+            </div>
+          </div>
+
+          <div className="eg-cyber-card p-5 shadow-xl flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đấu trường Quiz Arena</span>
+              <div className="p-2 rounded-full eg-glass-pill">
+                <Zap className="w-4 h-4 text-[var(--color-azure)]" />
+              </div>
+            </div>
+            <div className="my-2">
+              <div className="text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                {papers.filter(p => p.isQuizArena).length || 1} <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-sans">bộ đề Quiz</span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bảng xếp hạng trực tiếp & Điểm thưởng tốc độ</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-[var(--color-azure)] font-bold">
+              <span>Tương tác Live Giảng đường</span>
+              <span className="text-slate-500 dark:text-slate-400 font-normal">Realtime Socket</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. TOOLBAR TÌM KIẾM TINH GỌN (GLASS CAPSULE) ── */}
+        <div className="eg-cyber-card p-3 px-5 flex items-center justify-between shadow-xl">
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Tìm kiếm mã đề, tiêu đề đề thi..."
+              placeholder="Tìm kiếm mã đề, môn học, tiêu đề..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className={`w-full border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                isDark ? 'bg-slate-950 border-slate-800 text-slate-200 placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-              }`}
+              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[var(--color-azure)] transition-all"
             />
           </div>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+            Hiển thị {filtered.length} / {papers.length} đề thi
+          </span>
         </div>
 
         {/* Danh sách đề thi */}
@@ -973,38 +1030,38 @@ export default function ExamPapers() {
               return (
                 <div
                   key={paper._id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/80 dark:hover:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-xl dark:shadow-none flex flex-col justify-between transition-all group"
+                  className="bg-white/95 dark:bg-[#0B0C1E]/75 border border-slate-200 dark:border-white/10 hover:border-[#3781fc]/50 hover:shadow-[0_0_30px_rgba(25,81,252,0.15)] rounded-3xl p-6 shadow-xl backdrop-blur-2xl flex flex-col justify-between transition-all duration-300 group"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20">
+                        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-full eg-glass-pill shadow-xs">
                           {paper.code}
                         </span>
                         {paper.isQuizArena ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 font-bold flex items-center gap-1">
-                            <span>🎮 QUIZ ARENA</span>
+                          <span className="text-[10px] px-2.5 py-1 rounded-full eg-glass-pill-subtle font-bold flex items-center gap-1">
+                            <Gamepad2 className="w-3 h-3 text-[var(--color-azure)]" /> QUIZ ARENA
                           </span>
                         ) : isHybrid ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 font-bold">
-                            ⚡ HỖN HỢP (MCQ + TL)
+                          <span className="text-[10px] px-2.5 py-1 rounded-full eg-glass-pill-subtle font-bold flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-[var(--color-azure)]" /> HỖN HỢP (MCQ + TL)
                           </span>
                         ) : isFileAttached ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 font-bold">
-                            📄 FILE ĐỀ THI
+                          <span className="text-[10px] px-2.5 py-1 rounded-full eg-glass-pill-subtle font-bold flex items-center gap-1">
+                            <FileText className="w-3 h-3 text-[var(--color-azure)]" /> FILE ĐỀ THI
                           </span>
                         ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-bold">
-                            ⚡ QUIZ SỐ
+                          <span className="text-[10px] px-2.5 py-1 rounded-full eg-glass-pill-subtle font-bold flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-[var(--color-azure)]" /> QUIZ SỐ
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-transparent">
+                      <span className="text-[10px] px-3 py-1 rounded-full eg-glass-pill font-bold">
                         ĐÃ DUYỆT
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors line-clamp-2">
+                    <h3 className="text-base font-bold text-white group-hover:text-[#cbe9fd] transition-colors line-clamp-2">
                       {paper.title}
                     </h3>
 
@@ -1015,7 +1072,7 @@ export default function ExamPapers() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Cơ cấu câu hỏi:</span>
-                        <span className="text-cyan-700 dark:text-cyan-400 font-bold">
+                        <span className="text-[var(--color-azure)] font-bold">
                           {paper.totalQuestions || paper.questions?.length || 0} câu 
                           {paper.mcqCount ? ` (${paper.mcqCount} Trắc nghiệm` : ''}
                           {paper.essayCount ? `, ${paper.essayCount} Tự luận)` : paper.mcqCount ? ')' : ''}
@@ -1038,23 +1095,23 @@ export default function ExamPapers() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 space-y-2">
+                  <div className="pt-4 border-t border-slate-200 dark:border-white/10 mt-4 space-y-2">
                     {paper.fileUrl && (
                       <a
                         href={paper.fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full py-2 bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                        className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-[#cbe9fd] border border-slate-200 dark:border-white/10 rounded-full text-xs font-semibold transition flex items-center justify-center space-x-1.5 cursor-pointer"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                         <span>Xem File Đề Thi Gốc ({paper.fileName || 'PDF'})</span>
                       </a>
                     )}
                     <button
                       onClick={() => setSelectedPaper(paper)}
-                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                      className="w-full py-2.5 eg-btn-gradient text-white rounded-full text-xs font-extrabold transition flex items-center justify-center space-x-2 shadow-md cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      <Eye className="w-3.5 h-3.5" />
                       <span>Xem Ma Trận & Đáp Án</span>
                     </button>
                   </div>
@@ -1095,7 +1152,7 @@ export default function ExamPapers() {
                     href={selectedPaper.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5"
+                    className="px-3.5 py-1.5 eg-btn-gradient text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Mở / Tải Tệp</span>
@@ -1197,14 +1254,14 @@ export default function ExamPapers() {
             {/* Header: Title & Studio Badges */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-cyan-500/20">
+                <div className="w-9 h-9 rounded-xl eg-btn-gradient flex items-center justify-center text-white font-bold shadow-md shadow-[var(--accent-glow)]">
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
                     <h3 className="text-base font-bold text-white">Assessment Studio & Dual-View Builder</h3>
-                    <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                      <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+                    <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
+                      <Sparkles className="w-3 h-3 text-[var(--color-azure)] animate-pulse" />
                       <span>Live Sync Preview</span>
                     </span>
                   </div>
@@ -1216,10 +1273,10 @@ export default function ExamPapers() {
                 <button
                   type="button"
                   onClick={() => setBuilderMode('EDUTECH')}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 eg-glass-pill-subtle rounded-xl text-xs font-bold transition cursor-pointer"
                   title="Chuyển sang Studio Trực Quan Đa Khối"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Studio Trực Quan (EduTech)</span>
                 </button>
                 <button
@@ -1246,7 +1303,7 @@ export default function ExamPapers() {
                       onClick={() => setPreviewTab('FORMATTED')}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
                         previewTab === 'FORMATTED'
-                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          ? 'eg-btn-gradient text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -1259,7 +1316,7 @@ export default function ExamPapers() {
                       onClick={() => setPreviewTab('FILE')}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
                         previewTab === 'FILE'
-                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          ? 'eg-btn-gradient text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -1275,7 +1332,7 @@ export default function ExamPapers() {
                       onClick={() => setPreviewTab('CANDIDATE')}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
                         previewTab === 'CANDIDATE'
-                          ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
+                          ? 'eg-btn-gradient text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -1630,7 +1687,7 @@ export default function ExamPapers() {
                                   href={fileUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center space-x-2 transition"
+                                  className="px-4 py-2 eg-btn-gradient text-white font-bold rounded-xl text-xs flex items-center space-x-2 transition"
                                 >
                                   <ExternalLink className="w-4 h-4" />
                                   <span>Mở tệp gốc</span>
@@ -1745,7 +1802,7 @@ export default function ExamPapers() {
                     onClick={() => setCreateMode('FILE_ATTACHED')}
                     className={`flex-1 py-2 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
                       createMode === 'FILE_ATTACHED'
-                        ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/20'
+                        ? 'eg-btn-gradient text-white shadow-lg shadow-[var(--accent-glow)]'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -1758,7 +1815,7 @@ export default function ExamPapers() {
                     onClick={() => setCreateMode('STRUCTURED')}
                     className={`flex-1 py-2 rounded-xl font-bold transition flex items-center justify-center space-x-2 ${
                       createMode === 'STRUCTURED'
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20'
+                        ? 'eg-btn-gradient text-white shadow-lg shadow-[var(--accent-glow)]'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -1947,7 +2004,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => handleApplyStructurePreset('PURE_MCQ')}
                       className={`px-2.5 py-1 rounded-lg font-bold transition ${
-                        structureType === 'PURE_MCQ' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                        structureType === 'PURE_MCQ' ? 'eg-btn-gradient text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       100% Trắc nghiệm (40 câu)
@@ -1956,7 +2013,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => handleApplyStructurePreset('HYBRID')}
                       className={`px-2.5 py-1 rounded-lg font-bold transition ${
-                        structureType === 'HYBRID' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                        structureType === 'HYBRID' ? 'eg-btn-gradient text-white shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       Hỗn hợp (30 MCQ + 2 TL)
@@ -1965,7 +2022,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => handleApplyStructurePreset('PURE_ESSAY')}
                       className={`px-2.5 py-1 rounded-lg font-bold transition ${
-                        structureType === 'PURE_ESSAY' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'
+                        structureType === 'PURE_ESSAY' ? 'eg-btn-gradient text-white shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       100% Tự luận (4 câu)
@@ -2046,7 +2103,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => setFilterQuestionType('ALL')}
                       className={`px-2 py-1 rounded-lg transition ${
-                        filterQuestionType === 'ALL' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400'
+                        filterQuestionType === 'ALL' ? 'eg-btn-gradient text-white font-bold' : 'bg-slate-900 text-slate-400'
                       }`}
                     >
                       Tất cả ({configuredQuestions.length})
@@ -2055,7 +2112,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => setFilterQuestionType('MCQ')}
                       className={`px-2 py-1 rounded-lg transition ${
-                        filterQuestionType === 'MCQ' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400'
+                        filterQuestionType === 'MCQ' ? 'eg-btn-gradient text-white font-bold' : 'bg-slate-900 text-slate-400'
                       }`}
                     >
                       Trắc nghiệm ({configuredQuestions.filter(q => q.type === 'MULTIPLE_CHOICE').length})
@@ -2064,7 +2121,7 @@ export default function ExamPapers() {
                       type="button"
                       onClick={() => setFilterQuestionType('ESSAY')}
                       className={`px-2 py-1 rounded-lg transition ${
-                        filterQuestionType === 'ESSAY' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400'
+                        filterQuestionType === 'ESSAY' ? 'eg-btn-gradient text-white font-bold shadow-xs' : 'bg-slate-900 text-slate-400'
                       }`}
                     >
                       Tự luận ({configuredQuestions.filter(q => q.type === 'ESSAY').length})
@@ -2102,7 +2159,7 @@ export default function ExamPapers() {
                     <button
                       type="button"
                       onClick={handleApplyQuickAnswerString}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-xl transition text-xs shrink-0"
+                      className="px-4 py-2 eg-btn-gradient text-white font-bold rounded-xl transition text-xs shrink-0 shadow-md shadow-[var(--accent-glow)]"
                     >
                       Áp dụng chuỗi
                     </button>
@@ -2182,7 +2239,7 @@ export default function ExamPapers() {
                                   onClick={() => handleChangeSubmissionMethod(originalIdx, 'FILE_UPLOAD')}
                                   className={`py-1 rounded px-1 transition text-center truncate ${
                                     (q.submissionMethod === 'FILE_UPLOAD' || !q.submissionMethod)
-                                      ? 'bg-amber-500 text-slate-950 shadow'
+                                      ? 'eg-btn-gradient text-white shadow-xs font-bold'
                                       : 'bg-slate-800 text-slate-400 hover:text-white'
                                   }`}
                                   title="Chụp ảnh bài làm giấy / Tải tệp vẽ sơ đồ mạch logic, đồ thị, bài toán"
@@ -2194,7 +2251,7 @@ export default function ExamPapers() {
                                   onClick={() => handleChangeSubmissionMethod(originalIdx, 'TEXT_EDITOR')}
                                   className={`py-1 rounded px-1 transition text-center truncate ${
                                     q.submissionMethod === 'TEXT_EDITOR'
-                                      ? 'bg-cyan-500 text-slate-950 shadow'
+                                      ? 'eg-btn-gradient text-white shadow-xs font-bold'
                                       : 'bg-slate-800 text-slate-400 hover:text-white'
                                   }`}
                                   title="Soạn thảo văn bản / công thức trực tiếp trên máy"
@@ -2206,7 +2263,7 @@ export default function ExamPapers() {
                                   onClick={() => handleChangeSubmissionMethod(originalIdx, 'HYBRID_TEXT_FILE')}
                                   className={`py-1 rounded px-1 transition text-center truncate ${
                                     q.submissionMethod === 'HYBRID_TEXT_FILE'
-                                      ? 'bg-indigo-500 text-white shadow'
+                                      ? 'eg-btn-gradient text-white shadow-xs font-bold'
                                       : 'bg-slate-800 text-slate-400 hover:text-white'
                                   }`}
                                   title="Kết hợp: Vừa gõ text vừa đính kèm ảnh bài giải"
@@ -2217,7 +2274,7 @@ export default function ExamPapers() {
                             </div>
                             <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
                               <span>Tối thiểu: {q.minWords || 50} từ</span>
-                              <span className="text-amber-400">
+                              <span className="text-[var(--color-azure)] font-bold">
                                 {(q.submissionMethod === 'FILE_UPLOAD' || !q.submissionMethod) ? 'QR Scan Safe' : 'Giám sát gõ'}
                               </span>
                             </div>
@@ -2232,7 +2289,7 @@ export default function ExamPapers() {
                                   type="button"
                                   onClick={() => handleChangeSelectionMode(originalIdx, 'SINGLE')}
                                   className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                    q.selectionMode === 'SINGLE' ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                                    q.selectionMode === 'SINGLE' ? 'eg-btn-gradient text-white' : 'bg-slate-800 text-slate-400'
                                   }`}
                                 >
                                   1 Đáp án
@@ -2241,7 +2298,7 @@ export default function ExamPapers() {
                                   type="button"
                                   onClick={() => handleChangeSelectionMode(originalIdx, 'MULTIPLE')}
                                   className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                    q.selectionMode === 'MULTIPLE' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'
+                                    q.selectionMode === 'MULTIPLE' ? 'eg-btn-gradient text-white' : 'bg-slate-800 text-slate-400'
                                   }`}
                                   title="Câu có nhiều đáp án đúng cùng lúc"
                                 >
@@ -2378,7 +2435,7 @@ export default function ExamPapers() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition active:scale-95"
+                  className="px-6 py-2.5 eg-btn-gradient text-white font-bold text-xs rounded-xl shadow-lg shadow-[var(--accent-glow)] transition active:scale-95"
                 >
                   Lưu & Xuất Bản Đề Thi
                 </button>
@@ -2391,12 +2448,12 @@ export default function ExamPapers() {
       {/* ── MODAL CẮT ẢNH TỪ TÀI LIỆU ĐỀ THI (SNIPPING & CROP TOOL) ── */}
       {showCropModal && (
         <div className="fixed inset-0 z-[80] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-cyan-500/30 rounded-3xl w-[98vw] max-w-6xl max-h-[94vh] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 border border-[var(--color-azure)]/30 rounded-3xl w-[98vw] max-w-6xl max-h-[94vh] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-cyan-500/20">
-                  <Scissors className="w-5 h-5 text-slate-950" />
+                <div className="w-9 h-9 rounded-xl eg-btn-gradient flex items-center justify-center text-white font-bold shadow-md shadow-[var(--accent-glow)]">
+                  <Scissors className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
@@ -2596,7 +2653,7 @@ export default function ExamPapers() {
                     type="button"
                     disabled={!croppedPreviewUrl}
                     onClick={handleApplyCropToQuestion}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 disabled:opacity-40 disabled:hover:from-cyan-500 disabled:hover:to-indigo-600 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-1.5"
+                    className="flex-1 px-4 py-2 eg-btn-gradient disabled:opacity-40 text-white font-bold rounded-xl text-xs shadow-lg shadow-[var(--accent-glow)] transition active:scale-95 flex items-center justify-center space-x-1.5"
                   >
                     <Check className="w-4 h-4" />
                     <span>Gắn Vào Câu {configuredQuestions[cropTargetQIndex]?.stt || (cropTargetQIndex + 1)}</span>

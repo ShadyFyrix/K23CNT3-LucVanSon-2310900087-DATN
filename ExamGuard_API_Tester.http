@@ -1,0 +1,200 @@
+### ==============================================================================
+### EXAMGUARD AI — INTERACTIVE REST API TEST SUITE (.HTTP)
+### Hỗ trợ kiểm thử trực tiếp bằng VS Code REST Client / Thunder Client
+### Cổng dịch vụ:
+###   - Core Server:        http://localhost:3011
+###   - Face AI Service:    http://127.0.0.1:8000
+###   - Surveillance Flask: http://127.0.0.1:5000
+### ==============================================================================
+
+@baseUrl = http://localhost:3011
+@aiBaseUrl = http://127.0.0.1:8000
+@flaskBaseUrl = http://127.0.0.1:5000
+
+# BIẾN TOKEN DÙNG CHUNG (Cập nhật sau khi chạy lệnh Login số 1)
+@token = 
+
+### ==============================================================================
+### 01. XÁC THỰC & ĐĂNG NHẬP (AUTH)
+### ==============================================================================
+
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@examguard.edu.vn",
+  "password": "123456"
+}
+
+### Đăng nhập Giảng viên Coi thi
+# @name loginTeacher
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "anguyen@examguard.edu.vn",
+  "password": "123456"
+}
+
+### Đăng nhập Thí sinh Sinh viên
+# @name loginStudent
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "son.luc@sinhvien.edu.vn",
+  "password": "123456"
+}
+
+### Lấy thông tin tài khoản đang đăng nhập
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Lấy danh sách Vai trò & Đặc quyền phân quyền (RBAC)
+GET {{baseUrl}}/api/roles
+Authorization: Bearer {{token}}
+
+
+### ==============================================================================
+### 02. QUẢN LÝ PHÒNG THI & SƠ ĐỒ 3D (ROOMS & SPATIAL AI)
+### ==============================================================================
+
+### Lấy danh sách toàn bộ phòng thi
+GET {{baseUrl}}/api/rooms
+Authorization: Bearer {{token}}
+
+### AI Phân tích hình ảnh phòng học thực tế (Scene Spatial Mapping)
+POST {{baseUrl}}/api/rooms/analyze-photo
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "imageBase64": "data:image/jpeg;base64,123",
+  "roomCode": "LAB-01"
+}
+
+
+### ==============================================================================
+### 03. QUẢN LÝ ĐỀ THI (EXAM PAPERS)
+### ==============================================================================
+
+### Lấy danh sách đề thi
+GET {{baseUrl}}/api/exams/papers
+Authorization: Bearer {{token}}
+
+### Tạo đề thi trắc nghiệm mới
+POST {{baseUrl}}/api/exams/papers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "code": "INT101_POSTMAN_TEST",
+  "title": "Đề kiểm tra Kỹ thuật Lập trình (Postman Suite)",
+  "subject": "Kỹ thuật lập trình C",
+  "durationMinutes": 60,
+  "totalScore": 10.0,
+  "paperType": "STRUCTURED_QUIZ",
+  "structureType": "PURE_MCQ",
+  "shuffleQuestions": true,
+  "shuffleOptions": true,
+  "questions": [
+    {
+      "stt": 1,
+      "type": "MULTIPLE_CHOICE",
+      "content": "Toán tử nào trong C dùng để lấy địa chỉ của một biến?",
+      "options": ["*", "&", "->", "%"],
+      "correctAnswer": 1,
+      "correctAnswers": [1],
+      "score": 5.0,
+      "explanation": "Toán tử & (address-of) dùng để trích xuất địa chỉ bộ nhớ."
+    },
+    {
+      "stt": 2,
+      "type": "MULTIPLE_CHOICE",
+      "content": "Hàm nào trong thư viện stdio.h dùng để đọc một dòng ký tự?",
+      "options": ["printf", "fgets", "malloc", "free"],
+      "correctAnswer": 1,
+      "correctAnswers": [1],
+      "score": 5.0,
+      "explanation": "fgets đọc xâu ký tự an toàn chống tràn bộ đệm."
+    }
+  ]
+}
+
+
+### ==============================================================================
+### 04. QUẢN LÝ CA THI & XẾP CHỖ (EXAM SESSIONS)
+### ==============================================================================
+
+### Lấy danh sách các ca thi
+GET {{baseUrl}}/api/exams/sessions
+Authorization: Bearer {{token}}
+
+
+### ==============================================================================
+### 05. THÍ SINH LÀM BÀI (CANDIDATE WORKSPACE & ZERO-KNOWLEDGE)
+### ==============================================================================
+
+### Lấy lịch thi cá nhân của thí sinh
+GET {{baseUrl}}/api/exams/student-schedule
+Authorization: Bearer {{token}}
+
+### Lấy đề thi bảo mật Zero-Knowledge (Không lộ đáp án đúng)
+GET {{baseUrl}}/api/exams/questions/fallback_student
+Authorization: Bearer {{token}}
+
+### Thí sinh Auto-Save bài làm
+POST {{baseUrl}}/api/exams/save-progress
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sessionStudentId": "672e814a90b1c20012ab34ef",
+  "answers": {
+    "0": 1,
+    "1": 1
+  }
+}
+
+### Thí sinh nộp bài thi
+POST {{baseUrl}}/api/exams/submit
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sessionStudentId": "672e814a90b1c20012ab34ef",
+  "answers": {
+    "0": 1,
+    "1": 1
+  }
+}
+
+
+### ==============================================================================
+### 06. GIÁM SÁT THỜI GIAN THỰC & PROCTORING
+### ==============================================================================
+
+### Lấy danh sách ca thi đang mở giám sát
+GET {{baseUrl}}/api/proctor/sessions/active
+Authorization: Bearer {{token}}
+
+
+### ==============================================================================
+### 07. CHẤM THI & CÔNG BỐ ĐIỂM
+### ==============================================================================
+
+### Lấy danh sách các ca thi cần chấm điểm
+GET {{baseUrl}}/api/grading/sessions
+Authorization: Bearer {{token}}
+
+
+### ==============================================================================
+### 08. MICROSERVICES KIỂM THỬ ĐỘC LẬP (PYTHON AI & FLASK)
+### ==============================================================================
+
+### Kiểm tra sức khỏe Flask Surveillance
+GET {{flaskBaseUrl}}/health
+
+### Kiểm tra Face AI Swagger Docs (FastAPI)
+GET {{aiBaseUrl}}/docs

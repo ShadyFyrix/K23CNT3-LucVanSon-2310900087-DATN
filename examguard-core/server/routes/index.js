@@ -69,6 +69,7 @@ const postRoutes = require('./post.route');
 
 router.use('/dashboard', dashboardRoutes);
 router.use('/audit-logs', auditLogRoutes);
+router.use('/posts', postRoutes);
 // 8. Đấu trường Quiz Tương tác (Gamified Quiz Arena & Live Leaderboard)
 const quizArenaRoutes = require('./quizArena.route');
 router.use('/quiz-arena', quizArenaRoutes);

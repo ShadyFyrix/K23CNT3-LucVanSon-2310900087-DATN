@@ -35,11 +35,14 @@ import {
   Video,
   Radio,
   User,
-  Sparkles
+  Sparkles,
+  Award
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { io, Socket } from 'socket.io-client';
 import { apiClient } from '../../api/apiClient';
+import { RoomLayoutConfigModal } from '../../components/RoomLayoutConfigModal';
+import { ExamRoom3D } from '../../components/ExamRoom3D';
 
 interface StudentSeat {
   _id: string;
@@ -123,6 +126,8 @@ export default function LiveProctor() {
   const [filterMode, setFilterMode] = useState<'ALL' | 'FLAGGED' | 'IN_EXAM' | 'SUSPENDED'>('ALL');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [isRoomConfigOpen, setIsRoomConfigOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'MATRIX' | 'OVERLAY' | '3D'>('3D');
 
   // Modal actions
   const [warningMsg, setWarningMsg] = useState('Yêu cầu tập trung làm bài, nhìn thẳng vào màn hình.');
@@ -135,6 +140,10 @@ export default function LiveProctor() {
   // Multi-room monitoring states
   const [allSessions, setAllSessions] = useState<any[]>([]);
   const [showMultiRoomOverview, setShowMultiRoomOverview] = useState(false);
+
+  // Giám sát Thể chất & CCTV Realtime (MediaPipe & OpenCV Flask Microservice)
+  const [postureAlerts, setPostureAlerts] = useState<Record<string, { event: string; severity: string; time: number }>>({});
+  const [cctvAlerts, setCctvAlerts] = useState<Array<{ roomId: string; eventType: string; time: string }>>([]);
 
   const fetchAllSessions = async () => {
     try {
@@ -157,7 +166,11 @@ export default function LiveProctor() {
 
       if (roomRes.data && roomRes.data.success) {
         setSession(roomRes.data.data.session);
-        setRoom(roomRes.data.data.room);
+        const rData = roomRes.data.data.room;
+        setRoom(rData);
+        if (rData?.roomPhoto && rData?.layoutConfig?.viewMode === 'OVERLAY') {
+          setViewMode('OVERLAY');
+        }
         setStudents(roomRes.data.data.students || []);
         setViolations(roomRes.data.data.recentViolations || []);
       }
@@ -305,6 +318,29 @@ export default function LiveProctor() {
           return s;
         })
       );
+    });
+
+    // 6. Nhận cảnh báo tư thế & thể chất từ Flask Surveillance Microservice
+    socket.on('proctor:posture_alert', (data: any) => {
+      if (data?.examStudentId) {
+        setPostureAlerts(prev => ({
+          ...prev,
+          [data.examStudentId]: {
+            event: data.postureEvent,
+            severity: data.severity || 'MEDIUM',
+            time: Date.now()
+          }
+        }));
+      }
+    });
+
+    // 7. Nhận cảnh báo từ Camera CCTV phòng thi
+    socket.on('proctor:cctv_alert', (data: any) => {
+      toast.error(`📷 CCTV Phòng ${data.roomId || 'Thi'}: ${data.eventType}`, { duration: 5000 });
+      setCctvAlerts(prev => [
+        { roomId: data.roomId || 'Phòng thi', eventType: data.eventType, time: new Date().toLocaleTimeString('vi-VN') },
+        ...prev.slice(0, 5)
+      ]);
     });
 
     // Polling dự phòng mỗi 15 giây (thay vì 5s)
@@ -504,262 +540,363 @@ export default function LiveProctor() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans select-none">
       <div className="space-y-5">
-        {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+        {/* ── 1. HEADER (CYBER-LUXURY GLASS) ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
-            <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span className="hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer" onClick={() => navigate('/exam-sessions')}>Quản lý Ca thi</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-cyan-600 dark:text-cyan-400 font-medium">Giám thị Trực ban Realtime (Socket.IO)</span>
+            <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
+              <span className="hover:text-white cursor-pointer transition" onClick={() => navigate('/exam-sessions')}>Lịch Thi & Ca Thi</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[#3781fc] font-semibold">Giám Thị 3D Realtime</span>
             </div>
             <div className="flex items-center flex-wrap gap-3">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center space-x-3">
-                <span>PHÒNG GIÁM SÁT THÔNG MINH: {room?.name || 'Phòng Thi'}</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center space-x-3">
+                <span className="bg-gradient-to-r from-white via-[#cbe9fd] to-[#7c3aed] bg-clip-text text-transparent">
+                  Phòng Giám Sát: {room?.name || 'Phòng Thi'}
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold border flex items-center space-x-1.5 ${
                   socketConnected
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                 }`}>
-                  {socketConnected ? <Wifi className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> : <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400 animate-pulse" />}
-                  <span>{socketConnected ? 'SOCKET.IO LIVE' : 'ĐANG KẾT NỐI...'}</span>
+                  {socketConnected ? <Wifi className="w-3 h-3 text-emerald-400" /> : <WifiOff className="w-3 h-3 text-amber-400 animate-pulse" />}
+                  <span>{socketConnected ? 'SOCKET.IO LIVE' : 'KẾT NỐI LẠI...'}</span>
                 </span>
               </h1>
 
-              {/* BỘ CHUYỂN PHÒNG THI NHANH (MULTI-ROOM SWITCHER) */}
-              <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl px-2.5 py-1 shadow-xs">
-                <Building2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Chuyển phòng:</span>
+              {/* BỘ CHUYỂN PHÒNG THI NHANH */}
+              <div className="flex items-center space-x-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+                <Building2 className="w-3.5 h-3.5 text-[#3781fc]" />
+                <span className="text-xs text-slate-400 font-semibold">Phòng:</span>
                 <select
                   value={session?._id || ''}
                   onChange={e => {
                     if (e.target.value) navigate(`/live-proctor/${e.target.value}`);
                   }}
-                  className="bg-transparent text-xs text-slate-900 dark:text-white font-bold outline-none cursor-pointer pr-2"
+                  className="bg-transparent text-xs text-white font-bold outline-none cursor-pointer pr-1"
                 >
                   {allSessions.map(s => (
-                    <option key={s._id} value={s._id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-200">
-                      {s.room?.code || 'Phòng'} - {s.code} ({s.title}) [{s.status === 'IN_PROGRESS' ? 'ĐANG THI' : 'LÊN LỊCH'}]
+                    <option key={s._id} value={s._id} className="bg-[#0B0C1E] text-white">
+                      {s.room?.code || 'Phòng'} - {s.code} ({s.status === 'IN_PROGRESS' ? 'ĐANG THI' : 'LÊN LỊCH'})
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Ca thi: <b className="text-slate-800 dark:text-slate-200">{session?.title}</b> • Môn: <b className="text-indigo-600 dark:text-indigo-400">{session?.subject?.name} ({session?.subject?.courseCode})</b> • Giám thị: <b className="text-slate-700 dark:text-slate-300">{session?.proctor1?.fullName || 'Cán bộ 1'}</b>
+            <p className="text-xs text-slate-400 mt-1">
+              Ca: <b className="text-white">{session?.title}</b> • Môn: <b className="text-[#cbe9fd]">{session?.subject?.name}</b> • Giám thị: <b className="text-slate-300">{session?.proctor1?.fullName || 'Hệ thống AI'}</b>
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {/* Nút Toggle Tổng quan Đa Phòng */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Chế độ xem 3D / 2D / Ảnh Thật */}
+            <div className="flex items-center p-1 bg-[#070814]/80 border border-white/10 rounded-full">
+              <button
+                type="button"
+                onClick={() => setViewMode('3D')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                  viewMode === '3D'
+                    ? 'eg-glass-pill shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>3D WebGL</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-azure)] animate-ping" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('MATRIX')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 cursor-pointer ${
+                  viewMode === 'MATRIX'
+                    ? 'eg-glass-pill shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Ma Trận 2D</span>
+              </button>
+
+              {room?.roomPhoto && (
+                <button
+                  type="button"
+                  onClick={() => setViewMode('OVERLAY')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 cursor-pointer ${
+                    viewMode === 'OVERLAY'
+                      ? 'eg-glass-pill shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Phủ Ảnh Thật</span>
+                </button>
+              )}
+            </div>
+
+            {/* Cấu Hình Phòng Thi AI */}
+            <button
+              onClick={() => setIsRoomConfigOpen(true)}
+              className="px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center space-x-1.5 border border-[#3781fc]/30 bg-white/5 hover:bg-[#1951fc]/20 text-[#cbe9fd] cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5 text-[#3781fc]" />
+              <span>Sơ Đồ 3D</span>
+            </button>
+
+            {/* Toggle Tổng quan Đa Phòng */}
             <button
               onClick={() => setShowMultiRoomOverview(!showMultiRoomOverview)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border shadow-xs cursor-pointer ${
+              className={`px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center space-x-1.5 border cursor-pointer ${
                 showMultiRoomOverview
-                  ? 'bg-cyan-600 text-white border-cyan-500'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+                  ? 'bg-[#1951fc] text-white border-[#3781fc]'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:text-white'
               }`}
             >
-              <LayoutGrid className="w-4 h-4" />
-              <span>{showMultiRoomOverview ? 'Trở Về Sơ Đồ Phòng' : 'Tổng Quan Đa Phòng'}</span>
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Đa Phòng</span>
             </button>
 
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition text-xs flex items-center space-x-1.5 shadow-xs cursor-pointer"
-              title={soundEnabled ? 'Tắt âm thanh cảnh báo' : 'Bật âm thanh cảnh báo'}
+              className="p-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-full transition text-xs flex items-center space-x-1 cursor-pointer"
+              title={soundEnabled ? 'Tắt chuông cảnh báo' : 'Bật chuông cảnh báo'}
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
-              <span>{soundEnabled ? 'Chuông: Bật' : 'Chuông: Tắt'}</span>
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 text-slate-500" />}
             </button>
 
             {session?.status === 'COMPLETED' ? (
-              <div className="px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-xs">
-                <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                <span>Buồng Thi Đã Đóng</span>
+              <div className="px-3.5 py-2 bg-white/5 border border-white/10 text-slate-400 rounded-full text-xs font-semibold flex items-center space-x-1.5">
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Đã Đóng</span>
               </div>
             ) : (
               <button
                 onClick={handleEndSession}
                 disabled={actionLoading}
-                className="px-3.5 py-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-full text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
               >
-                <Lock className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
-                <span>Kết Thúc Ca Thi & Đóng Phòng</span>
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                <span>Kết Thúc Ca</span>
               </button>
             )}
 
             <button
               onClick={() => navigate(`/grading-review/${session?._id}`)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition flex items-center space-x-1.5 cursor-pointer"
+              className="px-4 py-2 eg-btn-gradient text-white rounded-full text-xs font-bold shadow-md hover:shadow-lg transition flex items-center space-x-1.5 cursor-pointer"
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Xem Bảng Chấm Thi</span>
+              <span>Duyệt Điểm</span>
             </button>
           </div>
         </div>
 
-        {/* ── NẾU BẬT TỔNG QUAN ĐA PHÒNG: HIỂN THỊ MULTI-ROOM MONITORING GRID ── */}
-        {showMultiRoomOverview && (
-          <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center space-x-2">
-                <Building2 className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  TRUNG TÂM GIÁM SÁT ĐA PHÒNG THI THỰC TẾ (MULTI-ROOM COMMAND CENTER)
-                </h3>
+        {/* ── 2. BENTO BOX TELEMETRY MATRIX ── */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+          {/* Bento Card 1: Tổng bàn thi */}
+          <div className="relative overflow-hidden bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 hover:border-[var(--color-azure)]/50 rounded-3xl p-4 shadow-xl transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tổng bàn thi</span>
+              <div className="p-1.5 rounded-full bg-[var(--color-electric)]/15 text-[var(--color-azure)]">
+                <LayoutGrid className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs text-slate-400">
-                Đang trực tuyến: <b className="text-emerald-400">{allSessions.length} ca thi / phòng</b>
-              </span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {allSessions.map(s => {
-                const isCurrent = s._id === session?._id;
-                return (
-                  <div
-                    key={s._id}
-                    className={`rounded-2xl border p-5 transition-all flex flex-col justify-between ${
-                      isCurrent
-                        ? 'bg-white dark:bg-slate-950 border-cyan-500 ring-2 ring-cyan-500/30 shadow-md'
-                        : 'bg-slate-50 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                            {s.room?.code || 'PHÒNG'}
-                          </span>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[160px]">
-                            {s.room?.name || 'Phòng thi'}
-                          </span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                          s.status === 'IN_PROGRESS'
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 animate-pulse'
-                            : s.status === 'COMPLETED'
-                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                            : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30'
-                        }`}>
-                          {s.status === 'IN_PROGRESS' ? '● ĐANG THI' : s.status === 'COMPLETED' ? 'ĐÃ KẾT THÚC' : 'LÊN LỊCH'}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-1">{s.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mb-3">{s.code} • {s.subject?.name}</p>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80 mb-4 shadow-2xs">
-                        <div>
-                          <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Sức chứa phòng:</span>
-                          <span className="font-bold text-slate-700 dark:text-slate-200">{s.room?.capacity || 40} máy</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Thí sinh xếp chỗ:</span>
-                          <span className="font-bold text-cyan-600 dark:text-cyan-400">{s.studentCount || 0} SV</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Cán bộ coi thi:</span>
-                          <span className="font-medium text-slate-700 dark:text-slate-300 truncate block">{s.proctor1?.fullName || 'Cán bộ'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 dark:text-slate-500 block text-[10px]">CCTV RTSP:</span>
-                          <span className="font-mono text-emerald-600 dark:text-emerald-400 text-[11px]">Online (HD)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        navigate(`/live-proctor/${s._id}`);
-                        setShowMultiRoomOverview(false);
-                      }}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer ${
-                        isCurrent
-                          ? 'bg-cyan-600 text-white hover:bg-cyan-500'
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white'
-                      }`}
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>{isCurrent ? 'Đang Trực Ban Phòng Này' : 'Chuyển Vào Giám Sát Phòng Này'}</span>
-                    </button>
-                  </div>
-                );
-              })}
+            <div className="text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">{rows * cols} bàn</div>
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span className="text-[var(--color-azure)] font-bold">{rows} dãy</span>
+              <span>×</span>
+              <span className="text-[var(--color-azure)] font-bold">{cols} cột</span>
+              <span className="text-slate-300 dark:text-white/20">•</span>
+              <span>{room?.code || 'LAB'}</span>
             </div>
           </div>
-        )}
 
-        {/* 4 Thẻ thống kê thời gian thực */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Tổng số bàn thi</span>
-            <div className="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1">{rows * cols} bàn</div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">{rows} dãy × {cols} cột</span>
+          {/* Bento Card 2: Thí sinh làm bài */}
+          <div className="relative overflow-hidden bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 hover:border-emerald-500/50 rounded-3xl p-4 shadow-xl transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đang làm bài</span>
+              <div className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight flex items-center space-x-1.5">
+              <span>{inExamCount}</span>
+              <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-sans">/ {students.length} SV</span>
+            </div>
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{students.length > 0 ? Math.round((inExamCount / students.length) * 100) : 0}% hiện diện</span>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Đang làm bài</span>
-            <div className="text-2xl font-bold font-mono text-cyan-600 dark:text-cyan-400 mt-1">{inExamCount} thí sinh</div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">{students.length} đã được gán chỗ</span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Cảnh báo bất thường</span>
-            <div className={`text-2xl font-bold font-mono mt-1 ${violationCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+          {/* Bento Card 3: Cảnh báo vi phạm */}
+          <div className="relative overflow-hidden bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 hover:border-amber-500/50 rounded-3xl p-4 shadow-xl transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cảnh báo vi phạm</span>
+              <div className={`p-1.5 rounded-full ${violationCount > 0 ? 'bg-amber-500/20 text-amber-500 animate-bounce' : 'bg-slate-100 dark:bg-white/5 text-slate-400'}`}>
+                <ShieldAlert className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className={`text-2xl font-black font-mono tracking-tight ${violationCount > 0 ? 'text-amber-500' : 'text-slate-700 dark:text-slate-300'}`}>
               {violationCount} bàn
             </div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">Điểm uy tín dưới 80đ</span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Điểm uy tín TB</span>
-            <div className={`text-2xl font-bold font-mono mt-1 ${avgTrust >= 85 ? 'text-emerald-600 dark:text-emerald-400' : avgTrust >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
-              {avgTrust} / 100
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              {violationCount > 0 ? (
+                <span className="text-amber-500 font-medium">⚠️ Cần quan sát</span>
+              ) : (
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ An toàn tuyệt đối</span>
+              )}
             </div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">{stats?.totalViolations || violations.length} sự kiện AI phát hiện</span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">AI Face & Pose Core</span>
-            <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400 mt-1">ArcFace 3D</div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">Khử phạt khi Giám thị ghé bàn</span>
+          {/* Bento Card 4: Điểm uy tín TB */}
+          <div className="relative overflow-hidden bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 hover:border-[var(--color-azure)]/50 rounded-3xl p-4 shadow-xl transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Điểm uy tín TB</span>
+              <div className="p-1.5 rounded-full bg-[var(--color-electric)]/15 text-[var(--color-azure)]">
+                <Award className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className={`text-2xl font-black font-mono tracking-tight ${avgTrust >= 85 ? 'text-emerald-600 dark:text-emerald-400' : avgTrust >= 70 ? 'text-amber-500' : 'text-rose-500'}`}>
+              {avgTrust}<span className="text-xs font-sans text-slate-500 dark:text-slate-400 font-normal"> / 100</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mt-2 overflow-hidden p-0.5">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${avgTrust >= 85 ? 'bg-gradient-to-r from-emerald-500 to-[#3781fc]' : avgTrust >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                style={{ width: `${Math.min(100, Math.max(0, avgTrust))}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Bento Card 5: AI Engine Telemetry */}
+          <div className="relative overflow-hidden bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 hover:border-[#7c3aed]/50 rounded-3xl p-4 shadow-xl transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ArcFace 3D Core</span>
+              <div className="p-1.5 rounded-full bg-[#7c3aed]/20 text-purple-600 dark:text-[#a855f7]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black font-mono text-purple-600 dark:text-[#a855f7] tracking-tight">100%</div>
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-[#cbe9fd] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#a855f7] animate-pulse" />
+              <span>Zero-Trust Spoof Guard</span>
+            </div>
           </div>
         </div>
 
         {/* Bộ lọc nhanh sơ đồ bàn */}
-        <div className="flex items-center space-x-2 pb-1">
-          <Filter className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Lọc hiển thị:</span>
-          {(['ALL', 'FLAGGED', 'IN_EXAM', 'SUSPENDED'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setFilterMode(mode)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                filterMode === mode
-                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-2xs'
-              }`}
-            >
-              {mode === 'ALL' && 'Tất cả bàn'}
-              {mode === 'FLAGGED' && `Cần lưu ý (${violationCount})`}
-              {mode === 'IN_EXAM' && `Đang làm (${inExamCount})`}
-              {mode === 'SUSPENDED' && 'Bị đình chỉ'}
-            </button>
-          ))}
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1 pb-1">
+          <div className="flex items-center space-x-2">
+            <Filter className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Lọc hiển thị:</span>
+            {(['ALL', 'FLAGGED', 'IN_EXAM', 'SUSPENDED'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setFilterMode(mode)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                  filterMode === mode
+                    ? 'eg-btn-gradient text-white shadow-sm shadow-[var(--accent-glow)]'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <span>{mode === 'ALL' && 'Tất cả bàn'}</span>
+                <span>{mode === 'FLAGGED' && `Cần lưu ý (${violationCount})`}</span>
+                <span>{mode === 'IN_EXAM' && `Đang làm (${inExamCount})`}</span>
+                <span>{mode === 'SUSPENDED' && 'Bị đình chỉ'}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Chú giải trạng thái màu sắc theo chuẩn UI/UX Pro Max */}
+          <div className="flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
+            <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" /><span>Bình thường</span></span>
+            <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs shadow-amber-500/50" /><span>Cảnh báo</span></span>
+            <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs shadow-rose-500/50" /><span>Nghiêm trọng</span></span>
+            <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-xs shadow-purple-500/50" /><span>Giám thị tại bàn</span></span>
+          </div>
         </div>
 
         {/* Layout: Sơ đồ phòng bên trái (75%) + Alert Feed bên phải (25%) */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* SƠ ĐỒ LƯỚI BÀN THI */}
-          <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 relative overflow-hidden">
+            {/* Lớp nền ảnh chụp phòng thi thực tế (khi bật chế độ OVERLAY) */}
+            {room?.roomPhoto && viewMode === 'OVERLAY' && (
+              <>
+                <div
+                  className="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-300"
+                  style={{
+                    backgroundImage: `url(${room.roomPhoto})`,
+                    opacity: 0.35,
+                    filter: 'contrast(1.1) brightness(0.9)'
+                  }}
+                />
+                <div className="absolute inset-0 bg-slate-950/30 pointer-events-none" />
+              </>
+            )}
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-3">
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-bold text-slate-900 dark:text-white">SƠ ĐỒ BÀN THI THỰC TẾ (REALTIME DESK MATRIX)</span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">(Nhấp vào bàn để điều khiển, bù giờ, gửi cảnh báo)</span>
+              </div>
+
+              {/* Nhóm điều khiển xem & Cấu hình nhanh */}
+              <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('3D')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                    viewMode === '3D'
+                      ? 'eg-btn-gradient text-white shadow-md shadow-[var(--accent-glow)]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Chuyển sang Không Gian 3D Digital Twin tương tác xoay 360 độ"
+                >
+                  <Eye className="w-3.5 h-3.5 text-white" />
+                  <span>Phòng Thi 3D Live</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-frosted-ice)] animate-ping"></span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('MATRIX')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                    viewMode === 'MATRIX'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Xem ma trận phẳng 2D"
+                >
+                  <span>Ma Trận 2D</span>
+                </button>
+
+                {room?.roomPhoto && (
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('OVERLAY')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
+                      viewMode === 'OVERLAY'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Chuyển sang chế độ phủ lên ảnh chụp phòng thi thực tế"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Phủ Ảnh Thật</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsRoomConfigOpen(true)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-[var(--color-azure)] hover:bg-[var(--color-electric)]/10 transition cursor-pointer flex items-center space-x-1 ml-0.5"
+                  title="Cấu hình số dãy, số cột, thêm bàn thi, tải ảnh phòng"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Cấu hình</span>
+                </button>
               </div>
 
               {/* Chú giải màu sắc */}
@@ -771,8 +908,21 @@ export default function LiveProctor() {
               </div>
             </div>
 
-            {/* THIẾT KẾ MẶT BẰNG PHÒNG THI THỰC TẾ: CỬA RA VÀO & BÀN GIÁM THỊ */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
+            {viewMode === '3D' ? (
+              <ExamRoom3D
+                room={room}
+                session={session}
+                students={students}
+                violations={violations}
+                postureAlerts={postureAlerts}
+                onSelectSeat={(st) => setSelectedSeat(st)}
+                selectedSeat={selectedSeat}
+                height={580}
+              />
+            ) : (
+              <>
+                {/* THIẾT KẾ MẶT BẰNG PHÒNG THI THỰC TẾ: CỬA RA VÀO & BÀN GIÁM THỊ */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
               {/* CỬA RA VÀO CHÍNH */}
               <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold shadow-sm">
                 <DoorOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
@@ -780,12 +930,19 @@ export default function LiveProctor() {
               </div>
 
               {/* BỤC GIẢNG & TRẠM ĐIỀU KHIỂN CỦA GIÁM THỊ */}
-              <div className="flex-1 max-w-lg bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-4 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
+              <div className="flex-1 max-w-xl bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-4 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
                 <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></span>
-                  <span>BỤC GIẢNG & TRẠM ĐIỀU KHIỂN GIÁM THỊ TRUNG TÂM</span>
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-azure)] animate-ping"></span>
+                  <span>BỤC GIẢNG & TRẠM ĐIỀU KHIỂN GIÁM THỊ (AI SURVEILLANCE)</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono">CCTV RTSP: {room?.rtspCameraUrl ? 'CONNECTED' : 'ONLINE'}</span>
+                <div className="flex items-center space-x-2 text-[10px] font-mono">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                    CCTV: 3.0 FPS
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[var(--color-electric)]/15 text-[var(--color-azure)] font-bold">
+                    Anti-Overload: Active
+                  </span>
+                </div>
               </div>
 
               {/* CỬA PHỤ / THOÁT HIỂM */}
@@ -796,13 +953,30 @@ export default function LiveProctor() {
             </div>
 
             {/* GRID OF DESKS VỚI LỐI ĐI CHÍNH GIỮA */}
-            <div className="space-y-3">
+            <div className="space-y-3 relative z-10">
               {Array.from({ length: rows }).map((_, rIdx) => {
                 const rNum = rIdx + 1;
-                const halfCols = Math.ceil(cols / 2);
+                const splitCol = room?.layoutConfig?.aisles?.[0] || Math.ceil(cols / 2);
 
                 const renderDeskCard = (cNum: number) => {
-                  const st = seatMap[`${rNum}-${cNum}`];
+                  const seatKey = `${rNum}-${cNum}`;
+                  const isDisabled = room?.layoutConfig?.disabledSeats?.includes(seatKey);
+                  const customLabel = room?.layoutConfig?.customLabels?.[seatKey] || `BÀN ${rNum}-${cNum}`;
+
+                  if (isDisabled) {
+                    return (
+                      <div
+                        key={seatKey}
+                        className="p-2.5 rounded-xl border border-dashed border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/20 text-rose-400 text-xs text-center flex flex-col justify-center items-center opacity-55 select-none min-h-[64px]"
+                        title="Bàn thi này đang tạm khóa hoặc bảo trì thiết bị"
+                      >
+                        <span className="font-mono text-[10px] line-through">{customLabel}</span>
+                        <span className="text-[9px] font-bold text-rose-500 uppercase mt-0.5">Khóa / Hỏng</span>
+                      </div>
+                    );
+                  }
+
+                  const st = seatMap[seatKey];
                   const isOverride = st?.proctorOverrideUntil && new Date(st.proctorOverrideUntil) > new Date();
 
                   const sessionStartTime = session?.startTime ? new Date(session.startTime).getTime() : 0;
@@ -810,10 +984,25 @@ export default function LiveProctor() {
                   const isLateLocked = st && (st.status === 'ASSIGNED' || st.status === 'ABSENT') && currentLateMinutes >= 15 && !st.isLateUnlocked;
                   const isHiddenByFilter = st && filterMode !== 'ALL' && !filteredStudents.some(f => f._id === st._id);
 
-                  let cardClass = 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 text-slate-400 dark:text-slate-600 hover:border-slate-300 dark:hover:border-slate-700';
+                  // Kiểm tra cảnh báo tư thế thể chất từ Flask Surveillance Microservice
+                  const activePosture = st && postureAlerts[st._id] && (Date.now() - postureAlerts[st._id].time < 30000)
+                    ? postureAlerts[st._id]
+                    : null;
+
+                  let cardClass = 'bg-white/90 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-700 backdrop-blur-xs';
                   if (st) {
                     if (isHiddenByFilter) {
                       cardClass = 'opacity-25 bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600';
+                    } else if (activePosture) {
+                      if (activePosture.event === 'POSTURE_ABSENT') {
+                        cardClass = 'bg-rose-100 dark:bg-rose-950/60 border-rose-500 text-rose-800 dark:text-rose-200 ring-2 ring-rose-500 animate-pulse shadow-md';
+                      } else if (activePosture.event === 'POSTURE_COLLAPSE') {
+                        cardClass = 'bg-purple-100 dark:bg-purple-950/60 border-purple-500 text-purple-800 dark:text-purple-200 ring-2 ring-purple-500 animate-pulse shadow-md';
+                      } else if (activePosture.event === 'POSTURE_STANDING') {
+                        cardClass = 'bg-amber-100 dark:bg-amber-950/60 border-amber-500 text-amber-800 dark:text-amber-200 ring-2 ring-amber-500 animate-pulse shadow-md';
+                      } else {
+                        cardClass = 'bg-yellow-100 dark:bg-yellow-950/60 border-yellow-500 text-yellow-800 dark:text-yellow-200 ring-2 ring-yellow-500 animate-pulse shadow-md';
+                      }
                     } else if (st.status === 'SUSPENDED') {
                       cardClass = 'bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-500/60 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/40 shadow-sm';
                     } else if (isOverride) {
@@ -821,30 +1010,30 @@ export default function LiveProctor() {
                     } else if (isLateLocked) {
                       cardClass = 'bg-amber-50 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500/80 text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/60 animate-pulse shadow-sm';
                     } else if (st.isLateUnlocked) {
-                      cardClass = 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-400 dark:border-cyan-500/60 text-cyan-800 dark:text-cyan-200 ring-1 ring-cyan-500/40 shadow-sm';
+                      cardClass = 'bg-[var(--color-electric)]/10 border-[var(--color-azure)] text-[var(--color-azure)] ring-1 ring-[var(--color-azure)]/40 shadow-sm';
                     } else if (st.trustScore < 60) {
                       cardClass = 'bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-500/60 text-rose-700 dark:text-rose-300 animate-pulse ring-1 ring-rose-500/50 shadow-sm';
                     } else if (st.trustScore < 85) {
                       cardClass = 'bg-amber-50 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500/60 text-amber-800 dark:text-amber-300 ring-1 ring-amber-500/40 shadow-sm';
                     } else if (st.status === 'IN_EXAM') {
-                      cardClass = 'bg-white dark:bg-slate-900 border-emerald-400 dark:border-emerald-500/40 text-slate-900 dark:text-slate-200 hover:border-emerald-500 shadow-sm dark:shadow-lg';
+                      cardClass = 'bg-white/95 dark:bg-slate-900/95 border-emerald-400 dark:border-emerald-500/40 text-slate-900 dark:text-slate-200 hover:border-emerald-500 shadow-sm dark:shadow-lg backdrop-blur-xs';
                     } else {
-                      cardClass = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm';
+                      cardClass = 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm backdrop-blur-xs';
                     }
                   }
 
                   return (
                     <div
-                      key={`${rNum}-${cNum}`}
+                      key={seatKey}
                       onClick={() => st && setSelectedSeat(st)}
                       className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all hover:scale-[1.02] ${cardClass}`}
                     >
                       <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-800/40">
-                        <span className="font-mono font-bold text-slate-600 dark:text-slate-400">BÀN {rNum}-{cNum}</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300 truncate max-w-[80px]">{customLabel}</span>
                         {st && (
-                          <span className="flex items-center space-x-1">
+                          <span className="flex items-center space-x-1 shrink-0">
                             <span className={`w-1.5 h-1.5 rounded-full ${st.isOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></span>
-                            <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">PIN:{st.seatPin}</span>
+                            <span className="font-mono text-[var(--color-azure)] font-bold">PIN:{st.seatPin}</span>
                           </span>
                         )}
                       </div>
@@ -861,7 +1050,25 @@ export default function LiveProctor() {
                               {st.trustScore}đ
                             </span>
 
-                            {isOverride ? (
+                            {activePosture ? (
+                              activePosture.event === 'POSTURE_ABSENT' ? (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-rose-600 text-white font-bold animate-pulse">
+                                  RỜI GHẾ
+                                </span>
+                              ) : activePosture.event === 'POSTURE_COLLAPSE' ? (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-purple-600 text-white font-bold animate-pulse">
+                                  GỤC XUỐNG
+                                </span>
+                              ) : activePosture.event === 'POSTURE_STANDING' ? (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-600 text-white font-bold animate-pulse">
+                                  ĐỨNG DẬY
+                                </span>
+                              ) : (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-600 text-white font-bold animate-pulse">
+                                  BẤT ĐỘNG
+                                </span>
+                              )
+                            ) : isOverride ? (
                               <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-semibold">
                                 Tại bàn
                               </span>
@@ -871,7 +1078,7 @@ export default function LiveProctor() {
                                 <span>Khóa {currentLateMinutes}p</span>
                               </span>
                             ) : st.isLateUnlocked ? (
-                              <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-semibold flex items-center space-x-0.5">
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-[var(--color-electric)]/20 text-[var(--color-azure)] font-semibold flex items-center space-x-0.5">
                                 <Unlock className="w-2.5 h-2.5 inline" />
                                 <span>Đặc cách</span>
                               </span>
@@ -893,11 +1100,14 @@ export default function LiveProctor() {
 
                 return (
                   <div key={rNum} className="flex items-center space-x-3">
-                    <span className="w-10 font-mono text-xs text-slate-500 font-bold">Dãy {rNum}</span>
+                    <span className="w-10 font-mono text-xs text-slate-500 font-bold shrink-0">Dãy {rNum}</span>
                     <div className="flex-1 flex items-center space-x-3">
                       {/* DÃY BÀN BÊN TRÁI */}
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                        {Array.from({ length: halfCols }).map((_, cIdx) => renderDeskCard(cIdx + 1))}
+                      <div
+                        className="flex-1 grid gap-2.5"
+                        style={{ gridTemplateColumns: `repeat(${splitCol}, minmax(0, 1fr))` }}
+                      >
+                        {Array.from({ length: splitCol }).map((_, cIdx) => renderDeskCard(cIdx + 1))}
                       </div>
 
                       {/* LỐI ĐI CHÍNH GIỮA (CENTRAL WALKWAY AISLE) */}
@@ -906,25 +1116,30 @@ export default function LiveProctor() {
                       </div>
 
                       {/* DÃY BÀN BÊN PHẢI */}
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                        {Array.from({ length: cols - halfCols }).map((_, cIdx) => renderDeskCard(halfCols + cIdx + 1))}
+                      <div
+                        className="flex-1 grid gap-2.5"
+                        style={{ gridTemplateColumns: `repeat(${cols - splitCol}, minmax(0, 1fr))` }}
+                      >
+                        {Array.from({ length: cols - splitCol }).map((_, cIdx) => renderDeskCard(splitCol + cIdx + 1))}
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
           {/* NHẬT KÝ VI PHẠM & GIÁM SÁT REALTIME (SIDEBAR) */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm dark:shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
                 <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-                  <ShieldAlert className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                  <ShieldAlert className="w-4 h-4 text-[var(--color-azure)]" />
                   <span>FEED GIÁM SÁT AI REALTIME</span>
                 </span>
-                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></span>
+                <span className="w-2 h-2 rounded-full bg-[var(--color-azure)] animate-ping"></span>
               </div>
 
               <div className="space-y-3 max-h-[560px] overflow-y-auto custom-scrollbar pr-1">
@@ -1026,7 +1241,7 @@ export default function LiveProctor() {
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 mb-6">
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/20">
                     BÀN DÃY {selectedSeat.seatRow} — CỘT {selectedSeat.seatCol}
                   </span>
                   <span className="font-mono text-xs text-slate-500 dark:text-slate-400">PIN: {selectedSeat.seatPin}</span>
@@ -1081,7 +1296,7 @@ export default function LiveProctor() {
                   </div>
 
                   {/* Thanh Metadata góc trên bên trái */}
-                  <div className="absolute top-2.5 left-2.5 z-20 flex items-center space-x-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-cyan-400 font-mono shadow-sm">
+                  <div className="absolute top-2.5 left-2.5 z-20 flex items-center space-x-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-[var(--color-azure)] font-mono shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
                     <span>LIVE HD • 30FPS</span>
                   </div>
@@ -1100,7 +1315,7 @@ export default function LiveProctor() {
                       className="p-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-lg border border-slate-700 text-[10px] font-semibold flex items-center space-x-1 backdrop-blur-sm transition active:scale-95 shadow"
                       title="Chụp ảnh snapshot lưu trữ làm bằng chứng vi phạm"
                     >
-                      <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                      <Camera className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                       <span>Chụp ảnh</span>
                     </button>
                   </div>
@@ -1110,8 +1325,8 @@ export default function LiveProctor() {
                 <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                   <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800/60">
                     <span className="text-slate-500 dark:text-slate-400">Trạng thái thi:</span>
-                    <span className="font-bold text-cyan-600 dark:text-cyan-400 flex items-center space-x-1">
-                      <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                    <span className="font-bold text-[var(--color-azure)] flex items-center space-x-1">
+                      <span className="w-2 h-2 rounded-full bg-[var(--color-azure)] animate-pulse"></span>
                       <span>{selectedSeat.status === 'IN_EXAM' ? 'Đang làm bài' : selectedSeat.status}</span>
                     </span>
                   </div>
@@ -1289,6 +1504,22 @@ export default function LiveProctor() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL CẤU HÌNH SƠ ĐỒ PHÒNG THI & CHỖ NGỒI TRỰC QUAN */}
+      {room && (
+        <RoomLayoutConfigModal
+          isOpen={isRoomConfigOpen}
+          onClose={() => setIsRoomConfigOpen(false)}
+          room={room}
+          onSave={(updatedRoom) => {
+            setRoom(updatedRoom);
+            if (updatedRoom?.roomPhoto && updatedRoom?.layoutConfig?.viewMode === 'OVERLAY') {
+              setViewMode('OVERLAY');
+            }
+            fetchRoomState();
+          }}
+        />
       )}
     </div>
   );

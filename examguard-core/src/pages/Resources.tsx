@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
   FolderOpen,
   Plus,
@@ -366,24 +367,57 @@ export default function Resources() {
     u.email.toLowerCase().includes(searchUserQuery.toLowerCase())
   );
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } }
+  };
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Tài liệu và Chính sách</h1>
-          <p className="text-slate-500">Lưu trữ, quản lý tài liệu và các chính sách của toàn bộ hệ thống.</p>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-16 font-sans select-none"
+    >
+      {/* ─── 1. BENTO HERO HEADER STAGE ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <FolderOpen className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Kho Học Liệu & Quy Định Khảo Thí
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Tài Liệu & <span className="eg-text-gradient">Chính Sách Khảo Thí</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Lưu trữ, quản lý văn bản quy chế, đề thi mẫu và tài nguyên phục vụ công tác tổ chức thi an toàn.
+          </p>
         </div>
-        <div className="flex gap-3">
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={() => {
               setVisibility('public');
               setSharedUsers([]);
               setIsFolderModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold px-6 py-3 rounded-xl hover:bg-slate-200 transition-all"
+            className="eg-glass-pill px-4 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-sm"
           >
-            <FolderPlus className="w-5 h-5" />
-            Tạo thư mục
+            <FolderPlus className="w-4 h-4 text-[var(--color-azure)]" />
+            <span>Tạo thư mục</span>
           </button>
           <button
             onClick={() => {
@@ -392,23 +426,26 @@ export default function Resources() {
               setSharedUsers([]);
               setIsUploadModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+            className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md"
           >
-            <Upload className="w-5 h-5" />
-            Tải lên tài liệu
+            <Upload className="w-4 h-4 stroke-[3]" />
+            <span>Tải lên tài liệu</span>
           </button>
         </div>
-      </header>
+      </motion.div>
 
-      {/* Directory Navigation (Breadcrumbs) */}
-      <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 overflow-x-auto whitespace-nowrap">
+      {/* ─── 2. DIRECTORY NAVIGATION (BREADCRUMBS) ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-white/95 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl p-3.5 px-5 rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-x-auto whitespace-nowrap shadow-sm"
+      >
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={idx}>
-            {idx > 0 && <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
+            {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
             <button
               onClick={() => handleBreadcrumbClick(idx)}
-              className={`hover:text-emerald-600 font-medium transition-colors ${
-                idx === breadcrumbs.length - 1 ? 'text-slate-800 font-bold cursor-default hover:text-slate-800' : ''
+              className={`hover:text-[var(--color-azure)] font-bold transition-colors cursor-pointer ${
+                idx === breadcrumbs.length - 1 ? 'text-slate-900 dark:text-white font-extrabold cursor-default' : ''
               }`}
               disabled={idx === breadcrumbs.length - 1}
             >
@@ -416,81 +453,84 @@ export default function Resources() {
             </button>
           </React.Fragment>
         ))}
-      </div>
+      </motion.div>
 
-      {/* Dynamic Statistics Info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+      {/* ─── 3. DYNAMIC METRICS INFO CARDS ─── */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="eg-cyber-card p-5 flex items-center gap-4">
+          <div className="p-3 bg-[var(--color-electric)]/15 text-[var(--color-azure)] rounded-2xl border border-[var(--color-azure)]/30">
             <FolderOpen className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Thư mục hiện tại</p>
-            <p className="text-xl font-bold text-slate-900">
-              {resources.filter(r => r.isFolder).length} thư mục
+            <p className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thư mục hiện tại</p>
+            <p className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">
+              {resources.filter(r => r.isFolder).length} <span className="text-xs font-sans text-slate-500">thư mục</span>
             </p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+        <div className="eg-cyber-card p-5 flex items-center gap-4">
+          <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20">
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Tài liệu hiện tại</p>
-            <p className="text-xl font-bold text-slate-900">
-              {resources.filter(r => !r.isFolder).length} tệp tin
+            <p className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tài liệu hiện tại</p>
+            <p className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">
+              {resources.filter(r => !r.isFolder).length} <span className="text-xs font-sans text-slate-500">tệp tin</span>
             </p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+        <div className="eg-cyber-card p-5 flex items-center gap-4">
+          <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-500/20">
             <HardDrive className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Tổng dung lượng tệp</p>
-            <p className="text-xl font-bold text-slate-900">
+            <p className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tổng dung lượng tệp</p>
+            <p className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">
               {formatBytes(resources.reduce((sum, r) => sum + (r.size || 0), 0))}
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Search Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+      {/* ─── 4. SEARCH BAR ─── */}
+      <motion.div variants={itemVariants} className="bg-white/95 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Tìm kiếm trong thư mục này..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#3781fc] outline-none transition-all"
           />
         </div>
-      </div>
+      </motion.div>
 
-      {/* Documents Grid */}
+      {/* ─── 5. DOCUMENTS GRID ─── */}
       {loading ? (
-        <div className="flex items-center justify-center p-12 bg-white rounded-xl border border-slate-100">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-          <span className="ml-3 text-slate-500">Đang tải tài liệu...</span>
+        <div className="flex items-center justify-center p-12 eg-cyber-card">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1951fc]"></div>
+          <span className="ml-3 text-xs font-bold text-slate-500">Đang tải tài liệu...</span>
         </div>
       ) : resources.length === 0 ? (
-        <div className="text-center p-12 bg-white rounded-xl border border-slate-100 flex flex-col items-center justify-center space-y-3">
-          <FolderOpen className="w-16 h-16 text-slate-300 animate-pulse" />
-          <p className="text-slate-500 font-medium">Thư mục trống hoặc không tìm thấy tài liệu phù hợp.</p>
+        <div className="text-center p-12 eg-cyber-card flex flex-col items-center justify-center space-y-3">
+          <FolderOpen className="w-16 h-16 text-slate-300 dark:text-slate-600 animate-pulse" />
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold">Thư mục trống hoặc không tìm thấy tài liệu phù hợp.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {resources.map((file) => (
-            <div
+            <motion.div
               key={file._id}
-              className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden group hover:border-emerald-500 transition-all relative flex flex-col justify-between"
+              variants={itemVariants}
+              whileHover={{ y: -4 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="eg-cyber-card overflow-hidden group transition-all relative flex flex-col justify-between"
             >
               <div className="p-5 flex-1 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-4">
                   <div 
-                    className="p-3 bg-slate-50 rounded-xl group-hover:bg-emerald-50 transition-colors cursor-pointer"
+                    className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl group-hover:bg-blue-500/10 transition-colors cursor-pointer border border-slate-200/50 dark:border-white/10"
                     onClick={() => file.isFolder && handleOpenFolder(file._id, file.name)}
                   >
                     {getFileIcon(file.type)}
@@ -503,24 +543,24 @@ export default function Resources() {
                         e.stopPropagation();
                         setActiveMenuId(activeMenuId === file._id ? null : file._id);
                       }}
-                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer"
                     >
-                      <MoreVertical className="w-5 h-5" />
+                      <MoreVertical className="w-4 h-4" />
                     </button>
                     
                     {activeMenuId === file._id && (
                       <div 
                         onClick={(e) => e.stopPropagation()} 
-                        className="absolute right-0 mt-1 w-44 bg-white rounded-xl border border-slate-100 shadow-xl z-50 py-1.5"
+                        className="absolute right-0 mt-1 w-44 bg-white dark:bg-[#0B0C1E] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 py-1.5 backdrop-blur-xl"
                       >
                         <button
                           onClick={() => {
                             handleOpenEditModal(file);
                             setActiveMenuId(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 flex items-center gap-2 cursor-pointer"
                         >
-                          <Edit2 className="w-4 h-4 text-slate-500" />
+                          <Edit2 className="w-3.5 h-3.5 text-blue-500" />
                           Chỉnh sửa
                         </button>
                         <button
@@ -528,9 +568,9 @@ export default function Resources() {
                             handleDeleteResource(file._id, file.name, file.isFolder);
                             setActiveMenuId(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2 cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4 text-rose-500" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                           Xóa tài liệu
                         </button>
                       </div>
@@ -541,12 +581,12 @@ export default function Resources() {
                 <div className="space-y-1 mb-4">
                   <h3 
                     onClick={() => file.isFolder && handleOpenFolder(file._id, file.name)}
-                    className={`font-bold text-slate-900 leading-snug truncate cursor-pointer ${file.isFolder ? 'hover:text-emerald-600 hover:underline' : ''}`}
+                    className={`font-black text-slate-900 dark:text-white leading-snug truncate cursor-pointer ${file.isFolder ? 'hover:text-blue-600 dark:hover:text-[#3781fc] hover:underline' : ''}`}
                     title={file.name}
                   >
                     {file.name}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                     <span>Tạo bởi: {file.owner?.fullName || 'Hệ thống'}</span>
                   </div>
                 </div>
@@ -556,7 +596,7 @@ export default function Resources() {
                   {getVisibilityLabel(file.visibility, file.sharedWith?.length || 0)}
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-200/60 dark:border-white/10 pt-3">
                   <div className="flex items-center gap-1">
                     <HardDrive className="w-3.5 h-3.5" />
                     {file.isFolder ? 'Thư mục' : formatBytes(file.size)}
@@ -569,20 +609,38 @@ export default function Resources() {
               </div>
 
               {/* Primary Actions based on file type */}
-              <div className="px-5 pb-5 pt-1 bg-slate-50/50 border-t border-slate-100 grid grid-cols-2 gap-2">
+              <div className="px-5 pb-5 pt-1 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-200/60 dark:border-white/10 grid grid-cols-2 gap-2">
                 {file.isFolder ? (
                   <button
                     onClick={() => handleOpenFolder(file._id, file.name)}
-                    className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-all"
+                    className="col-span-2 flex items-center justify-center gap-2 py-2 bg-blue-500/10 text-blue-700 dark:text-[#cbe9fd] border border-blue-500/20 text-xs font-bold rounded-full hover:bg-blue-500/20 transition-all cursor-pointer"
                   >
                     <FolderOpen className="w-4 h-4" />
-                    Mở thư mục
+                    <span>Mở thư mục</span>
                   </button>
                 ) : (
                   <>
                     <button
                       onClick={() => handleDownload(file)}
-                      className="col-span-1 flex items-center justify-center gap-2 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 border border-slate-200 transition-all shadow-sm"
+                      className="col-span-1 flex items-center justify-center gap-2 py-2 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Tải về</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenEditModal(file)}
+                      className="col-span-1 flex items-center justify-center gap-2 py-2 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 transition-all cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Chia sẻ</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
                     >
                       <Download className="w-4 h-4 text-slate-500" />
                       Tải về
@@ -701,7 +759,7 @@ export default function Resources() {
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 eg-btn-gradient text-white font-bold rounded-xl shadow-lg shadow-[var(--accent-glow)] flex items-center justify-center gap-2 cursor-pointer"
             >
               <Save className="w-5 h-5" />
               Tạo thư mục
@@ -961,7 +1019,7 @@ export default function Resources() {
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 eg-btn-gradient text-white font-bold rounded-xl shadow-lg shadow-[var(--accent-glow)] flex items-center justify-center gap-2 cursor-pointer"
             >
               <Save className="w-5 h-5" />
               Lưu thay đổi
@@ -969,6 +1027,6 @@ export default function Resources() {
           </div>
         </form>
       </Modal>
-    </div>
+    </motion.div>
   );
 }

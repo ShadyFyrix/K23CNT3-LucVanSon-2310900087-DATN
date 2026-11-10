@@ -88,16 +88,12 @@ export default function TeacherPortalPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans animate-in fade-in duration-300">
       {/* ── 1. DIGITAL LECTURER BADGE HEADER ── */}
-      <div className={`p-6 lg:p-8 rounded-3xl border relative overflow-hidden transition-all shadow-xl ${
-        isDark
-          ? 'bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-slate-800'
-          : 'bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-white border-indigo-200/80 shadow-md'
-      }`}>
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+      <div className="eg-hero-card p-6 lg:p-8 rounded-3xl relative overflow-hidden transition-all shadow-xl">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 rounded-full bg-[var(--color-electric)]/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="flex items-center space-x-5">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30 ring-4 ring-white/10 shrink-0">
+            <div className="w-20 h-20 rounded-2xl eg-btn-gradient text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-[var(--accent-glow)] ring-4 ring-white/10 shrink-0">
               {user?.fullName?.charAt(0)?.toUpperCase() || 'G'}
             </div>
 
@@ -106,7 +102,7 @@ export default function TeacherPortalPage() {
                 <h1 className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white">
                   {teacherProfile?.fullName || user?.fullName || 'Giảng viên / Giám thị'}
                 </h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                   {teacherProfile?.academicRank || 'Thạc sĩ'} · Cán bộ Coi thi
                 </span>
               </div>
@@ -127,29 +123,23 @@ export default function TeacherPortalPage() {
 
           {/* Quick Metrics */}
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Ca Coi Thi</div>
-              <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] font-mono mt-0.5">
                 {scheduledSessions.length}
               </div>
             </div>
 
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Chờ Duyệt Điểm</div>
-              <div className="text-xl font-black text-amber-500 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] font-mono mt-0.5">
                 {gradingSessions.length}
               </div>
             </div>
 
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Đề Thi Bộ Môn</div>
-              <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] font-mono mt-0.5">
                 {papers.length}
               </div>
             </div>
@@ -158,9 +148,7 @@ export default function TeacherPortalPage() {
               onClick={fetchTeacherData}
               disabled={loading}
               title="Đồng bộ dữ liệu"
-              className={`p-3 rounded-2xl border transition ${
-                isDark ? 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 text-slate-300' : 'bg-white/80 border-slate-200 hover:bg-slate-100 text-slate-700'
-              }`}
+              className="p-3 rounded-2xl eg-glass-pill transition cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -168,13 +156,13 @@ export default function TeacherPortalPage() {
         </div>
       </div>
 
-      {/* ── 2. NAVIGATION TABS ── */}
-      <div className="flex items-center space-x-2 border-b pb-3 border-slate-200 dark:border-slate-800">
+      {/* ── 2. NAVIGATION TABS (UNIFIED CAPSULE BAR) ── */}
+      <div className="flex flex-wrap items-center gap-2 border-b pb-3 border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('SHIFTS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'SHIFTS'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -184,9 +172,9 @@ export default function TeacherPortalPage() {
 
         <button
           onClick={() => setActiveTab('GRADING')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'GRADING'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -196,9 +184,9 @@ export default function TeacherPortalPage() {
 
         <button
           onClick={() => setActiveTab('PAPERS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'PAPERS'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -208,9 +196,9 @@ export default function TeacherPortalPage() {
 
         <button
           onClick={() => setActiveTab('PROFILE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'PROFILE'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -238,7 +226,7 @@ export default function TeacherPortalPage() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                     {s.code}
                   </span>
                   <span className="text-[10px] font-bold text-slate-400">
@@ -257,14 +245,14 @@ export default function TeacherPortalPage() {
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5 animate-pulse" />
+                  <span className="text-xs font-semibold text-emerald-500 flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
                     Sẵn sàng giám sát
                   </span>
 
                   <button
                     onClick={() => navigate(`/live-proctor/${s._id}`)}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition flex items-center space-x-1"
+                    className="px-4 py-1.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md shadow-[var(--accent-glow)] transition flex items-center space-x-1 cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     <span>Mở Buồng 3D</span>
@@ -294,7 +282,7 @@ export default function TeacherPortalPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono font-bold text-slate-400">{s.code}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                       Chờ Rà Soát
                     </span>
                   </div>
@@ -314,7 +302,7 @@ export default function TeacherPortalPage() {
 
                     <button
                       onClick={() => navigate(`/grading-review/${s._id}`)}
-                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition flex items-center space-x-1"
+                      className="px-4 py-1.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md shadow-[var(--accent-glow)] transition flex items-center space-x-1 cursor-pointer"
                     >
                       <FileCheck2 className="w-3.5 h-3.5" />
                       <span>Rà Soát & Duyệt Điểm</span>
@@ -336,7 +324,7 @@ export default function TeacherPortalPage() {
             </p>
             <button
               onClick={() => navigate('/exam-papers')}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center space-x-1.5"
+              className="px-4 py-2 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md shadow-[var(--accent-glow)] transition flex items-center space-x-1.5 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Soạn Đề Thi Mới</span>
@@ -352,7 +340,7 @@ export default function TeacherPortalPage() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                     {p.code}
                   </span>
                   <span className="text-[10px] font-bold text-slate-400">
@@ -374,7 +362,7 @@ export default function TeacherPortalPage() {
                   </span>
                   <button
                     onClick={() => navigate('/exam-papers')}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center space-x-1"
+                    className="text-[var(--color-azure)] hover:underline font-bold flex items-center space-x-1 cursor-pointer"
                   >
                     <span>Xem đề thi</span>
                     <ChevronRight className="w-3.5 h-3.5" />

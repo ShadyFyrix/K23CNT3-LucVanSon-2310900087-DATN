@@ -1434,74 +1434,71 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
       />
 
       {/* ========================================================================= */}
-      {/* 1. TOP MENU BAR (THANH TRÌNH ĐƠN STUDIO - 32px)                           */}
+      {/* 1. TOP MENU BAR (THANH TRÌNH ĐƠN STUDIO - CAPSULE BENTO GLASS)            */}
       {/* ========================================================================= */}
-      <header className={`h-8 px-3 border-b flex items-center justify-between text-xs shrink-0 z-40 ${
-        isDark ? 'bg-[#18181b] border-[#27272a] text-[#a1a1aa]' : 'bg-[#e4e4e7] border-[#d4d4d8] text-[#3f3f46]'
+      <header className={`h-11 px-4 border-b flex items-center justify-between text-xs shrink-0 z-40 transition-colors ${
+        isDark ? 'bg-[#0B0C1E]/90 border-white/10 text-slate-300' : 'bg-white/95 border-slate-200 text-slate-700'
       }`}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 font-bold text-slate-100">
-            <div className="w-4 h-4 rounded bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-[10px] text-slate-950 font-black">
+          <div className="flex items-center gap-2 font-bold">
+            <div className="w-6 h-6 rounded-lg eg-btn-gradient flex items-center justify-center text-[10px] text-white font-black shadow-sm">
               Eg
             </div>
-            <span className="tracking-tight text-white">Assessment Studio</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono font-normal">v3.5 SOLID</span>
+            <span className="tracking-tight text-slate-900 dark:text-white font-black">Assessment Studio</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full eg-glass-pill font-mono">v3.5 Solid</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2.5 text-[11px]">
+          <div className="hidden sm:flex items-center gap-2 text-[11px]">
             <button
               type="button"
               onClick={() => examFileInputRef.current?.click()}
-              className="hover:text-white transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-white/5"
+              className="eg-glass-pill px-3 py-1 text-slate-700 dark:text-[#cbe9fd] hover:text-white transition flex items-center gap-1.5 cursor-pointer"
               title="Tải file Word (.docx) hoặc PDF của trường để AI tự động bóc tách câu hỏi"
             >
-              <FolderUp className="w-3.5 h-3.5 text-cyan-400" />
+              <FolderUp className="w-3.5 h-3.5 text-[var(--color-azure)]" />
               <span>Nạp File Đề Trường</span>
             </button>
             <button
               type="button"
               onClick={() => setIsInsertDrawerOpen(true)}
-              className="hover:text-white transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-white/5"
+              className="eg-glass-pill px-3 py-1 text-slate-700 dark:text-[#cbe9fd] hover:text-white transition flex items-center gap-1.5 cursor-pointer"
             >
-              <ListPlus className="w-3.5 h-3.5 text-indigo-400" />
+              <ListPlus className="w-3.5 h-3.5 text-[var(--color-azure)]" />
               <span>Thêm Khối</span>
             </button>
-            <span className="text-slate-600">|</span>
             <button
               type="button"
               onClick={handleClearAllToBlank}
-              className="hover:text-amber-300 text-slate-400 transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-white/5"
+              className="px-3 py-1 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-1.5 cursor-pointer"
               title="Xóa toàn bộ các câu mẫu, bắt đầu tạo đề trắng từ đầu"
             >
-              <RefreshCw className="w-3 h-3 text-amber-400" />
+              <RefreshCw className="w-3 h-3 text-slate-400" />
               <span>Tạo Đề Trống</span>
             </button>
             <button
               type="button"
               onClick={handleLoadDemoPaper}
-              className="hover:text-emerald-300 text-slate-400 transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-white/5"
+              className="px-3 py-1 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-1.5 cursor-pointer"
               title="Nạp bộ đề mẫu minh họa 7 câu chuẩn đầy đủ các dạng bài"
             >
-              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <Sparkles className="w-3 h-3 text-[var(--color-azure)]" />
               <span>Nạp Đề Mẫu</span>
             </button>
-            <span className="text-slate-600">|</span>
             <button
               type="button"
               onClick={() => setShowStudentPreview(true)}
-              className="hover:text-white transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-white/5"
+              className="px-3 py-1 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-1.5 cursor-pointer"
             >
-              <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+              <GraduationCap className="w-3.5 h-3.5 text-[var(--color-azure)]" />
               <span>Góc Nhìn Thí Sinh</span>
             </button>
-            <span className="text-slate-600">|</span>
             <button
               type="button"
               onClick={() => setShowQuizGeneratorModal(true)}
-              className="px-2.5 py-0.5 rounded bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
-              title="Mở trình tạo đề thi trắc nghiệm Quiz nhanh: Kho đề có sẵn, dán văn bản AI phân tích, hoặc sinh câu trống"
+              className="px-3 py-1 rounded-full eg-glass-pill-subtle font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs text-[var(--color-azure)]"
+              title="Mở trình tạo đề thi trắc nghiệm Quiz nhanh"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <Zap className="w-3.5 h-3.5 text-[var(--color-azure)] fill-[var(--color-azure)]" />
               <span>Tạo Đề Cho Quiz</span>
             </button>
             <button
@@ -1509,25 +1506,24 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               onClick={() => {
                 const nextMode = !isQuizArenaMode;
                 setIsQuizArenaMode(nextMode);
-                toast(nextMode ? '🎮 Chế độ Quiz Arena: BẬT (Thời gian đếm ngược & phong cách Đấu Trường)' : 'Chế độ Đề thi truyền thống');
+                toast(nextMode ? '🎮 Chế độ Quiz Arena: BẬT' : 'Chế độ Đề thi truyền thống');
               }}
-              className={`px-2 py-0.5 rounded border transition flex items-center gap-1 cursor-pointer font-bold ${
+              className={`px-3 py-1 rounded-full border transition flex items-center gap-1.5 cursor-pointer font-bold ${
                 isQuizArenaMode
-                  ? 'bg-purple-600/30 border-purple-500 text-purple-300 shadow-sm'
-                  : 'bg-white/5 border-slate-700 text-slate-400 hover:text-white'
+                  ? 'eg-glass-pill shadow-xs'
+                  : 'border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-800 dark:hover:text-white'
               }`}
-              title="Chuyển đổi giao diện sang chế độ Đấu trường Quiz"
             >
-              <Gamepad2 className="w-3 h-3 text-purple-400" />
+              <Gamepad2 className="w-3.5 h-3.5 text-[var(--color-azure)]" />
               <span>Quiz: {isQuizArenaMode ? 'BẬT' : 'TẮT'}</span>
             </button>
             <button
               type="button"
               onClick={() => handleOpenQuizSimulator(0)}
-              className="hover:text-emerald-300 text-emerald-400 transition flex items-center gap-1 cursor-pointer px-2 py-0.5 rounded hover:bg-emerald-500/10 border border-emerald-500/30"
-              title="Mở màn hình thi thử Live Quiz Arena với âm thanh, đếm ngược và bảng điểm như Kahoot"
+              className="px-3 py-1 rounded-full eg-glass-pill font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Mở màn hình thi thử Live Quiz Arena"
             >
-              <Play className="w-3 h-3 fill-current" />
+              <Play className="w-3 h-3 fill-[var(--color-azure)] text-[var(--color-azure)]" />
               <span>Test Quiz Arena</span>
             </button>
           </div>
@@ -1539,7 +1535,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
             type="button"
             onClick={handleSaveAll}
             disabled={isSaving}
-            className="h-6 px-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 shadow-sm transition cursor-pointer"
+            className="h-7 px-4 rounded-full eg-btn-gradient text-white font-extrabold text-[11px] flex items-center gap-1.5 shadow-md transition cursor-pointer"
           >
             <Save className="w-3 h-3" />
             <span>{isSaving ? 'Đang lưu...' : 'Lưu Đề Thi'}</span>
@@ -1547,7 +1543,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 rounded flex items-center justify-center hover:bg-rose-500/20 hover:text-rose-400 transition cursor-pointer"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
             title="Đóng Studio"
           >
             <X className="w-4 h-4" />
@@ -1566,7 +1562,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="bg-transparent font-bold text-sm text-white px-2 py-0.5 rounded border border-transparent hover:border-[#3f3f46] focus:border-cyan-500 focus:outline-none max-w-sm sm:max-w-md truncate"
+            className="bg-transparent font-bold text-sm text-white px-2 py-0.5 rounded border border-transparent hover:border-[#3f3f46] focus:border-[var(--color-azure)] focus:outline-none max-w-sm sm:max-w-md truncate"
             title="Bấm để sửa tiêu đề đề thi"
           />
 
@@ -1576,7 +1572,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
           <select
             value={courseId}
             onChange={(e) => setCourseId(e.target.value)}
-            className="bg-[#18181b] border border-[#27272a] rounded px-2 py-0.5 text-[11px] text-cyan-300 font-medium focus:outline-none cursor-pointer"
+            className="bg-[#18181b] border border-[#27272a] rounded px-2 py-0.5 text-[11px] text-[var(--color-azure)] font-medium focus:outline-none cursor-pointer"
           >
             {coursesList.map((c) => (
               <option key={c._id} value={c._id}>
@@ -1593,7 +1589,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               type="button"
               onClick={() => setCanvasViewMode('SPLIT')}
               className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
-                canvasViewMode === 'SPLIT' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+                canvasViewMode === 'SPLIT' ? 'bg-[var(--color-electric)]/20 text-[var(--color-azure)] font-bold' : 'text-slate-400 hover:text-white'
               }`}
               title="Chia đôi màn hình: Đề gốc bên trái, Studio biên soạn bên phải"
             >
@@ -1603,7 +1599,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               type="button"
               onClick={() => setCanvasViewMode('CANVAS_ONLY')}
               className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
-                canvasViewMode === 'CANVAS_ONLY' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+                canvasViewMode === 'CANVAS_ONLY' ? 'bg-[var(--color-electric)]/20 text-[var(--color-azure)] font-bold' : 'text-slate-400 hover:text-white'
               }`}
               title="Toàn màn hình Studio"
             >
@@ -1613,7 +1609,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               type="button"
               onClick={() => setCanvasViewMode('PAPER_ONLY')}
               className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
-                canvasViewMode === 'PAPER_ONLY' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+                canvasViewMode === 'PAPER_ONLY' ? 'bg-[var(--color-electric)]/20 text-[var(--color-azure)] font-bold' : 'text-slate-400 hover:text-white'
               }`}
               title="Xem văn bản đề gốc trường"
             >
@@ -1648,7 +1644,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
             type="button"
             onClick={() => setIsInsertDrawerOpen(!isInsertDrawerOpen)}
             className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer group relative ${
-              isInsertDrawerOpen ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/30' : 'text-cyan-400 hover:bg-cyan-500/20'
+              isInsertDrawerOpen ? 'eg-btn-gradient text-white font-bold shadow-lg' : 'text-[var(--color-azure)] hover:bg-[var(--color-electric)]/20'
             }`}
             title="Mở bảng Thêm Khối Câu Hỏi"
           >
@@ -1769,7 +1765,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                       onClick={() => setInsertUseTemplate(false)}
                       className={`py-1.5 px-2 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                         !insertUseTemplate
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-xs'
+                          ? 'eg-btn-gradient text-white shadow-xs'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1781,7 +1777,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                       onClick={() => setInsertUseTemplate(true)}
                       className={`py-1.5 px-2 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                         insertUseTemplate
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                          ? 'eg-btn-gradient text-white shadow-xs'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1817,7 +1813,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                           }}
                           className={`p-2 rounded-lg flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold ring-1 ring-cyan-500/50'
+                              ? 'bg-[var(--color-electric)]/20 border-[var(--color-azure)] text-[var(--color-azure)] font-bold ring-1 ring-[var(--color-azure)]/50'
                               : 'bg-[#18181b] border-[#27272a] text-slate-400 hover:text-white hover:bg-white/5'
                           }`}
                         >
@@ -1845,11 +1841,11 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         setDraggedBlockType(null);
                         setIsCanvasDragOver(false);
                       }}
-                      className={`p-3.5 rounded-xl border ${currentItem.borderColor} ${currentItem.bgColor} space-y-2 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all`}
+                      className={`p-3.5 rounded-xl border border-[var(--color-azure)]/40 bg-[var(--color-electric)]/10 space-y-2 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-black/40 text-cyan-300">
+                          <div className="p-1.5 rounded-lg bg-black/40 text-[var(--color-azure)]">
                             <IconComp className="w-4 h-4" />
                           </div>
                           <div>
@@ -1857,7 +1853,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                             <span className="text-[10px] text-slate-400 font-mono">[{currentItem.badge}]</span>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-[var(--color-electric)]/20 text-[var(--color-azure)] text-[10px] font-mono font-bold">
                           {insertScore} đ
                         </span>
                       </div>
@@ -1879,7 +1875,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-bold text-slate-300">3. Số lượng khối cần thêm:</label>
-                    <span className="font-mono font-bold text-cyan-400">{insertBatchCount} khối</span>
+                    <span className="font-mono font-bold text-[var(--color-azure)]">{insertBatchCount} khối</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {[1, 3, 5, 10].map((num) => (
@@ -1889,7 +1885,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         onClick={() => setInsertBatchCount(num)}
                         className={`flex-1 py-1 rounded border font-mono text-[11px] transition cursor-pointer ${
                           insertBatchCount === num
-                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                            ? 'bg-[var(--color-electric)]/20 border-[var(--color-azure)] text-[var(--color-azure)] font-bold'
                             : 'bg-[#18181b] border-[#27272a] text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1903,7 +1899,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-bold text-slate-300">4. Điểm số mỗi khối:</label>
-                    <span className="font-mono font-bold text-amber-400">{insertScore} điểm</span>
+                    <span className="font-mono font-bold text-[var(--color-azure)]">{insertScore} điểm</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {[0.5, 1.0, 1.5, 2.0].map((sc) => (
@@ -1913,7 +1909,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         onClick={() => setInsertScore(sc)}
                         className={`flex-1 py-1 rounded border font-mono text-[11px] transition cursor-pointer ${
                           insertScore === sc
-                            ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold'
+                            ? 'bg-[var(--color-electric)]/20 border-[var(--color-azure)] text-[var(--color-azure)] font-bold'
                             : 'bg-[#18181b] border-[#27272a] text-slate-400 hover:text-white'
                         }`}
                       >
@@ -2058,7 +2054,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         key={q.stt}
                         onClick={() => setSelectedQuestionStt(q.stt)}
                         className={`p-2.5 rounded border mb-3 cursor-pointer transition ${
-                          isSelected ? 'border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-400' : 'border-slate-200 hover:border-slate-300'
+                          isSelected ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/10 ring-1 ring-[var(--color-azure)]' : 'border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <p className="font-sans font-semibold text-[11px]">
@@ -2072,7 +2068,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                               <div
                                 key={oIdx}
                                 className={`px-1.5 py-0.5 rounded truncate ${
-                                  q.correctAnswers.includes(oIdx) ? 'bg-emerald-100 text-emerald-800 font-bold' : ''
+                                  q.correctAnswers.includes(oIdx) ? 'bg-[var(--color-electric)]/15 text-[var(--color-azure)] font-bold' : ''
                                 }`}
                               >
                                 {String.fromCharCode(65 + oIdx)}. {opt || <span className="text-slate-400 italic">Phương án {String.fromCharCode(65 + oIdx)}...</span>}
@@ -2084,7 +2080,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         {/* Preview hình học nếu có */}
                         {q.type === 'GEOMETRY_CANVAS' && (
                           <div className="mt-1 p-1 bg-slate-50 rounded border border-slate-200 flex justify-center">
-                            <span className="text-[10px] text-indigo-600 font-mono">
+                            <span className="text-[10px] text-[var(--color-azure)] font-mono">
                               [Sơ đồ tam giác vuông AH² = BH·CH: BH={q.bhLength || 4}cm, CH={q.chLength || 9}cm]
                             </span>
                           </div>
@@ -2103,26 +2099,26 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               {/* Header Canvas Right */}
               <div className="h-8 px-4 border-b border-[#27272a] bg-[#121214] flex items-center justify-between text-[11px] text-slate-400 shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-cyan-400 font-bold">Khối #{currentSelectedQuestion.stt}</span>
+                  <span className="font-mono text-[var(--color-azure)] font-bold">Khối #{currentSelectedQuestion.stt}</span>
                   <span className="text-slate-300 font-semibold">• {getBlockName(currentSelectedQuestion.type)}</span>
                   {currentSelectedQuestion.prompt ? (
                     <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px]">
                       Đã có nội dung
                     </span>
                   ) : (
-                    <span className="px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">
+                    <span className="px-1.5 py-0.2 rounded bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30 text-[10px]">
                       Khung trống
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 font-mono text-[10px]">
-                  <span className="text-amber-400 font-bold">{currentSelectedQuestion.score} đ</span>
+                  <span className="text-[var(--color-azure)] font-bold">{currentSelectedQuestion.score} đ</span>
                   <span className="text-slate-600">|</span>
                   <button
                     type="button"
                     onClick={handleFillSampleForCurrent}
-                    className="text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-0.5"
+                    className="text-[var(--color-azure)] hover:underline cursor-pointer flex items-center gap-0.5"
                     title="Nạp dữ liệu mẫu tham khảo cho câu này"
                   >
                     <Sparkles className="w-3 h-3" />
@@ -2139,7 +2135,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDuplicateQuestion(currentSelectedIdx)}
-                    className="hover:text-cyan-400 cursor-pointer"
+                    className="hover:text-[var(--color-azure)] cursor-pointer"
                     title="Nhân bản khối này"
                   >
                     [Nhân Bản]
@@ -2263,7 +2259,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                       <button
                         type="button"
                         onClick={() => imageUploadInputRef.current?.click()}
-                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 eg-btn-gradient text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Upload className="w-3 h-3" />
                         <span>Tải ảnh từ máy</span>
@@ -2422,7 +2418,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRunCodeTestCases(currentSelectedIdx)}
-                        className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 eg-btn-gradient text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Play className="w-3 h-3 fill-current" />
                         <span>Chạy thử Test Cases</span>
@@ -2460,22 +2456,22 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 {/* Quiz Arena Countdown Time Selector */}
                 <div className={`p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
                   isQuizArenaMode
-                    ? 'bg-gradient-to-r from-amber-950/40 via-purple-950/30 to-slate-900 border-amber-500/40 shadow-sm'
+                    ? 'bg-gradient-to-r from-[var(--color-royal)]/30 to-transparent border-[var(--color-azure)]/40 shadow-sm'
                     : 'bg-[#202024] border-[#27272a]'
                 }`}>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--color-electric)]/20 text-[var(--color-azure)] border border-[var(--color-azure)]/30 flex items-center justify-center font-bold">
                       <Clock className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-2">
                         <span>Thời lượng đếm ngược:</span>
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-mono text-xs font-black shadow-xs">
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--color-electric)]/20 text-[var(--color-azure)] border border-[var(--color-azure)]/30 font-mono text-xs font-black shadow-xs">
                           {currentSelectedQuestion.timeLimitSeconds || 20} GIÂY
                         </span>
                         {isQuizArenaMode && (
-                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold flex items-center gap-1">
-                            <Flame className="w-3 h-3 text-amber-400" />
+                          <span className="px-2 py-0.5 rounded-full eg-glass-pill text-[10px] font-bold flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-[var(--color-azure)]" />
                             Đua Điểm Tốc Độ & Combo
                           </span>
                         )}
@@ -2499,7 +2495,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
                           (currentSelectedQuestion.timeLimitSeconds || 20) === sec
-                            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 ring-2 ring-amber-300 scale-105'
+                            ? 'bg-[var(--color-electric)] text-white shadow-md shadow-[var(--color-electric-rgb)]/30 ring-2 ring-[var(--color-azure)] scale-105'
                             : 'bg-[#18181b] text-slate-400 hover:text-white hover:bg-white/10 border border-[#27272a]'
                         }`}
                       >
@@ -2530,7 +2526,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                               return n;
                             });
                           }}
-                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-cyan-300 border border-slate-700 cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-[var(--color-electric)]/15 hover:bg-[var(--color-electric)]/25 text-[var(--color-azure)] text-[10px] border border-[var(--color-azure)]/30 cursor-pointer"
                         >
                           {currentSelectedQuestion.selectionMode === 'MULTIPLE' ? '☑ Đa Đáp Án' : '⦿ Đơn Đáp Án'}
                         </button>
@@ -2538,7 +2534,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                           <button
                             type="button"
                             onClick={() => handleAddOption(currentSelectedIdx)}
-                            className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                            className="px-2 py-0.5 rounded bg-[var(--color-electric)]/20 hover:bg-[var(--color-electric)]/30 text-[var(--color-azure)] border border-[var(--color-azure)]/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                             <span>Thêm ({String.fromCharCode(65 + currentSelectedQuestion.options.length)})</span>
@@ -2565,7 +2561,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                             key={oIdx}
                             className={`p-2.5 rounded-xl border flex items-center justify-between transition ${
                               isCorrect
-                                ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
+                                ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/15 shadow-sm'
                                 : 'border-[#27272a] bg-[#18181b] hover:bg-white/5'
                             }`}
                           >
@@ -2575,10 +2571,10 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                                 onClick={() => handleToggleAnswer(currentSelectedIdx, oIdx)}
                                 className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold shrink-0 transition cursor-pointer ${
                                   isCorrect
-                                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300'
+                                    ? 'eg-btn-gradient text-white shadow-md shadow-[var(--accent-glow)] ring-2 ring-[var(--color-azure)]/50'
                                     : isQuizArenaMode
                                     ? `${kahoot.bg} ${kahoot.text} shadow-xs hover:opacity-90`
-                                    : 'border border-slate-600 text-slate-400 hover:border-cyan-400 hover:text-white'
+                                    : 'border border-slate-600 text-slate-400 hover:border-[var(--color-azure)] hover:text-white'
                                 }`}
                                 title="Bấm để đặt làm đáp án đúng"
                               >
@@ -2604,14 +2600,14 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                                   });
                                 }}
                                 className={`text-xs bg-transparent focus:outline-none flex-1 ${
-                                  isCorrect ? 'text-emerald-300 font-semibold' : 'text-slate-200'
+                                  isCorrect ? 'text-[var(--color-azure)] font-semibold' : 'text-slate-200'
                                 }`}
                               />
                             </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
                               {isCorrect && (
-                                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-mono text-[9px] font-bold flex items-center gap-0.5">
-                                  <Check className="w-2.5 h-2.5" />
+                                <span className="px-2 py-0.5 rounded-full eg-btn-gradient text-white font-mono text-[9px] font-bold flex items-center gap-0.5 shadow-xs">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
                                   <span>Đúng</span>
                                 </span>
                               )}
@@ -2666,14 +2662,14 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
         <aside className={`w-80 border-l flex flex-col h-full shrink-0 z-30 shadow-xl ${
           isDark ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#d4d4d8]'
         }`}>
-          {/* Panel Header Tabs */}
-          <div className="h-9 px-2 border-b border-[#27272a] bg-[#121214] flex items-center justify-between text-xs shrink-0">
-            <div className="flex items-center gap-1">
+          {/* Panel Header Tabs (Capsule Bento Glass Style) */}
+          <div className="h-11 px-3 border-b border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-black/40 flex items-center justify-between text-xs shrink-0">
+            <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-200/50 dark:bg-black/30 border border-slate-200 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setActiveRightTab('LAYERS')}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer transition ${
-                  activeRightTab === 'LAYERS' ? 'bg-[#27272a] text-cyan-300' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  activeRightTab === 'LAYERS' ? 'eg-glass-pill shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -2683,8 +2679,8 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveRightTab('PROPERTIES')}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer transition ${
-                  activeRightTab === 'PROPERTIES' ? 'bg-[#27272a] text-cyan-300' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  activeRightTab === 'PROPERTIES' ? 'eg-glass-pill shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
@@ -2694,8 +2690,8 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveRightTab('INSERT_TAB')}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer transition ${
-                  activeRightTab === 'INSERT_TAB' ? 'bg-[#27272a] text-cyan-300' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  activeRightTab === 'INSERT_TAB' ? 'eg-glass-pill shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Bảng thêm khối trực tiếp"
               >
@@ -2710,7 +2706,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
             <div className="flex-1 flex flex-col min-h-0 bg-[#18181b]">
               <div className="p-2 border-b border-[#27272a] flex items-center justify-between text-[11px] text-slate-400 shrink-0">
                 <span className="font-semibold">Kéo thả để đổi thứ tự câu:</span>
-                <span className="text-cyan-400 font-mono font-bold">{questions.length} Khối</span>
+                <span className="text-[var(--color-azure)] font-mono font-bold">{questions.length} Khối</span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
@@ -2752,9 +2748,9 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                       onClick={() => setSelectedQuestionStt(q.stt)}
                       className={`p-2 rounded-lg border text-xs flex items-center justify-between transition-all cursor-pointer group ${
                         isSelected
-                          ? 'border-cyan-500 bg-cyan-500/10 text-white font-medium shadow-sm'
+                          ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/15 text-white font-medium shadow-sm'
                           : 'border-[#27272a] bg-[#141416] text-slate-300 hover:border-[#3f3f46]'
-                      } ${dropIndicatorLayerIdx === qIndex ? 'ring-2 ring-cyan-400 border-cyan-400' : ''}`}
+                      } ${dropIndicatorLayerIdx === qIndex ? 'ring-2 ring-[var(--color-azure)] border-[var(--color-azure)]' : ''}`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {/* Drag Handle */}
@@ -3251,18 +3247,18 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="bg-[#18181b] border border-amber-500/30 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl text-slate-200"
+              className="bg-[#0e1022] border border-white/10 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl text-slate-200"
             >
               {/* Header */}
-              <div className="p-4 bg-gradient-to-r from-amber-950/60 via-purple-950/50 to-slate-900 border-b border-[#27272a] flex items-center justify-between">
+              <div className="p-4 bg-gradient-to-r from-[var(--color-royal)]/40 via-[var(--color-electric)]/30 to-slate-900 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-slate-950 flex items-center justify-center font-bold shadow-lg shadow-amber-500/30">
-                    <Zap className="w-6 h-6 fill-current" />
+                  <div className="w-10 h-10 rounded-xl eg-btn-gradient text-white flex items-center justify-center font-bold shadow-md">
+                    <Zap className="w-5 h-5 fill-current" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-white flex items-center gap-2">
                       <span>Tạo Đề Thi Cho Quiz & Sàn Đấu Quiz Arena</span>
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded-full eg-glass-pill-subtle text-[10px] font-mono">
                         v3.5 Arena
                       </span>
                     </h3>
@@ -3274,26 +3270,26 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowQuizGeneratorModal(false)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Tabs */}
-              <div className="flex items-center gap-2 px-4 pt-3 border-b border-[#27272a] bg-[#141416]">
+              {/* Tabs (Capsule Pills) */}
+              <div className="flex items-center gap-2 p-3 border-b border-white/10 bg-black/40">
                 <button
                   type="button"
                   onClick={() => setQuizModalTab('PACKS')}
-                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                  className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer flex items-center gap-2 ${
                     quizModalTab === 'PACKS'
-                      ? 'border-amber-400 text-amber-300 bg-amber-500/10'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      ? 'eg-glass-pill shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Bộ Đề Mẫu Theo Chủ Đề</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-mono">
                     {PRESET_QUIZ_PACKS.length}
                   </span>
                 </button>
@@ -3301,15 +3297,15 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 <button
                   type="button"
                   onClick={() => setQuizModalTab('PASTE_TEXT')}
-                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                  className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer flex items-center gap-2 ${
                     quizModalTab === 'PASTE_TEXT'
-                      ? 'border-cyan-400 text-cyan-300 bg-cyan-500/10'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      ? 'eg-glass-pill shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>Dán Văn Bản Tự Động Bóc Tách</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-mono">
                     AI Parser
                   </span>
                 </button>
@@ -3317,15 +3313,15 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                 <button
                   type="button"
                   onClick={() => setQuizModalTab('BLANK_BATCH')}
-                  className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                  className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer flex items-center gap-2 ${
                     quizModalTab === 'BLANK_BATCH'
-                      ? 'border-purple-400 text-purple-300 bg-purple-500/10'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      ? 'eg-glass-pill shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <ListPlus className="w-3.5 h-3.5" />
                   <span>Sinh Đề Trống Hàng Loạt</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-mono">
                     Batch
                   </span>
                 </button>
@@ -3370,7 +3366,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                             <button
                               type="button"
                               onClick={() => handleLoadPresetQuizPack(pack)}
-                              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-full eg-btn-gradient text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
                             >
                               <Zap className="w-3 h-3 fill-current" />
                               <span>Nạp Vào Studio</span>
@@ -3474,7 +3470,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                               onClick={() => setBlankQuizTime(sec)}
                               className={`py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
                                 blankQuizTime === sec
-                                  ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                                  ? 'bg-[var(--color-electric)] text-white shadow-sm font-bold'
                                   : 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]'
                               }`}
                             >
@@ -3723,7 +3719,7 @@ export const EduTechExamBuilder: React.FC<EduTechExamBuilderProps> = ({
                   <button
                     type="button"
                     onClick={handleNextQuizSimulatorQuestion}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                    className="px-5 py-2 rounded-xl eg-btn-gradient text-white font-extrabold text-xs flex items-center gap-2 shadow-md cursor-pointer"
                   >
                     <span>Câu Tiếp Theo</span>
                     <ArrowRight className="w-4 h-4" />

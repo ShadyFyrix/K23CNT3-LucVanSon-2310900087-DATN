@@ -26,8 +26,12 @@ from bson import ObjectId
 # Nạp cấu hình môi trường
 load_dotenv()
 
+# Nạp Blueprint Giám sát Tư thế & Camera Phòng Thi (Surveillance Microservice)
+from surveillance import surveillance_bp
+
 app = Flask(__name__)
 CORS(app)
+app.register_blueprint(surveillance_bp)
 
 # Cấu hình kết nối
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
@@ -94,7 +98,12 @@ def index():
             "/api/flask/exam-sessions",
             "/api/flask/rooms",
             "/api/flask/stats",
-            "/api/flask/sync-from-mongo"
+            "/api/flask/sync-from-mongo",
+            "/api/surveillance/candidate/inspect-frame",
+            "/api/surveillance/cctv/register",
+            "/api/surveillance/cctv/stop",
+            "/api/surveillance/cctv/streams",
+            "/api/surveillance/metrics"
         ]
     })
 

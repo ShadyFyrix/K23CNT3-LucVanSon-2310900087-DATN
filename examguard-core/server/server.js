@@ -162,7 +162,8 @@ app.use(
 // ==============================
 // Middleware
 // ==============================
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
 // ==============================
@@ -243,16 +244,38 @@ async function startServer() {
       console.log(`⚡ Vite Dev Middleware (HMR) đã được tích hợp thành công trên cùng port ${PORT}`);
     } catch (viteErr) {
       console.warn(`⚠️ Vite dev middleware error, fallback sang dist:`, viteErr.message);
-      app.use(express.static(clientDist));
+      app.use(express.static(clientDist, {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          }
+        }
+      }));
       app.use((req, res, next) => {
         if (req.path.startsWith("/api")) return next();
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.sendFile(path.join(clientDist, "index.html"));
       });
     }
   } else {
-    app.use(express.static(clientDist));
+    app.use(express.static(clientDist, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      }
+    }));
     app.use((req, res, next) => {
       if (req.path.startsWith("/api")) return next();
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(clientDist, "index.html"));
     });
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'motion/react';
 import {
   Plus,
   Search,
@@ -16,7 +17,8 @@ import {
   GraduationCap,
   ScanFace,
   KeyRound,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { StudentForm } from '../components/forms/StudentForm';
@@ -245,53 +247,80 @@ export default function Students() {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.03 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } }
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Quản lý Sinh viên & Thí sinh</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40">
-              ExamGuard AI
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-16 font-sans select-none"
+    >
+      {/* ─── 1. BENTO HERO HEADER STAGE ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <Users className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Hệ Thống Thí Sinh & Face KYC
             </span>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">
-            Quản lý hồ sơ thí sinh, định danh sinh trắc học Face KYC và tài khoản dự thi trực tuyến.
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Quản Lý <span className="eg-text-gradient">Sinh Viên & Thí Sinh</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Quản lý hồ sơ thí sinh toàn trường, định danh sinh trắc học Face KYC 5 góc ArcFace và cấp phát tài khoản thi trực tuyến.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={handleBulkCreateAccounts}
             disabled={bulkLoading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all text-xs font-bold shadow-lg shadow-indigo-600/20 cursor-pointer active:scale-95 uppercase tracking-wider disabled:opacity-50"
+            className="eg-glass-pill px-4 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 disabled:opacity-50 shadow-md"
             title="Đồng bộ & cấp tài khoản thi (Pass: 123456) cho tất cả sinh viên"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 text-[var(--color-azure)]" />
             <span>{bulkLoading ? 'Đang cấp TK...' : '⚡ Cấp TK hàng loạt (Pass: 123456)'}</span>
           </button>
 
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-xs font-bold shadow-xs cursor-pointer active:scale-95 uppercase tracking-wider"
+            className="eg-glass-pill px-4 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md"
           >
-            <Download className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <Download className="w-4 h-4 text-[var(--color-azure)]" />
             <span>Xuất Excel / CSV</span>
           </button>
 
           <button
             onClick={() => { setEditingStudent(null); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all text-xs font-bold shadow-lg shadow-blue-600/20 cursor-pointer active:scale-95 uppercase tracking-wider"
+            className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Thêm sinh viên mới</span>
+            <span>Thêm sinh viên</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Bộ lọc và tìm kiếm */}
-      <div className="bg-white dark:bg-slate-900/90 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center backdrop-blur-md">
+      {/* ─── 2. SEARCH & FILTER TOOLBAR ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="bg-white/95 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col md:flex-row gap-4 justify-between items-center"
+      >
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-72">
             <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -300,7 +329,7 @@ export default function Students() {
               placeholder="Tìm theo MSSV, tên, email, lớp..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full pr-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[var(--color-azure)] transition-all"
               style={{ paddingLeft: '2.5rem' }}
             />
           </div>
@@ -308,7 +337,7 @@ export default function Students() {
           <select
             value={selectedDeptFilter}
             onChange={(e) => setSelectedDeptFilter(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-700 dark:text-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="px-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-[var(--color-azure)] transition-all cursor-pointer"
           >
             <option value="all">Tất cả Khoa / Viện</option>
             {departments.map(d => (
@@ -319,7 +348,7 @@ export default function Students() {
           <select
             value={selectedStatusFilter}
             onChange={(e) => setSelectedStatusFilter(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-700 dark:text-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="px-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-[var(--color-azure)] transition-all cursor-pointer"
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Đang theo học</option>
@@ -329,49 +358,55 @@ export default function Students() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-full border border-slate-200 dark:border-white/10">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-slate-900 shadow-xs text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`p-2 rounded-full transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-[var(--color-electric)] shadow-sm text-[var(--color-royal)] dark:text-white font-bold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
               title="Xem dạng lưới"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-slate-900 shadow-xs text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`p-2 rounded-full transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-[var(--color-electric)] shadow-sm text-[var(--color-royal)] dark:text-white font-bold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
               title="Xem dạng danh sách"
             >
               <ListIcon className="w-4 h-4" />
             </button>
           </div>
-          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 px-2">
             {filteredStudents.length} thí sinh
           </span>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Nội dung danh sách */}
+      {/* ─── 3. CONTENT DISPLAY (GRID OR LIST) ─── */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1951fc]"></div>
         </div>
       ) : filteredStudents.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="eg-cyber-card p-12 text-center">
           <GraduationCap className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Chưa có sinh viên nào</h3>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Không tìm thấy hồ sơ sinh viên phù hợp với bộ lọc hiện tại.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Không tìm thấy hồ sơ sinh viên phù hợp với bộ lọc hiện tại.</p>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStudents.map((student) => {
             const isKyc = student.isFaceKyc || student.userId?.isFaceRegistered;
             return (
-              <div key={student._id} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden hover:shadow-xl dark:hover:border-slate-700 transition-all group flex flex-col justify-between">
+              <motion.div
+                key={student._id}
+                variants={itemVariants}
+                whileHover={{ y: -4 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                className="eg-cyber-card overflow-hidden group flex flex-col justify-between"
+              >
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-800 flex items-center justify-center text-white font-black text-xl mr-4 shadow-md shadow-blue-600/20 shrink-0">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#0b2cb1] to-[#1951fc] flex items-center justify-center text-white font-black text-lg mr-3 shadow-md shadow-blue-600/20 shrink-0 border border-white/20">
                         {student.avatar ? (
                           <img src={student.avatar} alt="avatar" className="w-full h-full object-cover rounded-2xl" />
                         ) : (
@@ -379,25 +414,25 @@ export default function Students() {
                         )}
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight group-hover:text-[var(--color-azure)] transition-colors line-clamp-1">
                           {student.fullName}
                         </h3>
-                        <p className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 mt-1">
+                        <p className="text-xs font-mono font-bold text-[var(--color-azure)] mt-1">
                           MSSV: {student.studentCode || '---'}
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-90 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => { setEditingStudent(student); setIsModalOpen(true); }}
-                        className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                        className="p-1.5 text-[var(--color-azure)] hover:bg-[var(--color-electric)]/15 rounded-lg cursor-pointer transition-colors"
                         title="Sửa hồ sơ"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(student._id)}
-                        className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-white/10 rounded-lg cursor-pointer transition-colors"
                         title="Xóa hồ sơ"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -407,7 +442,7 @@ export default function Students() {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border ${STATUS_MAP[student.status]?.color || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${STATUS_MAP[student.status]?.color || 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300'}`}>
                         {STATUS_MAP[student.status]?.label || student.status}
                       </span>
                       {isKyc ? (
@@ -422,10 +457,10 @@ export default function Students() {
                             });
                             setIsFaceModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/40 px-2.5 py-1 rounded-xl border border-teal-200 dark:border-teal-800/50 transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/30 transition-all cursor-pointer"
                           title="Bấm để xem hoặc cập nhật lại khuôn mặt"
                         >
-                          <CheckCircle className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" /> Đã KYC 5 góc
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Đã KYC Face
                         </button>
                       ) : (
                         <button
@@ -439,10 +474,10 @@ export default function Students() {
                             });
                             setIsFaceModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-2.5 py-1 rounded-xl border border-blue-200 dark:border-blue-900/40 transition-all cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--color-azure)] bg-[var(--color-electric)]/15 hover:bg-[var(--color-electric)]/25 px-2.5 py-1 rounded-full border border-[var(--color-azure)]/30 transition-all cursor-pointer"
                           title="Bấm để quét webcam 5 góc khuôn mặt chuẩn KYC"
                         >
-                          <ScanFace className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Đăng ký Face ID
+                          <ScanFace className="w-3.5 h-3.5 text-[var(--color-azure)]" /> Đăng ký Face ID
                         </button>
                       )}
                     </div>
@@ -470,46 +505,46 @@ export default function Students() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50/80 dark:bg-slate-950/70 px-6 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                  <div className="flex-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 truncate">
-                    <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                <div className="px-6 py-3 bg-slate-50/70 dark:bg-white/[0.02] border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    <KeyRound className="w-3 h-3 text-indigo-500" />
                     <span>Pass: 123456</span>
                   </div>
                   <button
                     onClick={() => handleResetPassword(student)}
-                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                    className="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 text-[11px] font-bold rounded-full transition-all cursor-pointer"
                     title="Đặt lại mật khẩu về mặc định 123456"
                   >
                     Reset MK
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+        <motion.div variants={itemVariants} className="eg-cyber-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/70 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center w-12">STT</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Sinh viên</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Lớp & Khoa</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Định danh Face AI</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Trạng thái</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 text-right">Thao tác</th>
+                <tr className="bg-slate-100/90 dark:bg-white/[0.04] border-b border-slate-200 dark:border-white/10">
+                  <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-12">STT</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Sinh viên</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Lớp & Khoa</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Định danh Face AI</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
+              <tbody className="divide-y divide-slate-200/80 dark:divide-white/[0.06] text-sm">
                 {filteredStudents.map((student, index) => {
                   const isKyc = student.isFaceKyc || student.userId?.isFaceRegistered;
                   return (
-                    <tr key={student._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors group">
-                      <td className="px-4 py-3.5 text-center text-xs font-bold text-slate-400 dark:text-slate-500">{index + 1}</td>
+                    <tr key={student._id} className="hover:bg-blue-50/50 dark:hover:bg-white/[0.04] transition-colors group">
+                      <td className="px-4 py-3.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400">{index + 1}</td>
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0b2cb1] to-[#1951fc] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
                             {student.avatar ? (
                               <img src={student.avatar} alt="avatar" className="w-full h-full object-cover rounded-xl" />
                             ) : (
@@ -517,18 +552,18 @@ export default function Students() {
                             )}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                            <p className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#3781fc] transition-colors flex items-center gap-2">
                               {student.fullName}
                               {student.studentCode && (
-                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-900/40">
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-blue-500/10 text-blue-700 dark:text-[#cbe9fd] rounded border border-blue-500/20">
                                   {student.studentCode}
                                 </span>
                               )}
                             </p>
-                            <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                            <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                               {student.email && <span>{student.email}</span>}
                               {student.phone && <span>{student.phone}</span>}
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-900/40" title="Mật khẩu tài khoản đăng nhập mặc định là 123456">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20" title="Mật khẩu tài khoản đăng nhập mặc định là 123456">
                                 <KeyRound className="w-2.5 h-2.5 text-indigo-500" /> Pass: 123456
                               </span>
                             </div>
@@ -538,7 +573,7 @@ export default function Students() {
                       <td className="px-6 py-3.5">
                         <div className="text-xs">
                           <p className="font-bold text-slate-800 dark:text-slate-200">{student.class?.name || student.class?.code || 'Chưa phân lớp'}</p>
-                          <p className="text-slate-400 dark:text-slate-500">{student.department?.name || '---'}</p>
+                          <p className="text-slate-500 dark:text-slate-400">{student.department?.name || '---'}</p>
                         </div>
                       </td>
                       <td className="px-6 py-3.5">
@@ -554,10 +589,10 @@ export default function Students() {
                               });
                               setIsFaceModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/40 px-2.5 py-1 rounded-xl border border-teal-200 dark:border-teal-800/50 transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/30 transition-all cursor-pointer"
                             title="Bấm để xem hoặc cập nhật lại khuôn mặt"
                           >
-                            <ScanFace className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" /> Đã KYC 5 góc
+                            <ScanFace className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Đã KYC Face
                           </button>
                         ) : (
                           <button
@@ -571,15 +606,15 @@ export default function Students() {
                               });
                               setIsFaceModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-2.5 py-1 rounded-xl border border-blue-200 dark:border-blue-900/40 transition-all cursor-pointer shadow-2xs"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-[#cbe9fd] bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30 transition-all cursor-pointer"
                             title="Bật webcam quét 5 góc khuôn mặt chuẩn KYC"
                           >
-                            <ScanFace className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Đăng ký Face ID
+                            <ScanFace className="w-3.5 h-3.5 text-blue-600 dark:text-[#3781fc]" /> Đăng ký Face ID
                           </button>
                         )}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${STATUS_MAP[student.status]?.color || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${STATUS_MAP[student.status]?.color || 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'}`}>
                           {STATUS_MAP[student.status]?.label || student.status}
                         </span>
                       </td>
@@ -596,14 +631,14 @@ export default function Students() {
                               });
                               setIsFaceModalOpen(true);
                             }}
-                            className="p-1.5 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
                             title="Quét & Đăng ký Face ID (KYC)"
                           >
                             <ScanFace className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleResetPassword(student)}
-                            className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
                             title="Đặt lại mật khẩu về mặc định 123456"
                           >
                             <KeyRound className="w-4 h-4" />
@@ -619,21 +654,21 @@ export default function Students() {
                               });
                               setIsUserModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-[#3781fc] hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                             title="Phân quyền & Kiểm tra tài khoản User"
                           >
                             <ShieldCheck className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => { setEditingStudent(student); setIsModalOpen(true); }}
-                            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                            className="p-1.5 text-blue-600 dark:text-[#3781fc] hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors"
                             title="Sửa hồ sơ"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(student._id)}
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors"
                             title="Xóa hồ sơ"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -646,7 +681,7 @@ export default function Students() {
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Modal Thêm/Sửa Sinh viên */}
@@ -750,7 +785,7 @@ export default function Students() {
               type="button"
               disabled={exporting}
               onClick={handleDownload}
-              className="px-6 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer active:scale-95"
+              className="px-6 py-2.5 text-xs font-bold uppercase tracking-wider eg-btn-gradient text-white rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <Download className="w-4 h-4" />
               {exporting ? 'Đang xuất file...' : 'Tải về máy'}
@@ -774,6 +809,6 @@ export default function Students() {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

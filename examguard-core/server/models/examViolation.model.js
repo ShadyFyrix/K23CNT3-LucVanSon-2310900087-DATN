@@ -33,7 +33,13 @@ const ExamViolationSchema = new mongoose.Schema({
       'FULLSCREEN_EXIT',    // Thoát chế độ toàn màn hình (-10đ)
       'HEAD_POSE_PHONE',    // Cúi mặt nhìn điện thoại (-20đ)
       'SUSPICIOUS_SIDE',    // Liếc nhìn sang bài bạn (-10đ)
-      'IMPERSONATION_DETECTED' // Thi hộ (-50đ)
+      'IMPERSONATION_DETECTED', // Thi hộ (-50đ)
+      // Các sự kiện vi phạm giám sát thể chất & camera phòng thi (Surveillance Microservice)
+      'POSTURE_ABSENT',        // Rời khỏi vị trí ghế thi (-20đ)
+      'POSTURE_STANDING',      // Đứng dậy trong giờ thi (-15đ)
+      'POSTURE_COLLAPSE',      // Gục ngã xuống bàn / Sự cố y tế (0đ - Khẩn cấp)
+      'POSTURE_IRREGULAR_POSTURE', // Tư thế bất thường (-5đ)
+      'PROLONGED_IMMOBILITY'   // Bất động kéo dài quá 45s (-15đ / Video loop giả mạo)
     ],
     required: true 
   },

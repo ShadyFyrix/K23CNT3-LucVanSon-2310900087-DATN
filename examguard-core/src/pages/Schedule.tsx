@@ -304,20 +304,27 @@ export default function Schedule() {
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Lịch giảng dạy</h1>
-          <p className="text-slate-500 text-sm italic">Quản lý điều phối phòng học và giáo viên toàn hệ thống.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Lịch Giảng Dạy & <span className="eg-text-gradient">Phòng Học</span>
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Quản lý điều phối phòng học và giáo viên toàn hệ thống.</p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex bg-slate-100 p-1 rounded-xl">
-            <button onClick={() => setViewMode('day')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'day' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}>Ngày</button>
-            <button onClick={() => setViewMode('week')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'week' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}>Tuần</button>
-            <button onClick={() => setViewMode('list')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'list' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}>Danh sách</button>
+        <div className="flex items-center gap-3 bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-xl p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-white/10">
+          <div className="flex bg-slate-100 dark:bg-black/30 p-1 rounded-xl">
+            <button onClick={() => setViewMode('day')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer", viewMode === 'day' ? "eg-glass-pill shadow-xs" : "text-slate-500 dark:text-slate-400")}>Ngày</button>
+            <button onClick={() => setViewMode('week')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer", viewMode === 'week' ? "eg-glass-pill shadow-xs" : "text-slate-500 dark:text-slate-400")}>Tuần</button>
+            <button onClick={() => setViewMode('list')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer", viewMode === 'list' ? "eg-glass-pill shadow-xs" : "text-slate-500 dark:text-slate-400")}>Danh sách</button>
           </div>
           {viewMode !== 'list' ? (
-            <div className="flex items-center gap-1 border-l pl-4">
-              <button onClick={() => navigateDate('prev')} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"><ChevronLeft className="w-5 h-5" /></button>
-              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="font-bold text-slate-700 text-sm outline-none cursor-pointer" />
+            <div className="flex items-center gap-1 border-l border-slate-200 dark:border-white/10 pl-4">
+              <button onClick={() => navigateDate('prev')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 cursor-pointer"><ChevronLeft className="w-5 h-5" /></button>
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="font-bold text-slate-700 dark:text-slate-200 text-sm outline-none cursor-pointer bg-transparent" />
+              <button onClick={() => navigateDate('next')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 cursor-pointer"><ChevronRight className="w-5 h-5" /></button>
+            </div>
+          ) : null}
+        </div>
+      </div>
               <button onClick={() => navigateDate('next')} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"><ChevronRight className="w-5 h-5" /></button>
             </div>
           ) : (
@@ -388,7 +395,7 @@ export default function Schedule() {
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+              <Loader2 className="w-10 h-10 animate-spin text-[var(--color-azure)] mb-4" />
               <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Đang tải dữ liệu lịch học...</p>
             </div>
           ) : viewMode === 'list' ? (
@@ -415,12 +422,12 @@ export default function Schedule() {
                             <span className="text-sm font-bold text-slate-700">{new Date(s.startTime).toLocaleDateString('vi-VN')}</span>
                           </td>
                           <td className="p-4">
-                            <span className="font-bold text-[11px] text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                            <span className="font-bold text-[11px] text-[var(--color-azure)] bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 px-2.5 py-1 rounded-lg">
                               {formatTime(s.startTime)} - {formatTime(s.endTime)}
                             </span>
                           </td>
                           <td className="p-4">
-                            <p className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{s.class?.name || s.title}</p>
+                            <p className="text-sm font-bold text-slate-800 group-hover:text-[var(--color-azure)] transition-colors">{s.class?.name || s.title}</p>
                             {s.sessionNumber && <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Buổi {s.sessionNumber}</p>}
                           </td>
                           <td className="p-4">

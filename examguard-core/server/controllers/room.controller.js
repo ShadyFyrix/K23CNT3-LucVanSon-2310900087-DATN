@@ -35,3 +35,12 @@ exports.deleteRoom = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+exports.analyzeRoomPhoto = async (req, res) => {
+  try {
+    const data = await roomService.analyzeRoomPhoto(req.body.image);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

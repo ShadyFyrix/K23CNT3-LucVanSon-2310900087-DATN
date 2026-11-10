@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
 import {
-  Plus, Search, Book, Clock,
-  Edit2, Trash2, Loader2, Tag, Layers, Hash, Award, CheckCircle
+  Plus, Search, BookOpen, Clock,
+  Edit2, Trash2, Loader2, Award, CheckCircle, BookMarked
 } from 'lucide-react';
 import { apiClient } from '../api/apiClient';
 import { Modal } from '../components/Modal';
@@ -50,65 +51,110 @@ export default function Courses() {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } }
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Học Phần & Môn Thi</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">
-            Quản lý chương trình đào tạo, học phần tín chỉ, khoa phụ trách và đề cương thi.
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-16 font-sans select-none"
+    >
+      {/* ─── 1. BENTO HERO HEADER STAGE ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <BookMarked className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Chương Trình Đào Tạo & Khảo Thí
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Học Phần & <span className="eg-text-gradient">Môn Thi</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Quản lý chương trình đào tạo, học phần tín chỉ, khoa phụ trách và liên kết ma trận ngân hàng câu hỏi.
           </p>
         </div>
+
         {canManageCourses && (
           <button
             onClick={() => { setEditingCourse(null); setIsModalOpen(true); }}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-lg shadow-blue-600/25 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
+            className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            Thêm học phần mới
+            <span>Thêm học phần mới</span>
           </button>
         )}
-      </header>
+      </motion.div>
 
-      <div className="bg-white dark:bg-slate-900/90 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex gap-4 backdrop-blur-md">
+      {/* ─── 2. SEARCH TOOLBAR ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="bg-white/95 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex gap-4 items-center"
+      >
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Tìm theo tên học phần hoặc mã môn học (VD: IT201)..."
-            className="w-full pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-full pr-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-[var(--color-azure)] transition-all"
             style={{ paddingLeft: '2.6rem' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-      </div>
+        <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 px-2 shrink-0">
+          {courses.length} Học phần
+        </span>
+      </motion.div>
 
+      {/* ─── 3. COURSE CARDS GRID ─── */}
       {loading ? (
         <div className="flex justify-center p-20">
-          <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+          <Loader2 className="w-10 h-10 animate-spin text-[var(--color-azure)]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course: any) => (
-            <div key={course._id} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden hover:shadow-xl dark:hover:border-slate-700 transition-all group flex flex-col justify-between">
+            <motion.div
+              key={course._id}
+              variants={itemVariants}
+              whileHover={{ y: -4 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="eg-cyber-card overflow-hidden group flex flex-col justify-between"
+            >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <Book className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--color-electric)]/15 border border-[var(--color-azure)]/30 flex items-center justify-center text-[var(--color-azure)] shadow-sm">
+                    <BookOpen className="w-6 h-6" />
                   </div>
                   {canManageCourses && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-90 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => { setEditingCourse(course); setIsModalOpen(true); }} 
-                        className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors"
+                        className="p-1.5 text-[var(--color-azure)] hover:bg-[var(--color-electric)]/15 rounded-lg cursor-pointer transition-colors"
                         title="Sửa học phần"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDelete(course._id, course.name)} 
-                        className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors"
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-white/10 rounded-lg cursor-pointer transition-colors"
                         title="Xóa học phần"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -117,50 +163,52 @@ export default function Courses() {
                   )}
                 </div>
 
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{course.name}</h3>
-                <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4">
-                  Mã môn: {course.courseCode || course.code || 'Chưa có'}
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1 group-hover:text-[var(--color-azure)] transition-colors line-clamp-1">
+                  {course.name}
+                </h3>
+                <p className="text-xs font-mono font-bold text-[var(--color-azure)] uppercase tracking-wider mb-4">
+                  Mã môn: {course.courseCode || course.code || 'CHƯA_CÓ'}
                 </p>
 
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 bg-blue-50/60 dark:bg-blue-950/40 rounded-2xl border border-blue-100 dark:border-blue-900/40">
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase mb-1 flex items-center gap-1">
+                    <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/70 dark:border-white/5">
+                      <p className="text-[10px] text-[var(--color-azure)] font-bold uppercase mb-1 flex items-center gap-1">
                         <Award className="w-3 h-3" /> Số tín chỉ
                       </p>
-                      <p className="text-sm font-black text-blue-900 dark:text-blue-200">
+                      <p className="text-sm font-black text-slate-900 dark:text-white">
                         {course.credits || 3} tín chỉ
                       </p>
                     </div>
-                    <div className="p-3 bg-teal-50/60 dark:bg-teal-950/40 rounded-2xl border border-teal-100 dark:border-teal-900/40">
-                      <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase mb-1 flex items-center gap-1">
+                    <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/70 dark:border-white/5">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase mb-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" /> Thời lượng
                       </p>
-                      <p className="text-sm font-black text-teal-900 dark:text-teal-200">
+                      <p className="text-sm font-black text-slate-900 dark:text-white">
                         {course.duration || '45 tiết'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border ${
+                <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between">
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase border ${
                     course.status === 'active' 
-                      ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/60' 
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' 
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
                   }`}>
                     {course.status === 'active' ? 'Đang giảng dạy' : 'Tạm dừng'}
                   </span>
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">
                       {course.department?.name || course.category || 'Khoa CNTT'}
                     </span>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingCourse ? "Cập nhật học phần" : "Thêm học phần mới"}>
@@ -170,6 +218,6 @@ export default function Courses() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
-    </div>
+    </motion.div>
   );
 }

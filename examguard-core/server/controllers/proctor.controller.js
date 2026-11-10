@@ -3,6 +3,7 @@ const ExamSession = require('../models/examSession.model');
 const ExamRoom = require('../models/examRoom.model');
 const ExamStudent = require('../models/examStudent.model');
 const ExamViolation = require('../models/examViolation.model');
+const AiPoseSurveillanceLog = require('../models/aiPoseSurveillanceLog.model');
 const Course = require('../models/course.model');
 const Student = require('../models/student.model');
 const Teacher = require('../models/teacher.model');
@@ -690,6 +691,137 @@ exports.verifyCheckIn = async (req, res) => {
       similarity: error.similarity ?? 0,
       message: error.message
     });
+  }
+};
+
+// 11. Nhận Webhook từ Flask Surveillance Microservice (Giám sát Tư thế & Bất động CCTV / Webcam)
+exports.handleSurveillanceWebhook = async (req, res) => {
+  try {
+    const { entity_id, event_type, severity, penalty, source, metadata, timestamp } = req.body;
+
+    // Kiểm tra khóa bảo mật nội bộ
+    const internalKey = req.headers['x-internal-ai-key'];
+    const expectedKey = process.env.INTERNAL_AI_SECRET || 'FaceAI_Internal_Microservice_Secret_Key_999';
+    if (internalKey && internalKey !== expectedKey) {
+      return res.status(403).json({ success: false, message: 'Invalid internal AI key' });
+    }
+
+    if (!entity_id || !event_type) {
+      return res.status(400).json({ success: false, message: 'Missing entity_id or event_type' });
+    }
+
+    // A. Nếu là vi phạm từ camera phòng thi (CCTV)
+    if (source === 'CCTV_SURVEILLANCE' || entity_id.startsWith('room_')) {
+      const roomId = entity_id.replace(/^room_/, '');
+      socketService.emitRoomBroadcast(roomId, 'proctor:cctv_alert', {
+        roomId,
+        eventType: event_type,
+        severity: severity || 'HIGH',
+        metadata: metadata || {},
+        timestamp: timestamp || new Date()
+      });
+      return res.json({ success: true, processed: 'CCTV_ALERT_BROADCASTED' });
+    }
+
+    // B. Nếu là vi phạm từ máy thí sinh (Candidate)
+    const examStudent = await ExamStudent.findById(entity_id).populate('session').populate('student');
+    if (!examStudent) {
+      return res.status(404).json({ success: false, message: 'Thí sinh không tồn tại' });
+    }
+
+    // Kiểm tra Proctor Override: Nếu Giám thị đang đứng tại bàn -> Miễn trừ
+    if (examStudent.proctorOverrideUntil && new Date(examStudent.proctorOverrideUntil) > new Date()) {
+      return res.json({ success: true, message: 'Proctor Override đang hoạt động, bỏ qua vi phạm.' });
+    }
+
+    const appliedPenalty = penalty || 0;
+    const newScore = Math.max(0, examStudent.trustScore - appliedPenalty);
+    examStudent.trustScore = newScore;
+    await examStudent.save();
+
+    // Tạo bản ghi vi phạm trong MongoDB
+    const violation = await ExamViolation.create({
+      session: examStudent.session._id,
+      examStudent: examStudent._id,
+      student: examStudent.student._id,
+      type: event_type,
+      severity: severity || 'MEDIUM',
+      penalty: appliedPenalty,
+      isProctorPresence: false,
+      proctorName: '',
+      snapshotUrl: metadata?.snapshotUrl || '',
+      metadata: metadata || {},
+      timestamp: new Date()
+    });
+
+    // Lưu trữ telemetry động học chuyên sâu vào collection ai_pose_surveillance_logs
+    try {
+      await AiPoseSurveillanceLog.create({
+        sessionId: examStudent.session._id,
+        examStudentId: examStudent._id,
+        roomId: examStudent.session?.room?.toString() || 'ONLINE_ROOM',
+        source: source || 'CANDIDATE_WEBCAM',
+        postureState: event_type.replace(/^POSTURE_/, ''),
+        isImmobile: event_type === 'PROLONGED_IMMOBILITY',
+        immobileDurationSec: metadata?.immobile_duration || 0,
+        motionEnergy: metadata?.motion_energy || 0,
+        confidence: metadata?.confidence || 0,
+        angles: {
+          torsoTilt: metadata?.angles?.torso_tilt,
+          hipAngle: metadata?.angles?.hip_angle,
+          kneeAngle: metadata?.angles?.knee_angle
+        },
+        engine: metadata?.engine || 'HYBRID_ENGINE'
+      });
+    } catch (logErr) {
+      console.warn('Lỗi ghi AiPoseSurveillanceLog:', logErr.message);
+    }
+
+    const violationPayload = {
+      violationId: violation._id,
+      examStudentId: examStudent._id,
+      studentId: examStudent.student._id,
+      candidateCode: examStudent.candidateCode,
+      studentName: examStudent.student?.fullName || examStudent.student?.name || 'Thí sinh',
+      seatRow: examStudent.seatRow,
+      seatCol: examStudent.seatCol,
+      type: event_type,
+      severity: severity || 'MEDIUM',
+      penalty: appliedPenalty,
+      newTrustScore: newScore,
+      snapshotUrl: violation.snapshotUrl,
+      createdAt: violation.createdAt
+    };
+
+    const sessionIdStr = examStudent.session._id.toString();
+    socketService.emitViolation(sessionIdStr, violationPayload);
+    socketService.emitStudentUpdate(sessionIdStr, {
+      examStudentId: examStudent._id,
+      candidateCode: examStudent.candidateCode,
+      trustScore: newScore,
+      status: examStudent.status
+    });
+
+    socketService.emitRoomBroadcast(sessionIdStr, 'proctor:posture_alert', {
+      examStudentId: examStudent._id.toString(),
+      candidateCode: examStudent.candidateCode,
+      seatRow: examStudent.seatRow,
+      seatCol: examStudent.seatCol,
+      postureEvent: event_type,
+      severity: severity || 'MEDIUM',
+      penalty: appliedPenalty,
+      newTrustScore: newScore,
+      timestamp: new Date()
+    });
+
+    return res.json({
+      success: true,
+      processed: 'CANDIDATE_VIOLATION_LOGGED',
+      newTrustScore: newScore
+    });
+  } catch (error) {
+    console.error('Lỗi handleSurveillanceWebhook:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

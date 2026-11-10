@@ -1247,7 +1247,7 @@ export default function TakeExam() {
               <button
                 onClick={() => fetchExam()}
                 disabled={loading}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+                className="flex-1 py-3 px-4 eg-btn-gradient text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 <span>Kiểm Tra Lại Trạng Thái Bàn Thi</span>
@@ -1286,20 +1286,20 @@ export default function TakeExam() {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Ambient glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 right-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-[var(--color-electric)]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-80 h-80 bg-[var(--color-azure)]/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
         <div className="max-w-6xl w-full mx-auto flex items-center justify-between pb-4 border-b border-slate-800/80 relative z-10">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <div className="w-10 h-10 rounded-xl eg-btn-gradient flex items-center justify-center shadow-lg shadow-[var(--accent-glow)]">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-base font-bold text-white flex items-center space-x-2">
                 <span>EXAMGUARD AI</span>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1 font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--color-electric)]/20 text-[var(--color-azure)] border border-[var(--color-azure)]/30 flex items-center space-x-1 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-azure)] animate-pulse" />
                   <span>PHÒNG CHỜ THI TRỰC TUYẾN</span>
                 </span>
               </h1>
@@ -1310,7 +1310,7 @@ export default function TakeExam() {
           <div className="flex items-center space-x-3 text-xs font-mono">
             <div className="hidden sm:block text-right">
               <span className="text-slate-400 block">{examData?.session?.roomName}</span>
-              <span className="text-cyan-400 font-bold">Mã ca: {examData?.session?.code}</span>
+              <span className="text-[var(--color-azure)] font-bold">Mã ca: {examData?.session?.code}</span>
             </div>
             <button
               onClick={() => {
@@ -1329,12 +1329,12 @@ export default function TakeExam() {
         <div className="max-w-6xl w-full mx-auto my-auto relative z-10 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Left Column (7 cols): Hero Countdown Timer */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-slate-900/90 border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="bg-slate-900/90 border border-[var(--color-azure)]/30 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-electric)]/10 rounded-full blur-2xl pointer-events-none" />
 
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <span className="text-xs font-bold text-cyan-400 flex items-center space-x-1.5 tracking-wider uppercase">
-                  <Clock className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+                <span className="text-xs font-bold text-[var(--color-azure)] flex items-center space-x-1.5 tracking-wider uppercase">
+                  <Clock className="w-4 h-4 text-[var(--color-azure)] animate-spin" style={{ animationDuration: '6s' }} />
                   <span>ĐỒNG HỒ ĐẾM NGƯỢC GIỜ PHÁT ĐỀ</span>
                 </span>
                 <span className="text-[11px] font-mono text-slate-400">
@@ -1746,7 +1746,7 @@ export default function TakeExam() {
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => navigate(`/exam-result/${examData?.examStudent?.id || 'fallback_student'}`)}
-                className="py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/20 transition active:scale-95 flex items-center justify-center space-x-1.5"
+                className="py-2.5 px-4 eg-btn-gradient text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
               >
                 <Eye className="w-4 h-4" />
                 <span>Xem Trạng Thái Điểm</span>
@@ -1887,9 +1887,9 @@ export default function TakeExam() {
           }`}>
             <button
               onClick={() => setWorkspaceMode('SPLIT_FILE')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
                 workspaceMode === 'SPLIT_FILE'
-                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  ? 'bg-[var(--color-electric)] text-white shadow-sm font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Split View: Xem tài liệu đề thi song song với công thức và bài làm"
@@ -1899,9 +1899,9 @@ export default function TakeExam() {
             </button>
             <button
               onClick={() => setWorkspaceMode('QUIZ_CARDS')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
                 workspaceMode === 'QUIZ_CARDS'
-                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  ? 'bg-[var(--color-electric)] text-white shadow-sm font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Novagenius Quiz: Thẻ câu hỏi trắc nghiệm tương tác"
@@ -1916,10 +1916,10 @@ export default function TakeExam() {
             timeLeft < 300
               ? 'bg-rose-500/10 border-rose-500/40 text-rose-500 animate-pulse'
               : isDark
-              ? 'bg-slate-900 border-slate-800 text-teal-300'
-              : 'bg-white border-slate-200 text-teal-700'
+              ? 'bg-slate-900 border-slate-800 text-[var(--color-azure)]'
+              : 'bg-white border-slate-200 text-[var(--color-royal)]'
           }`}>
-            <Clock className="w-3.5 h-3.5 text-teal-500" />
+            <Clock className="w-3.5 h-3.5 text-[var(--color-azure)]" />
             <span className="text-sm font-extrabold">{formatTime(timeLeft)}</span>
             <span className="text-[10px] text-slate-400 font-sans hidden sm:inline">
               / {examData.session.durationMinutes}:00
@@ -1933,7 +1933,7 @@ export default function TakeExam() {
           <div className={`hidden xl:flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs ${
             isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'
           }`}>
-            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-[var(--color-electric)] text-white font-bold text-[10px] flex items-center justify-center">
               {examData.student.name?.slice(0, 2).toUpperCase() || 'TS'}
             </div>
             <div className="text-left">
@@ -2110,7 +2110,7 @@ export default function TakeExam() {
                     // Fallback for docx or other formats
                     return (
                       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto">
-                        <div className="w-16 h-16 rounded-3xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/10">
+                        <div className="w-16 h-16 rounded-3xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/20 flex items-center justify-center mb-4 shadow-lg shadow-[var(--accent-glow)]">
                           <FileText className="w-8 h-8" />
                         </div>
                         <h3 className="text-base font-bold text-white mb-1.5">{examData.examPaper.fileName || 'Tệp Đề Thi Đính Kèm'}</h3>
@@ -2122,7 +2122,7 @@ export default function TakeExam() {
                           target="_blank"
                           rel="noreferrer"
                           download
-                          className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95"
+                          className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl eg-btn-gradient text-white font-bold text-xs shadow-lg shadow-[var(--accent-glow)] transition active:scale-95"
                         >
                           <Download className="w-4 h-4" />
                           <span>Tải / Mở Tệp Đề Thi</span>
@@ -2135,7 +2135,7 @@ export default function TakeExam() {
                   <div className="p-6 max-w-3xl w-full space-y-6">
                     <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
                       <span>Đang hiển thị đề thi dạng văn bản liên tục. Thí sinh đọc đề bên trái và tô đáp án ở phiếu bên phải.</span>
-                      <span className="font-bold text-cyan-400">{examData.questions.length} câu</span>
+                      <span className="font-bold text-[var(--color-azure)]">{examData.questions.length} câu</span>
                     </div>
                     {examData.questions.map((q, idx) => (
                       <div
@@ -2143,12 +2143,12 @@ export default function TakeExam() {
                         onClick={() => setCurrentIdx(idx)}
                         className={`p-5 rounded-2xl border transition-all ${
                           currentIdx === idx
-                            ? 'bg-slate-900/90 border-cyan-500/60 ring-1 ring-cyan-500/30 shadow-lg'
+                            ? 'bg-slate-900/90 border-[var(--color-azure)]/60 ring-1 ring-[var(--color-azure)]/30 shadow-lg'
                             : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-cyan-400">Câu {idx + 1} ({q.score} điểm)</span>
+                          <span className="text-xs font-bold text-[var(--color-azure)]">Câu {idx + 1} ({q.score} điểm)</span>
                           {flagged[idx] && <Bookmark className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
                         </div>
                         <div className="text-sm text-slate-200 font-medium whitespace-pre-line mb-3">
@@ -2169,12 +2169,12 @@ export default function TakeExam() {
                                   }}
                                   className={`p-2.5 rounded-xl border flex items-center space-x-2 cursor-pointer transition ${
                                     isSelected
-                                      ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-200 font-semibold'
+                                      ? 'bg-[var(--color-electric)]/20 border-[var(--color-azure)]/60 text-[var(--color-azure)] font-semibold'
                                       : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
                                   }`}
                                 >
                                   <span className={`w-6 h-6 rounded-lg text-[11px] font-bold flex items-center justify-center shrink-0 ${
-                                    isSelected ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                                    isSelected ? 'eg-btn-gradient text-white' : 'bg-slate-800 text-slate-400'
                                   }`}>
                                     {letter}
                                   </span>
@@ -2218,7 +2218,7 @@ export default function TakeExam() {
                   </div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-300"
+                      className="h-full eg-btn-gradient rounded-full transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
                     ></div>
                   </div>
@@ -2229,7 +2229,7 @@ export default function TakeExam() {
                   <button
                     onClick={() => setFilterTab('ALL')}
                     className={`flex-1 py-1 rounded-md text-center font-medium transition ${
-                      filterTab === 'ALL' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400 hover:text-white'
+                      filterTab === 'ALL' ? 'eg-btn-gradient text-white font-bold' : 'bg-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
                     Tất cả ({totalCount})
@@ -2259,7 +2259,7 @@ export default function TakeExam() {
                     const isFlag = flagged[idx];
                     const isCur = currentIdx === idx;
                     let pillClass = 'bg-slate-800 text-slate-400 hover:bg-slate-700';
-                    if (isCur) pillClass = 'bg-cyan-500 text-slate-950 font-bold ring-1 ring-cyan-300';
+                    if (isCur) pillClass = 'eg-btn-gradient text-white font-bold ring-1 ring-[var(--color-azure)]';
                     else if (isFlag) pillClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold';
                     else if (isAns) pillClass = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold';
 
@@ -2453,7 +2453,7 @@ export default function TakeExam() {
                   <button
                     onClick={() => setFilterTab('ALL')}
                     className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                      filterTab === 'ALL' ? 'bg-cyan-500 text-slate-950 font-bold shadow' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      filterTab === 'ALL' ? 'eg-btn-gradient text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     Tất cả ({totalCount})
@@ -2492,7 +2492,7 @@ export default function TakeExam() {
                       type="checkbox"
                       checked={autoAdvance}
                       onChange={e => setAutoAdvance(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
+                      className="rounded bg-slate-800 border-slate-700 text-[var(--color-azure)] focus:ring-0"
                     />
                     <span>Tự động qua câu tiếp theo</span>
                   </label>
@@ -2510,7 +2510,7 @@ export default function TakeExam() {
 
                   let btnClass = 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700';
                   if (isCur) {
-                    btnClass = 'ring-2 ring-cyan-400 bg-cyan-500/20 text-cyan-300 font-bold border-cyan-500/50 shadow-md shadow-cyan-500/20';
+                    btnClass = 'ring-2 ring-[var(--color-azure)] bg-[var(--color-electric)]/20 text-[var(--color-azure)] font-bold border-[var(--color-azure)]/50 shadow-md shadow-[var(--accent-glow)]';
                   } else if (isFlag) {
                     btnClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold';
                   } else if (isAns) {
@@ -2536,8 +2536,8 @@ export default function TakeExam() {
                 {/* Header Thẻ câu hỏi */}
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                   <div className="flex items-center space-x-3">
-                    <span className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-600/20 to-indigo-600/20 border border-cyan-500/30 text-cyan-300 text-xs font-bold rounded-xl flex items-center space-x-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="px-3.5 py-1.5 bg-[var(--color-electric)]/15 border border-[var(--color-azure)]/30 text-[var(--color-azure)] text-xs font-bold rounded-xl flex items-center space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                       <span>CÂU HỎI {currentIdx + 1} / {totalCount}</span>
                     </span>
                     <span className="text-xs text-slate-400 font-medium">({currentQ.score} điểm)</span>
@@ -2568,7 +2568,7 @@ export default function TakeExam() {
                 {currentQ.image && (
                   <div className="my-4 p-3 bg-slate-950/90 rounded-2xl border border-slate-800 shadow-xl max-w-xl mx-auto">
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
-                      <span className="flex items-center space-x-1.5 font-medium text-cyan-400">
+                      <span className="flex items-center space-x-1.5 font-medium text-[var(--color-azure)]">
                         <ImageIcon className="w-4 h-4" />
                         <span>Sơ đồ / Hình vẽ minh họa Câu {currentIdx + 1}:</span>
                       </span>
@@ -2587,15 +2587,15 @@ export default function TakeExam() {
 
                 {/* Gợi ý mở File đề thi gốc để xem sơ đồ nếu là đề thi đính kèm tệp */}
                 {examData.examPaper?.fileUrl && !currentQ.image && (
-                  <div className="mt-3 p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2 text-xs text-cyan-300">
-                      <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div className="mt-3 p-3 rounded-xl bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 text-xs text-[var(--color-azure)]">
+                      <FileText className="w-4 h-4 text-[var(--color-azure)] shrink-0" />
                       <span>Câu hỏi có thể chứa sơ đồ mạch logic hoặc bảng biểu trong <b>File đề thi gốc</b>.</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setWorkspaceMode('SPLIT_FILE')}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 transition shadow shrink-0"
+                      className="px-3 py-1.5 rounded-lg eg-btn-gradient text-white text-xs font-bold flex items-center space-x-1.5 transition shadow shrink-0"
                     >
                       <Columns className="w-3.5 h-3.5" />
                       <span>Mở File đề song song (Split View)</span>
@@ -2623,7 +2623,7 @@ export default function TakeExam() {
                           onClick={() => handleToggleOption(qId, optIdx)}
                           className={`flex items-center p-4 rounded-2xl border transition-all cursor-pointer group ${
                             isSelected
-                              ? 'bg-gradient-to-r from-cyan-950/60 to-slate-900 border-cyan-500 ring-2 ring-cyan-500/50 text-white shadow-xl shadow-cyan-950/50 scale-[1.01]'
+                              ? 'bg-[var(--color-electric)]/10 border-[var(--color-azure)] ring-2 ring-[var(--color-azure)]/50 text-white shadow-xl shadow-[var(--accent-glow)] scale-[1.01]'
                               : 'bg-slate-950/50 border-slate-800 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
                           }`}
                         >
@@ -2631,7 +2631,7 @@ export default function TakeExam() {
                           <div
                             className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs mr-4 transition-all ${
                               isSelected
-                                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                                ? 'eg-btn-gradient text-white shadow-md'
                                 : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-slate-200'
                             }`}
                           >
@@ -2643,7 +2643,7 @@ export default function TakeExam() {
 
                           {/* Selected indicator */}
                           {isSelected ? (
-                            <div className="w-6 h-6 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center animate-in zoom-in-75">
+                            <div className="w-6 h-6 rounded-full eg-btn-gradient text-white flex items-center justify-center animate-in zoom-in-75">
                               <Check className="w-4 h-4 stroke-[3]" />
                             </div>
                           ) : (
@@ -2912,7 +2912,7 @@ export default function TakeExam() {
                   <button
                     disabled={currentIdx === totalCount - 1}
                     onClick={() => setCurrentIdx(prev => Math.min(totalCount - 1, prev + 1))}
-                    className="flex items-center space-x-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-blue-700/20 transition"
+                    className="flex items-center space-x-1.5 px-5 py-2.5 rounded-xl eg-btn-gradient text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-[var(--accent-glow)] transition"
                   >
                     <span>Câu tiếp theo (→)</span>
                     <ChevronRight className="w-4 h-4" />
@@ -2985,9 +2985,9 @@ export default function TakeExam() {
                   <button
                     type="button"
                     onClick={() => setSidebarTab('NAVIGATOR')}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center space-x-1.5 ${
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center space-x-1.5 cursor-pointer ${
                       sidebarTab === 'NAVIGATOR'
-                        ? 'bg-blue-600 text-white shadow-xs'
+                        ? 'bg-[var(--color-electric)] text-white shadow-xs'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -3078,7 +3078,7 @@ export default function TakeExam() {
                     <span className="text-xs mb-2">Webcam đang chờ cấp quyền hoặc bị ngắt</span>
                     <button
                       onClick={() => startCamera()}
-                      className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-semibold rounded-lg transition shadow-md"
+                      className="px-3 py-1 eg-btn-gradient text-white text-[11px] font-bold rounded-lg transition shadow-md"
                     >
                       Bật lại Camera
                     </button>
@@ -3096,17 +3096,17 @@ export default function TakeExam() {
                 </div>
 
                 {/* Bounding box giả lập AI nhận diện mắt/mặt */}
-                <div className="absolute inset-x-12 inset-y-5 border border-cyan-400/30 rounded-2xl pointer-events-none">
-                  <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400"></div>
-                  <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyan-400"></div>
-                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-cyan-400"></div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-cyan-400"></div>
+                <div className="absolute inset-x-12 inset-y-5 border border-[var(--color-azure)]/30 rounded-2xl pointer-events-none">
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[var(--color-azure)]"></div>
+                  <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[var(--color-azure)]"></div>
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[var(--color-azure)]"></div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[var(--color-azure)]"></div>
                 </div>
 
                 {/* Footer thanh camera */}
                 <div className="absolute bottom-2 inset-x-2 bg-slate-900/85 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-800 flex items-center justify-between text-[11px]">
                   <span className="text-slate-300 font-medium truncate max-w-[120px]">{examData.student.name}</span>
-                  <span className="text-cyan-400 font-mono font-bold">SBD: {examData.examStudent.candidateCode}</span>
+                  <span className="text-[var(--color-azure)] font-mono font-bold">SBD: {examData.examStudent.candidateCode}</span>
                 </div>
               </div>
 
@@ -3172,7 +3172,7 @@ export default function TakeExam() {
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Số báo danh</span>
-                    <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-bold text-xs rounded-lg inline-block">
+                    <span className="px-2 py-0.5 bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 text-[var(--color-azure)] font-mono font-bold text-xs rounded-lg inline-block">
                       {examData.examStudent.candidateCode}
                     </span>
                   </div>
@@ -3580,7 +3580,7 @@ export default function TakeExam() {
               >
                 Đóng
               </button>
-              <label className="flex-1 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl text-center cursor-pointer shadow-lg shadow-cyan-600/20 transition">
+              <label className="flex-1 py-2.5 eg-btn-gradient text-white font-bold text-xs rounded-xl text-center cursor-pointer shadow-md transition">
                 <span>Chọn ảnh mẫu thử nghiệm</span>
                 <input
                   type="file"

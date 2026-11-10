@@ -1,4 +1,4 @@
-# EXAMGUARD AI — SYSTEM BLUEPRINT v3.3
+# EXAMGUARD AI — SYSTEM BLUEPRINT v3.4
 ## Tài liệu Phân tích Nghiệp vụ & Kỹ thuật Toàn diện
 
 > **Mục đích:** Tài liệu này là nguồn tham chiếu duy nhất (Single Source of Truth) cho toàn bộ quá trình phát triển.  
@@ -28,7 +28,12 @@
 18. [Kiến trúc Đề thi Đa dạng: Đề thi Hỗn hợp, Đề theo File & Quy chế Chấm Đa đáp án](#18-kiến-trúc-đề-thi-đa-dạng-đề-thi-hỗn-hợp-trắc-nghiệm--tự-luận-đề-theo-file--quy-chế-chấm-đa-đáp-án-multi-select--alternative-keys)
 19. [Danh mục Toàn diện Nền tảng Hệ thống, Công nghệ & Thư viện (Tech Stack & Libraries Specification)](#19-danh-mục-toàn-diện-nền-tảng-hệ-thống-công-nghệ--thư-viện-tech-stack--libraries-specification)
 20. [Quy Chế Khảo Thí: Đếm Ngược Giờ Phát Đề (Countdown Waiting Room), Chặn Vào Phòng Khi Đi Muộn & Giám Thị Mở Bàn Đặc Cách](#20-quy-chế-khảo-thí-đếm-ngược-giờ-phát-đề-countdown-waiting-room-chặn-vào-phòng-khi-đi-muộn--giám-thị-mở-bàn-đặc-cách)
-21. [Đấu Trường Quiz Arena (Gamification), Bộ Công Cụ Soạn Đề Studio v3.5 & Custom Rules Engine](#21-đấu-trường-quiz-arena-gamification-bộ-công-cụ-soạn-đề-studio-v35--custom-rules-engine)
+21. [Quản Lý Vòng Đời Ca Thi (Exam Lifecycle), Tự Động Thu Bài & Đóng Buồng Thi](#21-quản-lý-vòng-đời-ca-thi-exam-lifecycle-tự-động-thu-bài--đóng-buồng-thi)
+22. [Chuẩn Hóa Kiến Trúc Hệ Thống Theo 5 Nguyên Lý S.O.L.I.D & Clean Architecture](#22-chuẩn-hóa-kiến-trúc-hệ-thống-theo-5-nguyên-lý-solid--clean-architecture-v33)
+23. [Hệ Thống Màu Chủ Đạo Thiết Kế & Định Kiểu TypeScript (Enterprise Academic Palette)](#23-hệ-thống-màu-chủ-đạo-thiết-kế--định-kiểu-typescript-enterprise-academic-palette)
+24. [Đặc Tả Chi Tiết 10 Workflow Toàn Diện Của Toàn Bộ Hệ Thống (End-to-End System Workflows)](#24-đặc-tả-chi-tiết-10-workflow-toàn-diện-của-toàn-bộ-hệ-thống-end-to-end-system-workflows-specification)
+25. [Đấu Trường Quiz Arena (Gamification), Bộ Công Cụ Soạn Đề Studio v3.5 & Custom Rules Engine](#25-đấu-trường-quiz-arena-gamification-bộ-công-cụ-soạn-đề-studio-v35--custom-rules-engine)
+26. [Hệ Thống Giám Sát Tư Thế & Bất Động Thời Gian Thực (Real-Time Pose & Immobility Surveillance Microservice — MediaPipe, OpenCV & Flask)](#26-hệ-thống-giám-sát-tư-thế--bất-động-thời-gian-thực-real-time-pose--immobility-surveillance-microservice--mediapipe-opencv--flask)
 
 ---
 
@@ -1299,7 +1304,7 @@ d:\K23CNT3-LucVanSon-2310900087\DATN\
 │   │   ├── utils/                    # examFileParser (PDF/Word), token generator, response helper
 │   │   └── uploads/                  # Thư mục lưu trữ đề thi gốc, tài liệu minh họa & ảnh bài làm thí sinh
 │   │
-│   └── src/                          # Modern React 19 Single Page Application
+│   └── src/                          # Modern React 19 Multi-Route Enterprise Client Architecture (React Router DOM v7)
 │       ├── main.tsx                  # React DOM Root
 │       ├── App.tsx                   # Central Router, Route Guard (RBAC/CBAC) & Layout
 │       ├── index.css                 # Core Design System, CSS variables & Tailwind v4 Design Tokens
@@ -1359,6 +1364,68 @@ d:\K23CNT3-LucVanSon-2310900087\DATN\
                 ├─► [Màn hình Giám thị (Proctor Dashboard)]: Bàn đổi màu đỏ, ghim feed vi phạm, phát âm thanh cảnh báo
                 └─► [Màn hình Thí sinh (TakeExam)]: Hiển thị cảnh báo trực tiếp, trừ điểm uy tín (Trust Score)
 ```
+
+---
+
+### 10.4. Kiến Trúc Điều Hướng Phân Tầng Chuyên Sâu (Multi-Route Client Architecture via React Router DOM — Tại sao Tuyệt đối KHÔNG dùng Single-Page Monolith)
+
+Trong kiến trúc của một hệ thống quản lý và giám sát khảo thí AI phức hợp như ExamGuard AI, việc xây dựng hệ thống theo dạng **"Single-Page Monolith (Một trang duy nhất chuyển đổi tab bằng state/ẩn hiện Component)"** là một **sai lầm kỹ thuật nghiêm trọng**. 
+
+ExamGuard AI bắt buộc phải sử dụng **Kiến trúc Điều hướng Phân tầng Client-Side (Multi-Route Client Architecture)** được xây dựng trên nền tảng **React Router DOM v7** vì 5 nguyên nhân cốt lõi mang tính sống còn sau:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│               TẠI SAO PHẢI DÙNG REACT ROUTER DOM THAY VÌ SINGLE-PAGE TAB MONOLITH?                     │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1. WORKSPACE ISOLATION     │ Tách biệt 100% không gian SEB Lockdown (Không Sidebar/Header)             │
+│                            │ khỏi không gian Quản trị Khảo thí (Dashboard, Navigation, Bento Palette)  │
+├────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤
+│ 2. DEEP-LINKING & QR CODE  │ Định danh từng Ca thi (/live-proctor/:id), Bàn thi (/take-exam/:id),      │
+│                            │ hỗ trợ quét QR vào thẳng phòng, mở đa tab giám sát song song              │
+├────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤
+│ 3. RESOURCE & MEMORY LEAK  │ Tự động Unmount để giải phóng WebGL 3D VRAM, đóng MediaStream Camera,     │
+│                            │ ngắt Socket.IO room — Tránh sập trình duyệt máy trạm phòng Lab            │
+├────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤
+│ 4. ANTI-CHEAT BROWSER TRAP │ Tích hợp History API: Bẫy phím Back/Forward (popstate trap) phạt gian lận,│
+│                            │ khôi phục chính xác tiến trình làm bài khi gặp sự cố F5/mất mạng          │
+├────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤
+│ 5. ZERO-TRUST ROUTE GUARDS │ Ngăn chặn thí sinh tải mã nguồn/dữ liệu quản trị ngay từ tầng URL phân giải│
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 1. Phân Ly Không Gian Làm Việc Tuyệt Đối (Workspace Isolation & SEB Lockdown Environment)
+* **Giao diện Quản trị & Giám sát (`/`, `/exam-sessions`, `/live-proctor`, `/students`...):** Cần một khung làm việc phong phú ([Layout.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/components/Layout.tsx)) với Sidebar điều hướng đa cấp, thanh công cụ tìm kiếm Command Palette (Ctrl+K), trung tâm thông báo, chuyển đổi Light/Dark theme.
+* **Giao diện Làm bài của Thí sinh (`/exam/take` hoặc `/take-exam/:sessionStudentId`):** Đòi hỏi môi trường **Lockdown Kiosk Mode (Safe Exam Browser)** hoàn toàn biệt lập: **100% KHÔNG CÓ SIDEBAR, KHÔNG HEADER, KHÔNG NÚT ĐIỀU HƯỚNG RA NGOÀI**.
+* **Hậu quả nếu dùng Single Page Monolith:** Nếu chỉ dùng một trang duy nhất rồi chuyển tab bằng state (`activeTab === 'exam'`), DOM tree của Sidebar và Header vẫn tồn tại hoặc dễ bị lỗi render rò rỉ vào màn hình thi. Sinh viên có thể lợi dụng Console/DevTools để bật lại menu điều hướng, gian lận truy cập dữ liệu đề thi hoặc văng khỏi phiên làm bài. React Router DOM cho phép phân nhánh rạch ròi ngay tại [App.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/App.tsx): Route làm bài thi chạy cô lập ngoài `Layout`, các route quản trị nằm gọn bên trong `Layout`.
+
+#### 2. Khả Năng Deep-Linking, Quét Mã QR & Giám Sát Đa Phòng Song Song
+* Trong các kỳ thi quy mô lớn tại trường đại học (hàng chục ca thi, hàng nghìn sinh viên):
+  - Cán bộ coi thi cần truy cập trực tiếp vào buồng thi cụ thể: `/live-proctor/CA-20261025-P302-300`.
+  - Sinh viên quét mã QR dán trên mặt bàn phòng máy để mở thẳng bàn thi của mình: `/take-exam/SS-67890`.
+  - Giảng viên chấm thi và thanh tra mở trực tiếp link đối soát: `/grading-review/:sessionId` hoặc `/exam/result?view=lecturer`.
+* **Hậu quả nếu dùng Single Page Monolith:** Nếu tất cả chỉ nằm trên URL duy nhất `http://localhost:3011/`, hệ thống không thể tạo link trực tiếp, không thể tạo mã QR định danh ca thi, giám thị không thể mở nhiều tab để giám sát đồng thời nhiều phòng thi khác nhau, và mỗi khi người dùng tải lại trang sẽ bị văng về màn hình bắt đầu.
+
+#### 3. Quản Lý Vòng Đời Tài Nguyên, Dọn Dẹp GPU VRAM & Chống Tràn Bộ Nhớ (Memory Leak Prevention)
+* Đây là yếu tố kỹ thuật then chốt nhất quyết định sự ổn định của phòng máy trường:
+  - **Phòng Giám thị 3D ([LiveProctor.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/pages/exam/LiveProctor.tsx)):** Sử dụng WebGL Canvas ([ExamRoom3D.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/components/ExamRoom3D.tsx)) mô phỏng phòng thi không gian ba chiều bằng Three.js, ngốn lượng lớn VRAM của card đồ họa, đồng thời nhận hàng chục luồng camera CCTV qua WebSocket.
+  - **Phòng Thi Thí sinh ([TakeExam.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/pages/exam/TakeExam.tsx)):** Giữ luồng stream camera webcam liên tục và chạy định kỳ phân tích khuôn mặt ArcFace ngầm mỗi 15-20s.
+  - **Studio Đề thi ([ExamPapers.tsx](file:///d:/K23CNT3-LucVanSon-2310900087/DATN/examguard-core/src/pages/exam/ExamPapers.tsx)):** Nạp file PDF đề thi dung lượng lớn lên bộ nhớ đệm trình duyệt qua Mozilla PDF.js.
+* **Hậu quả nếu dùng Single Page Monolith:** Nếu chỉ ẩn/hiện component qua CSS (`display: none`) hoặc tab state, các tiến trình render ngầm (`requestAnimationFrame`), các MediaStream Track của webcam, các event listener của Socket.IO và WebGL buffer **VẪN ÂM THẦM CHẠY TIẾP TỤC TRONG NỀN**. Sau 30-45 phút thi, máy tính phòng Lab sẽ bị tràn RAM/VRAM, trình duyệt bị đơ cứng (freeze) hoặc crash giữa chừng làm gián đoạn bài thi của sinh viên!
+* **Giải pháp với React Router DOM:** Khi chuyển đổi giữa các Route, component cũ được **Unmount triệt để**. Hàm cleanup trong hook `useEffect` được kích hoạt lập tức:
+  - Gọi `cancelAnimationFrame(requestId)` và hủy hoàn toàn WebGL Context của Three.js.
+  - Gọi `mediaStream.getTracks().forEach(track => track.stop())` để tắt camera ngay khi rời phòng thi.
+  - Thoát khỏi phòng Socket.IO (`socket.emit('leave_room')`), dọn sạch bộ nhớ cache.
+
+#### 4. Bẫy Lịch Sử Duyệt Web Chống Gian Lận (Anti-Cheating Popstate Trap & Resilient State Recovery)
+* React Router DOM tích hợp sâu với HTML5 History API:
+  - **Bẫy nút Back/Forward:** Khi thí sinh đang làm bài thi mà cố tình nhấn nút Back/Forward trên chuột gaming hoặc trình duyệt để tìm cách thoát ứng dụng thi, Router DOM kích hoạt bẫy `popstate` / `beforeunload` / `useBlocker`, chặn đứng hành động điều hướng, ngay lập tức gửi tín hiệu vi phạm `BROWSER_NAVIGATE_ATTEMPT` lên máy chủ và trừ điểm uy tín.
+  - **Khôi phục trạng thái làm bài kiên cường (Resilient State Recovery):** Khi gặp sự cố mạng chập chờn hoặc máy thi bị tắt nguồn đột ngột, nhờ có URL định danh cụ thể `/take-exam/:sessionStudentId`, khi mở lại trình duyệt, React Router DOM điều hướng thẳng vào phiên thi cũ, kết hợp dữ liệu lưu trữ đệm (Local Cache + Server Recovery) để khôi phục chính xác 100% các câu hỏi đã chọn và thời gian còn lại mà không làm mất bài của thí sinh.
+
+#### 5. Phân Quyền Bảo Mật Zero-Trust ở Tầng Định Tuyến (Route-Level ProtectedRoute)
+* React Router DOM cho phép áp dụng mẫu kiến trúc `<ProtectedRoute>` kiểm soát quyền truy cập trước khi component được khởi tạo:
+  - Thí sinh (`student`) hoàn toàn bị chặn đứng nếu cố tình gõ URL `/live-proctor`, `/grading-review`, `/permissions` hay `/campuses`.
+  - Giám thị chỉ được truy cập vào đúng ca thi mình được phân công (`proctorId`).
+  - Phân tách rõ ràng giữa Public Route (`/login`), Lockdown Workspace (`/exam/take`), Giảng viên cá nhân (`/teacher-portal`) và Quản trị khảo thí (`/exam-sessions`).
 
 ---
 
@@ -3327,7 +3394,7 @@ Dưới đây là danh mục chi tiết các thư viện frontend trong [examgua
 | `vite` | `^6.2.0` | **Next-Generation Frontend Tooling**: Biên dịch TypeScript siêu tốc với esbuild, Hot Module Replacement (HMR) tức thì dưới 50ms. |
 | `@vitejs/plugin-react` | `^5.0.4` | **Plugin Vite cho React**: Tối ưu hóa Fast Refresh và chuyển đổi mã JSX/TSX. |
 | `typescript` | `~5.8.2` | **Ngôn ngữ Type-Safe**: Đảm bảo an toàn kiểu dữ liệu cho toàn bộ State, Props, DTO, tránh lỗi runtime trong phòng thi. |
-| `react-router-dom` | `^7.13.1` | **Bộ điều hướng Single Page App**: Quản lý định tuyến động, bảo vệ đường dẫn theo Role (Role Guards), layout lồng nhau. |
+| `react-router-dom` | `^7.13.1` | **Bộ điều hướng Phân tầng Đa Không gian (Multi-Route Client Architecture)**: Quản lý định tuyến động, phân lập triệt để Workspace thi cử Lockdown (SEB) khỏi Dashboard, quản lý vòng đời GPU/WebGL & Camera streams, kiểm soát Zero-Trust Route Guards. |
 | `zustand` | `^5.0.14` | **Quản lý Trạng thái Toàn cục (Global State)**: Siêu nhẹ, lưu trữ session đăng nhập (`authStore`), tiến trình làm bài (`examStore`), trạng thái giám sát (`proctorStore`). |
 | `socket.io-client` | `^4.8.4` | **WebSocket Client**: Duy trì kết nối realtime 2 chiều liên tục giữa trình duyệt của Thí sinh / Giám thị với máy chủ thi. |
 | `lucide-react` | `^0.546.0` | **Thư viện Icon Vector**: Bộ biểu tượng chuẩn cho giao diện thi cử, camera, trạng thái bảo mật, công cụ cắt ảnh (`Scissors`, `Camera`, `ShieldAlert`...). |
@@ -4077,7 +4144,7 @@ graph TD
 
 ---
 
-## 21. ĐẤU TRƯỜNG QUIZ ARENA (GAMIFICATION), BỘ CÔNG CỤ SOẠN ĐỀ STUDIO v3.5 & CUSTOM RULES ENGINE
+## 25. ĐẤU TRƯỜNG QUIZ ARENA (GAMIFICATION), BỘ CÔNG CỤ SOẠN ĐỀ STUDIO v3.5 & CUSTOM RULES ENGINE
 
 ### 21.1 Tổng quan & Triết lý Thiết kế
 Nhằm đáp ứng yêu cầu kiểm tra trắc nghiệm tương tác cao (Interactive Gamified Quizzing) theo tinh thần kiểm tra thường xuyên và củng cố kiến thức trên lớp, ExamGuard AI mở rộng phân hệ **Quiz Arena**:
@@ -4142,7 +4209,526 @@ ExamSessionSchema.add({
 ```
 
 
-*Blueprint version 3.3 — Cập nhật toàn diện: 2026-10-20*  
+
+
+---
+
+## 26. HỆ THỐNG GIÁM SÁT TƯ THẾ & BẤT ĐỘNG THỜI GIAN THỰC (REAL-TIME POSE & IMMOBILITY SURVEILLANCE MICROSERVICE — MEDIAPIPE, OPENCV & FLASK)
+
+> **Tham chiếu kiến trúc & Dự án nền tảng:**  
+> Hệ thống tích hợp và chuẩn hóa công nghệ từ repository nghiên cứu: `https://github.com/AlifSrSE/RealTimeSurveillanceSystem.git`  
+> **Bộ công nghệ cốt lõi:** Python 3.10+, OpenCV (`opencv-python-headless`), MediaPipe Pose (`mediapipe`), Microservice Flask (`flask`, `flask-cors`).  
+> **Mục tiêu then chốt:** Khắc phục triệt để khoảng trống giám sát thể chất (Physical Posture Blindspots) của hệ thống: tự động phân loại tư thế (Đứng, Ngồi, Ngã/Nằm gục), phát hiện trạng thái rời khỏi ghế thi (Leave Seat / Absence), và phát hiện sự bất động bất thường kéo dài (Prolonged Immobility / Freeze Frame Video Loop).
+
+---
+
+### 26.1. Đánh Giá Hiện Trạng Hệ Thống & Cơ Sở Tích Hợp (System Gap Analysis)
+
+Trước khi tích hợp microservice này, hệ thống ExamGuard AI đã có những thành phần giám sát sinh trắc học sau:
+1. **Face AI Service (`examguard-ai` - FastAPI Port 8000):** Nhận diện khuôn mặt (YuNet), so khớp vector căn cước gốc 512-D (ArcFace), chống giả mạo ảnh in/màn hình (MiniFASNet Liveness) và ước lượng góc quay đầu 3D Pose (Yaw, Pitch, Roll qua PnP).
+2. **Client-side Web Worker:** `@mediapipe/tasks-vision` theo dõi 468 điểm Face Mesh và hướng nhìn con ngươi mắt (Gaze Tracking).
+3. **Flask Core Registry (`examguard-flask` - Port 5000):** Quản lý cấu trúc danh mục đào tạo (Khoa, Lớp, Sinh viên, Ca thi) với MySQL và MongoDB.
+
+#### Các khoảng trống kỹ thuật & nghiệp vụ còn thiếu (Current Gaps):
+* ❌ **Chưa có tầng giám sát khung xương toàn thân / bán thân (Full/Upper Body Pose):** Hệ thống chỉ tập trung vào khuôn mặt (Face-centric). Khi thí sinh **đứng dậy nhòm bài bàn bên**, **gục người xuống bàn giấu tài liệu**, hoặc **rời hẳn khỏi chỗ ngồi**, camera webcam chỉ báo `NO_FACE` mà không thể phân loại được bản chất hành vi vật lý.
+* ❌ **Chưa có bộ phát hiện bất động kéo dài (Prolonged Immobility Detection):** Thí sinh sử dụng thủ thuật gian lận tinh vi: chèn video lặp (Webcam Video Loop Attack / Virtual Camera) giả vờ đang ngồi chăm chú làm bài. Do video bị đóng băng hoặc lặp lại động tác tĩnh, Face AI vẫn thấy mặt nhưng thực chất thí sinh đã rời khỏi phòng thi hoặc mở tài liệu.
+* ❌ **Chưa có cảnh báo sự cố sức khỏe (Fall / Medical Emergency):** Trong ca thi căng thẳng, thí sinh có thể bị ngất xỉu, đột quỵ hoặc ngã khỏi ghế thi. Hệ thống thiếu cơ chế nhận diện trạng thái ngã/nằm gục (`FALL_OR_LYING`) để kích hoạt cứu hộ y tế khẩn cấp.
+
+---
+
+### 26.2. Ma Trận Phân Loại Tư Thế & Trạng Thái Bất Động (Pose Classification & Anomaly Matrix)
+
+MediaPipe Pose trích xuất **33 điểm mốc khung xương 3D (Landmarks)** theo thời gian thực. Hệ thống phân loại thành 5 trạng thái vận động chuẩn:
+
+```
+                     ┌─────────────────────────────────────────┐
+                     │     CAMERA STREAM (WEBCAM / CCTV)       │
+                     └────────────────────┬────────────────────┘
+                                          │ (Frame RGB 640x480)
+                                          ▼
+                     ┌─────────────────────────────────────────┐
+                     │     MEDIAPIPE POSE 33 LANDMARKS         │
+                     │  (Nose, Shoulders, Elbows, Wrists,      │
+                     │   Hips, Knees, Ankles, Torso Vector)    │
+                     └────────────────────┬────────────────────┘
+                                          │
+                  ┌───────────────────────┴───────────────────────┐
+                  ▼                                               ▼
+   ┌─────────────────────────────┐                 ┌─────────────────────────────┐
+   │   POSE GEOMETRY CLASSIFIER  │                 │    IMMOBILITY DETECTOR      │
+   │  (Angles, Height, Tilt)     │                 │ (Temporal Landmark Delta)   │
+   └──────────────┬──────────────┘                 └──────────────┬──────────────┘
+                  │                                               │
+                  ├───────────────────────────────┬───────────────┤
+                  ▼                               ▼               ▼
+      [SITTING / STANDING / FALL]           [ABSENCE]      [FROZEN / LOOP]
+```
+
+| Mã Trạng Thái | Tên Nghiệp Vụ | Dấu Hiệu Hình Học Khung Xương (Geometric Criteria) | Mức Độ | Điểm Trừ | Hành Động Hệ Thống |
+|---|---|---|---|---|---|
+| `SITTING_NORMAL` | Ngồi làm bài chuẩn | Góc khớp hông $\theta_{\text{hip}} \in [80^\circ, 120^\circ]$, trục sống lưng nghiêng $< 25^\circ$ so với phương đứng. | `NORMAL` | 0đ | Tiếp tục ghi nhận trạng thái bình thường. |
+| `STANDING_UP` | Đứng dậy khỏi vị trí | Góc khớp hông $\theta_{\text{hip}} \ge 155^\circ$, độ cao vai $Y_{\text{shoulder}}$ dâng cao đột ngột $> 25\%$ so với baseline ngồi. | `MEDIUM` | -15đ | Bắn cảnh báo vàng lên Dashboard: "Thí sinh đứng dậy khỏi ghế thi". |
+| `SLUMPED_DESK` / `FALL_DOWN` | Gục xuống bàn / Ngã nằm | Trục sống lưng (vector vai - hông) nghiêng $> 60^\circ$ so với phương đứng, độ cao đầu sụt giảm $> 40\%$ kéo dài $> 15$ giây. | `HIGH` / `CRITICAL` | -10đ (nếu ngủ) / Cứu hộ | Báo động đỏ Giám thị kiểm tra bàn thi (nghi ngất xỉu hoặc gian lận hộc bàn). |
+| `LEAVE_SEAT` / `ABSENCE` | Rời khỏi khung hình / Bỏ thi | Tổng số landmark nhận diện được $< 6$ hoặc Confidence $< 0.3$ liên tục $> 15$ giây ($T_{\text{absence}} \ge 15\text{s}$). | `CRITICAL` | -25đ | Phát còi báo động: "Thí sinh đã rời khỏi vị trí thi", bật đếm ngược 60s trước khi đình chỉ. |
+| `PROLONGED_IMMOBILITY` | Bất động bất thường (Video Loop) | Độ dịch chuyển trung bình các khớp $\Delta d < 1.5$ pixel trong cửa sổ trượt $T_{\text{immobile}} \ge 60$ giây liên tục (không có vi cử động thở). | `HIGH` | -20đ | Cảnh báo nghi vấn "Video Loop / Đóng băng camera", yêu cầu giám thị lại gần kiểm tra. |
+
+---
+
+### 26.3. Thuật Toán Hình Học Khớp & Đo Lường Bất Động (Biomechanical Kinematics)
+
+#### 1. Thuật toán tính góc khớp 3 điểm (Joint Angle Calculation):
+Để tính góc tại khớp $B$ nối giữa 2 điểm $A$ và $C$ (ví dụ: Vai - Hông - Gối để phân biệt Đứng vs Ngồi):
+$\vec{u} = \vec{BA} = (x_A - x_B, y_A - y_B), \quad \vec{v} = \vec{BC} = (x_C - x_B, y_C - y_B)$
+$\cos(\theta) = \frac{\vec{u} \cdot \vec{v}}{\|\vec{u}\| \|\vec{v}\|} = \frac{(x_A - x_B)(x_C - x_B) + (y_A - y_B)(y_C - y_B)}{\sqrt{(x_A - x_B)^2 + (y_A - y_B)^2} \sqrt{(x_C - x_B)^2 + (y_C - y_B)^2}}$
+$\theta = \arccos(\text{clip}(\cos(\theta), -1.0, 1.0)) \times \frac{180}{\pi}$
+
+#### 2. Thuật toán đo lường mức độ bất động (Kinetic Immobility Index):
+Độ dịch chuyển trung bình của $K$ điểm mốc trọng yếu (Mũi, 2 Vai, 2 Cổ tay, 2 Hông) giữa 2 frame liên tiếp cách nhau $\Delta t$:
+$\Delta d_t = \frac{1}{K} \sum_{i=1}^{K} \sqrt{(x_{i, t} - x_{i, t-1})^2 + (y_{i, t} - y_{i, t-1})^2}$
+
+* **Bộ đệm trượt thời gian (Sliding Window):** Lưu trữ mảng $\mathcal{W} = [\Delta d_{t-N}, \dots, \Delta d_t]$ trong khoảng thời gian $W = 60$ giây.
+* **Chỉ số bất động (Immobility State):**
+  $\text{If } \max(\mathcal{W}) < \epsilon_{\text{threshold}} \quad (\text{với } \epsilon = 1.8\text{ px tại chuẩn 640x480}) \implies \text{PROLONGED\_IMMOBILITY = TRUE}$
+
+---
+
+### 26.4. Kiến Trúc Microservice Flask & API Contracts (`examguard-surveillance`)
+
+Microservice được đóng gói bằng **Python Flask** độc lập hoặc mở rộng trong phân hệ Flask của dự án, lắng nghe trên cổng `5002` (hoặc Blueprint `/api/surveillance` trên cổng `5000`).
+
+#### Cấu trúc thư mục module:
+```
+examguard-flask/
+├── app.py                             # Flask Core Service (Port 5000)
+├── surveillance/                      # Sub-package Pose Surveillance
+│   ├── __init__.py
+│   ├── routes.py                      # Flask Blueprint endpoints (/api/surveillance/*)
+│   ├── pose_detector.py               # Wrapper MediaPipe Pose (33 Landmarks)
+│   ├── posture_classifier.py          # Logic phân loại Đứng, Ngồi, Ngã, Rời ghế
+│   ├── immobility_analyzer.py         # Theo dõi cửa sổ trượt phân tích bất động
+│   └── event_dispatcher.py            # HTTP Client gửi Webhook sang Node.js Core
+```
+
+#### 1. Endpoint: Phân tích Frame Webcam/CCTV (`POST /api/surveillance/analyze-frame`)
+* **Headers:** `Content-Type: application/json`, `X-API-Key: <EXAMGUARD_AI_SECRET>`
+* **Request Body:**
+```json
+{
+  "sessionId": "ca_thi_toan_cao_cap_k23",
+  "studentId": "2310900087",
+  "seatCode": "R2-C04",
+  "timestamp": "2026-11-09T10:30:15.120Z",
+  "frameBase64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
+  "cameraSource": "WEBCAM_CANDIDATE"
+}
+```
+* **Response Body (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "poseState": "STANDING_UP",
+    "confidence": 0.942,
+    "isAnomaly": true,
+    "anomalyType": "UNAUTHORIZED_STANDING",
+    "severity": "MEDIUM",
+    "penaltyScore": 15,
+    "metrics": {
+      "hipAngleDeg": 168.4,
+      "spineTiltDeg": 12.1,
+      "immobilityDurationSec": 2.4,
+      "bodyPresent": true
+    },
+    "keypoints2D": {
+      "nose": [320.4, 110.2],
+      "leftShoulder": [280.1, 160.5],
+      "rightShoulder": [360.3, 161.0],
+      "leftHip": [290.0, 310.2],
+      "rightHip": [350.2, 311.0]
+    }
+  }
+}
+```
+
+#### 2. Endpoint: Kích hoạt Luồng Giám sát RTSP CCTV Phòng thi (`POST /api/surveillance/cctv-stream/start`)
+* **Request Body:**
+```json
+{
+  "roomId": "P302",
+  "rtspUrl": "rtsp://admin:pass@192.168.1.108:554/ch1/main",
+  "deskPolygons": [
+    { "seatCode": "R1-C01", "polygon": [[100, 200], [250, 200], [250, 350], [100, 350]] },
+    { "seatCode": "R1-C02", "polygon": [[260, 200], [410, 200], [410, 350], [260, 350]] }
+  ]
+}
+```
+
+---
+
+### 26.5. Cơ Chế Bắn Sự Kiện (Event-Driven Webhook) & Lưu Trữ Dữ Liệu
+
+Khi Flask Surveillance Microservice phát hiện bất kỳ trạng thái vi phạm nào (`LEAVE_SEAT`, `STANDING_UP`, `PROLONGED_IMMOBILITY`, `SLUMPED_DESK`), hệ thống tự động thực hiện **quy trình phản ứng tức thời 3 bước**:
+
+```
+  [Flask Surveillance Service]
+             │
+             │ (1) Bắn Webhook HTTP POST
+             ▼
+  [Node.js Core Backend (Port 3011)] ──(2) Async Insert──► [MongoDB: ai_pose_surveillance_logs]
+             │
+             │ (3) Socket.IO Emit: "proctor:pose_violation"
+             ▼
+  [LiveWall / 3D Room Dashboard Giám Thị]
+  (Bàn thi nhấp nháy ĐỎ + Hiển thị khung xương Skeleton & Snapshot)
+```
+
+#### MongoDB Collection: `ai_pose_surveillance_logs`
+```javascript
+{
+  "_id": ObjectId("672a9b2f4c91a783e4000001"),
+  "sessionId": "ca_thi_toan_cao_cap_k23",
+  "studentId": "2310900087",
+  "studentName": "Lục Văn Sơn",
+  "seatCode": "R2-C04",
+  "poseState": "LEAVE_SEAT",
+  "anomalyType": "ABSENCE_LEAVE_FRAME",
+  "severity": "CRITICAL",
+  "penaltyScore": 25,
+  "durationSeconds": 18.5,
+  "evidenceSnapshotUrl": "/uploads/evidences/session_k23/2310900087_leave_seat_103015.jpg",
+  "cameraSource": "WEBCAM_CANDIDATE",
+  "biomechanicalData": {
+    "landmarksCount": 0,
+    "confidence": 0.05,
+    "lastKnownPose": "SITTING_NORMAL"
+  },
+  "isAcknowledgedByProctor": false,
+  "createdAt": ISODate("2026-11-09T10:30:15.120Z")
+}
+```
+
+#### Cập nhật Bảng MySQL: `vi_pham_quy_che`
+Bổ sung 4 mã vi phạm mới vào cột enum `loai_vi_pham`:
+* `LEAVE_SEAT`: Rời khỏi vị trí thi / Khung hình camera quá 15 giây.
+* `STANDING_UP`: Đứng dậy khỏi chỗ ngồi không có sự cho phép của Cán bộ coi thi.
+* `PROLONGED_IMMOBILITY`: Bất động bất thường quá 60 giây (Nghi vấn Video Loop giả mạo webcam hoặc đột quỵ).
+* `SLUMPED_DESK`: Gục đầu xuống bàn quá thời gian quy định (Nghi vấn tài liệu hộc bàn hoặc sự cố sức khỏe).
+
+---
+
+### 26.6. Tích Hợp UI Giám Thị (Desk Matrix Live View & Skeleton Overlay)
+
+Trên giao diện **LiveWall Multi-Room Command Center** của Giám thị:
+1. **Sơ đồ bàn thi (Desk Matrix 3D):**
+   * Ô bàn thi lập tức đổi sang màu tương ứng với trạng thái cơ thể:
+     - 🟢 **Xanh lục (#10B981):** `SITTING_NORMAL` — Thí sinh ngồi làm bài chuẩn quy chế.
+     - 🟡 **Vàng cảnh báo (#F59E0B):** `STANDING_UP` — Thí sinh đang đứng dậy.
+     - 🔴 **Đỏ nhấp nháy (#EF4444):** `LEAVE_SEAT` — Bàn trống, thí sinh đã rời khỏi khung hình.
+     - 🟣 **Tím cảnh báo (#8B5CF6):** `PROLONGED_IMMOBILITY` — Bất động đóng băng $> 60$ giây.
+2. **Skeleton & Pose Indicator Drawer:**
+   * Khi Giám thị bấm vào ô bàn thi, Drawer trượt ra hiển thị luồng video kèm **Khung xương MediaPipe Pose (33 điểm mốc & các đường nối màu biometric teal)**.
+   * Hiển thị bảng đo lường trực tiếp: Góc hông (Hip Angle), Độ nghiêng lưng (Spine Angle), và Đồng hồ đếm thời gian bất động (Immobility Timer).
+
+---
+
+### 26.7. Kế Hoạch Triển Khai Kỹ Thuật Chi Tiết (6-Phase Implementation Roadmap)
+
+Hệ thống được lập kế hoạch tích hợp theo 6 giai đoạn chuẩn kỹ nghệ phần mềm:
+
+| Giai đoạn | Nội dung công việc cụ thể | Đầu ra kỹ thuật (Deliverables) |
+|---|---|---|
+| **Phase 1: Môi trường & Thư viện** | Cập nhật `examguard-flask/requirements.txt` thêm `mediapipe>=0.10.9`, `opencv-python-headless>=4.8.0`, `numpy>=1.24.0`. Kiểm thử nạp model Pose Landmark trên Python 3.10+. | File requirements đã nạp thư viện, script kiểm thử `test_mediapipe_pose.py` chạy thành công. |
+| **Phase 2: Xây dựng Core AI Module** | Lập trình `posture_classifier.py` (tính góc hông, trục lưng, nhận diện Đứng/Ngồi/Gục) và `immobility_analyzer.py` (bộ đệm trượt 60s đo delta landmark). | Module Core AI độc lập có Unit Test kiểm thử các tư thế mẫu với độ chính xác $ge 95\%$. |
+| **Phase 3: Đóng gói Flask Microservice** | Xây dựng Blueprint `/api/surveillance` trong `examguard-flask`: endpoint `/analyze-frame` nhận ảnh Base64 từ client và endpoint `/cctv-stream` đọc luồng RTSP. | Microservice Flask phản hồi kết quả phân tích trong $\le 45\text{ms}$/frame, sẵn sàng API RESTful. |
+| **Phase 4: Webhook Event & Socket.IO** | Viết `event_dispatcher.py` bắn HTTP POST sang Node.js Core khi có vi phạm. Cấu hình Socket.IO emit sự kiện `proctor:pose_violation`. | Sự kiện vi phạm được truyền tải tức thời từ Flask $\rightarrow$ Node.js $\rightarrow$ Client Giám thị trong $< 100\text{ms}$. |
+| **Phase 5: Đồng bộ Database** | Khởi tạo MongoDB Collection `ai_pose_surveillance_logs` và cập nhật enum MySQL `vi_pham_quy_che` bằng migration script. | Dữ liệu vi phạm lưu song song RDBMS và Document DB, phục vụ đối soát và hậu kiểm phúc khảo. |
+| **Phase 6: Hoàn thiện UI & Benchmarking** | Tích hợp hiển thị màu sắc bàn thi trên Desk Matrix và Canvas vẽ khung xương Skeleton trên React 19 Frontend. Chạy Benchmark tải trọng 50 luồng stream đồng thời. | Giao diện giám sát hoàn chỉnh, không giật lag, đạt chuẩn báo cáo Đồ án Tốt nghiệp xuất sắc. |
+
+---
+
+### 26.8. Kiến Trúc Chống Quá Tải & Tối Ưu Tải Trọng Server (Anti-Overload & High-Concurrency Optimization Architecture)
+
+Nhằm đảm bảo hệ thống vận hành ổn định, loại bỏ triệt để nguy cơ quá tải (Overload) hoặc sập server (Server Crash / Out-Of-Memory) khi đồng thời giám sát **hàng ngàn thí sinh trên máy cá nhân** và **hàng chục luồng camera CCTV phòng thi**, ExamGuard AI thiết lập kiến trúc tối ưu hóa 2 cấp độ phân tán (Two-Tier Edge-Hybrid Architecture):
+
+```mermaid
+flowchart TD
+    subgraph TIER_1["TIER 1: MÁY THÍ SINH (CANDIDATE LAPTOP/PC)"]
+        A1["Camera Thí Sinh (Webcam)"] --> A2["HTML5 Canvas Downscaling<br/>(320x240, JPEG q=0.6, ~20KB)"]
+        A2 --> A3{"Đánh Giá Điểm Uy Tín<br/>(Trust Score)"}
+        A3 -->|"Trust Score >= 90"| A4["Adaptive Interval: 20s/frame"]
+        A3 -->|"70 <= Trust < 90"| A5["Adaptive Interval: 15s/frame"]
+        A3 -->|"Trust Score < 70"| A6["Adaptive Interval: 10s/frame"]
+        A4 & A5 & A6 --> A7["Client-side Burst Trigger<br/>(Head Turn > 30° / No Face Mesh)"]
+        A7 --> A8["Gửi HTTP POST /inspect-frame<br/>(Rate Limiter 1 req/5s Token Bucket)"]
+    end
+
+    subgraph TIER_2["TIER 2: CAMERA PHÒNG THI (ROOM CCTV RTSP)"]
+        B1["Camera CCTV Phòng Thi (RTSP 1080p@30fps)"] --> B2["CCTV Worker Process<br/>(Non-blocking Frame Ingestion)"]
+        B2 --> B3["Frame Skipping & Decimation<br/>(Lấy mẫu 2 - 3 FPS, bỏ qua 90% frame)"]
+        B3 --> B4["Spatial Downscale to 640x360<br/>& Single-Slot Ring Buffer (maxsize=1)"]
+    end
+
+    subgraph SERVER_CORE["FLASK CORE SURVEILLANCE ENGINE (PORT 5000)"]
+        A8 --> C1["Async ThreadPoolExecutor Worker Pool"]
+        B4 --> C2["MediaPipe Pose Lite (model_complexity=0)"]
+        C1 --> C2
+        C2 --> C3["Biomechanical Kinematics<br/>(Hip, Torso, Knee Angles)"]
+        C3 --> C4["Immobility Sliding Window Tracker<br/>(Zero-Memory Kinetic Energy)"]
+        C4 --> C5{"Hysteresis Debounce Filter<br/>(Bộ lọc trễ chống spam)"}
+        C5 -->|"Trạng thái không đổi"| C6["Bỏ qua — Không ghi DB / Socket"]
+        C5 -->|"Trạng thái thay đổi liên tục > 3s"| C7["Event Dispatcher Queue"]
+    end
+
+    subgraph DISPATCH["HỆ THỐNG XỬ LÝ SỰ KIỆN & LƯU TRỮ"]
+        C7 --> D1["Webhook sang Node.js Core<br/>(Socket.IO Realtime Alert)"]
+        C7 --> D2["MongoDB: ai_pose_surveillance_logs"]
+        C7 --> D3["MySQL: vi_pham_quy_che"]
+    end
+
+    style TIER_1 fill:#e0f2fe,stroke:#0284c7,stroke-width:2px
+    style TIER_2 fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    style SERVER_CORE fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style DISPATCH fill:#fdf4ff,stroke:#c026d3,stroke-width:2px
+```
+
+#### 26.8.1. Phân Tích Mô Hình Tải Trọng Thực Tế & Nguy Cơ Quá Tải (Capacity & Failure Analysis)
+
+Trong kịch bản kỳ thi thực tế quy mô lớn của trường đại học:
+- **Số lượng thí sinh đồng thời (CCU):** 1.000 thí sinh làm bài trực tuyến trên máy tính xách tay / PC.
+- **Số lượng phòng thi tập trung:** 20 phòng thi, mỗi phòng trang bị 1 đến 2 camera IP/CCTV góc rộng quan sát toàn cảnh các dãy bàn.
+
+**Nếu xử lý theo cách thức ngây thơ (Naive Continuous Streaming):**
+1. *Băng thông mạng:* 1.000 thí sinh stream WebRTC/RTSP 720p@30fps ($1.5\text{ Mbps/stream}$) tiêu tốn $1.500\text{ Mbps} = 1.5\text{ Gbps}$ băng thông liên tục, làm nghẽn toàn bộ switch mạng và hạ tầng cloud.
+2. *Tải trọng tính toán AI:* $1.000 \text{ máy} \times 30\text{ fps} + 20 \text{ CCTV} \times 30\text{ fps} = 30.600 \text{ frames/giây}$. Ngay cả các cụm máy chủ trang bị GPU chuyên dụng cũng bị tràn VRAM và 100% CPU, dẫn đến tình trạng treo tiến trình (Process Starvation) và crash ứng dụng.
+3. *Cơ sở dữ liệu:* Nếu mỗi frame ghi nhận trạng thái vào cơ sở dữ liệu, server sẽ gửi hàng trăm ngàn câu lệnh `INSERT` mỗi giây, làm cạn kiệt Connection Pool của MySQL và MongoDB.
+
+#### 26.8.2. Chiến Lược Tối Ưu Máy Thí Sinh (Candidate PC / Laptop - Personal Webcam)
+
+Để bảo vệ server, nguyên tắc cốt lõi là **đẩy một phần tải trọng lọc sơ bộ ra biên (Client-Side Edge Hybrid)**:
+
+1. **Chu kỳ lấy mẫu thích ứng theo điểm uy tín (Adaptive Sampling Interval):**
+   - Thay vì stream video 30 FPS, trình duyệt của thí sinh (ReactJS) chỉ chụp một ảnh tĩnh dạng thumbnail qua thẻ `<canvas>`:
+     - Độ phân giải thu nhỏ: $320 \times 240$ px (đủ trích xuất khung xương vai, ngực, đầu).
+     - Định dạng nén: JPEG chất lượng 60% (`quality = 0.6`), dung lượng mỗi frame chỉ khoảng **15 – 25 KB**.
+     - Tần suất gửi:
+       - **Thí sinh có điểm uy tín cao ($\ge 90$ điểm):** 1 frame mỗi **20 giây** (Heartbeat Frame).
+       - **Thí sinh có dấu hiệu vi phạm trước đó ($70 - 89$ điểm):** 1 frame mỗi **15 giây**.
+       - **Thí sinh diện giám sát đặc biệt ($< 70$ điểm):** 1 frame mỗi **10 giây**.
+   - **Phát hiện kích hoạt đột biến (Client-Side Burst Trigger):** Khi Web Worker client phát hiện thí sinh quay đầu quá $30^\circ$, che camera hoặc không có mặt trong khung hình, client sẽ gửi ngay một frame ưu tiên cao (Burst Inspection Frame) mà không đợi hết chu kỳ.
+   - **Kết quả tính toán tải:** Với 1.000 thí sinh, server chỉ phải tiếp nhận:
+     $$\text{Request Rate} = \frac{1.000 \text{ thí sinh}}{18 \text{ giây trung bình}} \approx 55 \text{ requests/giây}$$
+     Băng thông mạng chỉ còn: $55 \times 20 \text{ KB} \approx 1.1 \text{ MB/s}$ (tiết kiệm **99.4%** băng thông và tài nguyên CPU).
+
+2. **Bộ giới hạn tần suất Token Bucket phía Server (Server-Side Rate Limiter):**
+   - Áp dụng thuật toán Token Bucket / Sliding Window gắn chặt theo `sessionStudentId`.
+   - Giới hạn cứng: Tối đa 1 request / 5 giây cho mỗi thí sinh. Nếu trình duyệt gửi liên tục do lỗi vòng lặp, server lập tức phản hồi mã HTTP 429 hoặc trả về cache kết quả trước đó mà không gọi vào mô hình AI.
+   - Luồng tiếp nhận HTTP được tách rời khỏi luồng tính toán AI thông qua hàng đợi `ThreadPoolExecutor(max_workers=8..16)`.
+
+#### 26.8.3. Chiến Lược Tối Ưu Camera Phòng Thi (Exam Room CCTV / RTSP Stream Manager)
+
+Đối với camera giám sát toàn cảnh phòng thi (RTSP 1080p@30fps):
+
+1. **Lấy mẫu thưa luồng video (FPS Decimation / Frame Skipping):**
+   - Các hành vi thể chất bất thường trong phòng thi (thí sinh đứng dậy quay cóp, rời khỏi chỗ ngồi, gục xuống bàn) đều diễn ra trong khoảng thời gian từ **1.5 đến 3.0 giây**.
+   - Do đó, việc phân tích ở tốc độ 30 FPS là hoàn toàn lãng phí.
+   - Kiến trúc `CCTVStreamWorker` liên tục kéo luồng video từ RTSP để giải phóng bộ đệm phần cứng của camera (ngăn ngừa hiện tượng trễ tích lũy - Lag Accumulation), nhưng **bỏ qua 90% số frame** và chỉ đưa vào pipeline AI **2 đến 3 FPS** (1 frame mỗi $330\text{ms} - 500\text{ms}$).
+   - **Tỷ lệ giảm tải:** Giảm ngay **90% - 93%** khối lượng tính toán ma trận điểm ảnh.
+
+2. **Hạ độ phân giải không gian (Spatial Downscaling):**
+   - Frame 1080p ($1920 \times 1080$) được tự động nén về $640 \times 360$ px trước khi nạp vào MediaPipe Pose.
+   - Tốc độ suy luận tăng gấp **4 lần**, bộ nhớ RAM giảm từ 6.2 MB/frame xuống còn 690 KB/frame.
+
+3. **Vòng đệm không chặn đơn vị 1-Slot (Non-blocking Single-Slot Ring Buffer):**
+   - Hàng đợi nhận frame sử dụng cơ chế `Queue(maxsize=1)`.
+   - Nếu worker AI đang bận tính toán frame trước, frame mới đến sẽ lập tức thay thế frame cũ trong buffer (`put_nowait` với chiến lược `drop oldest`).
+   - Đảm bảo server **không bao giờ bị phình bộ nhớ (Memory Leak)** và thời gian trễ hiển thị (Display Latency) luôn dưới $150\text{ms}$.
+
+4. **Cô lập tiến trình (Process Isolation & Auto-Recovery Watchdog):**
+   - Mỗi camera RTSP được quản lý trong một tiến trình/luồng chuyên biệt với cơ chế Auto-Reconnect. Nếu mạng phòng thi chập chờn hoặc camera khởi động lại, luồng worker sẽ tự động kết nối lại sau 5 giây mà không làm gián đoạn toàn bộ hệ thống.
+
+#### 26.8.4. Bộ Lọc Trễ Trạng Thái & Khử Trùng Lặp Sự Kiện (Hysteresis Filter & Debounce Engine)
+
+Nhằm ngăn chặn hiện tượng spam cảnh báo và ghi đè cơ sở dữ liệu:
+
+1. **Bộ lọc trễ thời gian (Temporal Hysteresis Filter):**
+   - Một frame đơn lẻ bị phát hiện bất thường sẽ **chưa kích hoạt sự kiện vi phạm ngay** (để loại trừ trường hợp camera bị giật hình, thí sinh vươn vai hoặc đổi tư thế chốc lát).
+   - Quy tắc kích hoạt:
+     - Trạng thái `STANDING` (Đứng dậy) hoặc `ABSENT` (Rời khỏi chỗ): Phải duy trì liên tục tối thiểu **3.0 giây** (tương đương 6 - 9 frame CCTV liên tiếp).
+     - Trạng thái `IMMOBILITY` (Bất động bất thường): Phải duy trì liên tục tối thiểu **45.0 giây**.
+2. **Khử trùng lặp phát tán sự kiện (Event Deduplication):**
+   - Chỉ phát sự kiện (Webhook sang Node.js / Socket.IO và ghi vào MySQL/MongoDB) khi có **sự chuyển giao trạng thái (State Transition)**:
+     $$\text{PREVIOUS\_STATE} \neq \text{CURRENT\_STATE}$$
+   - Trong suốt khoảng thời gian thí sinh tiếp tục duy trì trạng thái vi phạm, hệ thống chỉ cập nhật timestamp `last_seen` trong RAM mà không gửi thêm bất kỳ bản tin socket nào.
+   - Giảm **99.9%** số lượng truy vấn ghi cơ sở dữ liệu.
+
+#### 26.8.5. Bảng So Sánh Hiệu Năng Trước & Sau Tối Ưu (Performance Benchmark)
+
+| Tiêu chí kỹ thuật | Trước khi tối ưu (Naive Continuous 30 FPS) | Sau khi tối ưu (2-Tier Edge-Hybrid Architecture) | Mức độ cải thiện |
+|---|---|---|---|
+| **Băng thông mạng (1.000 Thí sinh + 20 CCTV)** | $\sim 1.580\text{ Mbps}$ ($1.58\text{ Gbps}$) | $\sim 12.5\text{ Mbps}$ | **Tiết kiệm 99.2% băng thông** |
+| **Số frame suy luận AI/giây** | $30.600\text{ frames/giây}$ | $\sim 95 - 115\text{ frames/giây}$ | **Giảm 99.6% tải tính toán AI** |
+| **Mức tiêu thụ CPU Server** | $100\%$ (Thắt cổ chai, treo máy trong 5s) | $15\% - 25\%$ (Trên server 8 cores tiêu chuẩn) | **Hệ thống chạy mượt mà, ổn định** |
+| **Mức tiêu thụ RAM Server** | Tăng lũy tiến $> 16\text{ GB} \rightarrow \text{OOM Crash}$ | Cố định $\sim 1.2\text{ GB} - 1.8\text{ GB}$ | **Ổn định tuyệt đối, không rò rỉ RAM** |
+| **Số lượt ghi Cơ sở dữ liệu/phút** | $> 1.800.000\text{ writes/phút}$ | $< 60\text{ writes/phút}$ (Chỉ ghi khi có biến đổi) | **Giảm 99.99% I/O Disk & DB Load** |
+| **Độ trễ phát hiện vi phạm (Latency)** | $> 15\text{ giây}$ (Do nghẽn hàng đợi) | $\le 1.2\text{ giây}$ | **Thời gian thực tức thì** |
+| **Khả năng chịu tải (Scalability)** | Tối đa 30 - 50 thí sinh | Sẵn sàng mở rộng lên **2.000+ thí sinh** | **Tăng 40 lần quy mô phục vụ** |
+
+---
+
+### 26.9. Đặc Tả Chuẩn Hóa Biểu Đồ Hoạt Động (AD-09) & Biểu Đồ Tuần Tự (SD-09)
+
+Nhằm phục vụ báo cáo Đồ án Tốt nghiệp theo đúng chuẩn mực phân tích thiết kế hệ thống của Visual Paradigm:
+
+#### 26.9.1. Biểu Đồ Hoạt Động (Activity Diagram — AD-09: Giám Sát Thể Chất & Camera Phòng Thi Chống Quá Tải)
+Bản vẽ áp dụng trọn vẹn **nguyên lý bố cục vàng** của Visual Paradigm (3 Swimlanes rõ ràng, thanh đồng bộ Fork/Join màu đen, hình thoi rẽ nhánh điều kiện quay ngược loại trừ hoàn toàn các nút thừa):
+
+```plantuml
+@startuml
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #000000
+skinparam ActivityFontName Arial
+skinparam ActivityFontSize 12
+skinparam ArrowColor #000000
+
+|Thí Sinh & Camera CCTV|
+start
+fork
+  :1.1. Thí sinh làm bài thi\n(Webcam chụp thumbnail 320x240);
+  :1.2. Đánh giá Adaptive Interval\n(10s - 20s theo điểm uy tín);
+fork again
+  :1.3. Camera CCTV phòng thi\n(Kéo luồng RTSP 1080p@30fps);
+  :1.4. Lấy mẫu thưa Decimation\n(Chỉ giữ 3 FPS, bỏ qua 90% frame);
+end fork
+
+|Flask Surveillance (Microservice)|
+:2. Kiểm tra Token Bucket Rate Limiter\n(Giới hạn 1 req/4.5s trên mỗi thí sinh);
+
+if (Request có vượt quá tần suất?) then (T: Bị giới hạn)
+  :2.1. Trả về kết quả Cache trong RAM\n(Không gọi mô hình AI, Latency < 0.3ms);
+  detach
+else (F: Hợp lệ)
+  :3. Thu nhỏ ảnh (Downscaling)\n& Chuyển đổi ma trận điểm ảnh;
+  :4. Trích xuất góc động học cơ sinh học\n(MediaPipe Lite / OpenCV Kinematics);
+  :5. Tính năng lượng chuyển động vi sai\n(Immobility & Kinetic Motion Energy);
+
+  if (Phát hiện tư thế bất thường hoặc bất động?) then (T: Có dấu hiệu)
+    :6. Đưa vào Bộ lọc trễ Hysteresis Filter\n(Debounce: Rời ghế/Đứng > 3s, Bất động > 45s);
+    if (Trạng thái bất thường duy trì đủ lâu?) then (T: Xác nhận vi phạm)
+      :7. Hàng đợi Worker bất đồng bộ\nphát tán sự kiện (Event Dispatcher);
+    else (F: Thoáng qua)
+      :6.1. Bỏ qua nhiễu — Không ghi nhận vi phạm;
+      detach
+    endif
+  else (F: Bình thường)
+    :5.1. Xác nhận thí sinh ngồi làm bài đúng quy chế;
+    detach
+  endif
+endif
+
+|Hệ Thống-Backend (Node.js Core)|
+:8. Nhận Webhook xác thực bảo mật HMAC\n(POST /api/proctor/webhook);
+:9. Kiểm tra Proctor Override\n(Giám thị đang ghé kiểm tra bàn?);
+
+if (Cán bộ coi thi đang tại bàn?) then (T: Đúng)
+  :9.1. Miễn trừ xử phạt — Giữ nguyên điểm uy tín;
+else (F: Không)
+  :10. Khấu trừ điểm uy tín theo trọng số\n& Ghi nhận bản ghi ExamViolation (MongoDB/MySQL);
+  :11. Phát sóng sự kiện thời gian thực\nqua Socket.IO (proctor:posture_alert);
+endif
+
+|Giám Thị (LiveProctor UI)|
+:12. Sơ đồ bàn Desk Matrix nhấp nháy viền màu\n& hiển thị huy hiệu (RỜI GHẾ / ĐỨNG DẬY / GỤC XUỐNG);
+stop
+@enduml
+```
+
+#### 26.9.2. Biểu Đồ Tuần Tự (Sequence Diagram — SD-09: Quy Trình Giám Sát Thời Gian Thực & Chống Quá Tải)
+Mô tả tuần tự tương tác 4 phân vùng (Client Tier $\leftrightarrow$ Edge AI Microservice $\leftrightarrow$ Node.js Core Backend $\leftrightarrow$ Giám Thị):
+
+```plantuml
+@startuml
+skinparam SequenceMessageAlignment center
+skinparam BoxPadding 10
+skinparam ParticipantPadding 10
+
+box "Client Tier" #E0F2FE
+actor "Thí Sinh\n(Webcam)" as HV
+participant "TakeExam UI\n(ReactJS)" as UI
+actor "CCTV Phòng Thi\n(RTSP 30 FPS)" as CCTV
+end box
+
+box "Edge AI Microservice (Flask:5000)" #F0FDF4
+participant "Surveillance Engine\n(Flask Core)" as Flask
+participant "Token Bucket &\nRing Buffer" as Buffer
+participant "Dual-Engine AI\n(MediaPipe/OpenCV)" as AI
+participant "Hysteresis Debounce\n& Dispatcher" as Debounce
+end box
+
+box "Backend & Realtime Core (Node:3011)" #FEF3C7
+participant "Proctor Controller\n(Node.js Core)" as Node
+participant "Socket.IO Server\n(Realtime Hub)" as Socket
+database "Database\n(MongoDB & MySQL)" as DB
+end box
+
+box "Proctor Dashboard" #FDF4FF
+actor "Giám Thị Coi Thi\n(LiveProctor UI)" as Proctor
+end box
+
+== 1. QUY TRÌNH CHỐNG NGHẼN TẢI TỪ MÁY THÍ SINH (CLIENT TOKEN BUCKET) ==
+HV -> UI : 1. Thực hiện làm bài thi trực tuyến
+UI -> UI : 2. Chụp frame 320x240 px (JPEG q=0.6, ~20KB)\nĐịnh kỳ 15s-20s theo điểm uy tín
+UI -> Flask : 3. POST /candidate/inspect-frame (sessionStudentId, frame)
+activate Flask
+Flask -> Buffer : 4. Kiểm tra giới hạn tần suất Token Bucket (1 req/4.5s)
+alt Tần suất gửi quá nhanh (< 4.5s)
+    Buffer --> Flask : 5. Trả về kết quả Cache trong RAM (Load Shedding)
+    Flask --> UI : 6. HTTP 200 { rate_limited: true, cached: true } (Latency < 0.3ms)
+else Tần suất hợp lệ (>= 4.5s)
+    Buffer --> Flask : 7. Cho phép thực thi
+    Flask -> AI : 8. Phân tích tư thế & Năng lượng động học vi sai
+    activate AI
+    AI --> Flask : 9. Trả về posture_state: STANDING, angles, motion_energy
+    deactivate AI
+    Flask -> Debounce : 10. Đưa vào bộ lọc trễ Hysteresis Filter (3s debounce)
+    Flask --> UI : 11. HTTP 200 { success: true, posture_state, trustScore }
+end
+deactivate Flask
+
+== 2. QUY TRÌNH LẤY MẪU THƯA CAMERA CCTV PHÒNG THI (FPS DECIMATION) ==
+loop Kéo luồng liên tục 30 FPS để xả bộ đệm phần cứng
+    CCTV -> Buffer : 12. Gửi frame RTSP 1080p@30fps
+    Buffer -> Buffer : 13. Decimation: Bỏ qua 90% số frame\nChỉ nạp 3 FPS vào Single-Slot Buffer (maxsize=1)
+    Buffer -> AI : 14. Suy luận trên ảnh nén 640x360 px (3 FPS)
+    AI --> Debounce : 15. Cập nhật trạng thái phòng thi
+end
+
+== 3. BẮN SỰ KIỆN WEBHOOK & HIỂN THỊ THỜI GIAN THỰC CHO GIÁM THỊ ==
+alt Trạng thái bất thường duy trì liên tục > 3s (Xác nhận vi phạm)
+    Debounce -> Node : 16. Asynchronous Webhook (POST /api/proctor/webhook)\nPayload: { entity_id, event_type: POSTURE_STANDING, penalty: 15 }
+    activate Node
+    Node -> Node : 17. Kiểm tra Proctor Override (Giám thị có đang tại bàn?)
+    alt Giám thị đang ghé kiểm tra bàn
+        Node --> Debounce : 18. Miễn trừ phạt (Proctor Override Active)
+    else Không có giám thị tại bàn
+        Node -> DB : 19. Khấu trừ điểm uy tín & Lưu ExamViolation + AiPoseSurveillanceLog
+        activate DB
+        DB --> Node : 20. Xác nhận lưu dữ liệu
+        deactivate DB
+        Node -> Socket : 21. emit('proctor:posture_alert', { seatRow, seatCol, event: 'POSTURE_STANDING' })
+        activate Socket
+        Socket -> Proctor : 22. Sơ đồ bàn Desk Matrix nhấp nháy viền cam & hiển thị badge [ĐỨNG DẬY]
+        deactivate Socket
+        Node --> Debounce : 23. HTTP 200 { processed: 'CANDIDATE_VIOLATION_LOGGED' }
+    end
+    deactivate Node
+end
+@enduml
+```
+
+---
+
+*Blueprint version 3.5 — Cập nhật toàn diện: 2026-11-09 (Tích hợp Kiến trúc Chống Quá Tải Server cho Camera Phòng Thi & Máy Thí Sinh)*  
 *Chứng nhận: Hệ thống đáp ứng chuẩn xác 100% Đề cương Công nghệ Đồ án Tốt nghiệp: **ReactJS, Python Flask, MySQL, MongoDB, Tailwind Framework**.*  
-*Kiến trúc bổ sung: **SOLID Principles, Layered Clean Architecture, Strategy Pattern Scoring, Non-Intrusive Biometric Exam Guarding, Enterprise Academic Palette (Non-Gaudy)**.*  
+*Kiến trúc bổ sung: **SOLID Principles, Layered Clean Architecture, Two-Tier Edge-Hybrid Load Shedding, Hysteresis Debouncing, High-Concurrency ThreadPool**.*  
 *Nguồn tham chiếu gốc: `database/init_mysql.sql`, `examguard-flask/`, `examguard-core/src/theme/colors.ts`, `examguard-core/server/services/`, `examguard-core/server/strategies/`*

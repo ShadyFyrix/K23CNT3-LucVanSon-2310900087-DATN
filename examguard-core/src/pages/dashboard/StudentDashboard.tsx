@@ -162,22 +162,18 @@ export default function StudentDashboard() {
   }, [allSessions]);
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      {/* ── 1. DIGITAL STUDENT BADGE & WELCOME BANNER ── */}
-      <div className={`relative overflow-hidden rounded-3xl border p-6 lg:p-8 transition-all ${
-        isDark
-          ? 'bg-gradient-to-r from-slate-900 via-blue-950/40 to-slate-900 border-slate-800 shadow-xl'
-          : 'bg-gradient-to-r from-blue-50 via-teal-50/60 to-white border-blue-200/80 shadow-md'
-      }`}>
+    <div className="space-y-6 pb-12 animate-in fade-in duration-300 font-sans">
+      {/* ── 1. DIGITAL STUDENT BADGE & WELCOME BANNER (EG HERO CARD) ── */}
+      <div className="eg-hero-card p-6 lg:p-8 rounded-3xl relative overflow-hidden transition-all shadow-xl">
         {/* Glow ambient background circles */}
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 rounded-full bg-teal-500/10 blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-[var(--color-electric)]/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 rounded-full bg-[var(--color-royal)]/10 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           {/* Left: Avatar & Identity info */}
           <div className="flex items-center space-x-5">
             <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 ring-4 ring-white/10 overflow-hidden">
+              <div className="w-20 h-20 rounded-2xl eg-btn-gradient text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-[var(--accent-glow)] ring-4 ring-white/10 overflow-hidden shrink-0">
                 {user?.facePhoto ? (
                   <img src={user.facePhoto} alt={user.fullName} className="w-full h-full object-cover" />
                 ) : (
@@ -196,7 +192,7 @@ export default function StudentDashboard() {
                 <h1 className="text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                   {user?.fullName || 'Sinh viên Dự thi'}
                 </h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                   Thí sinh K23
                 </span>
               </div>
@@ -227,20 +223,16 @@ export default function StudentDashboard() {
 
           {/* Right: Quick KPI Cards */}
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[11px] font-bold text-slate-400 uppercase">Ca Thi Sắp Tới</div>
-              <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] mt-0.5 font-mono">
                 {upcomingList.length}
               </div>
             </div>
 
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[11px] font-bold text-slate-400 uppercase">Môn Đã Thi</div>
-              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">
                 {historyList.length}
               </div>
             </div>
@@ -249,11 +241,9 @@ export default function StudentDashboard() {
               onClick={fetchStudentSchedule}
               disabled={loading}
               title="Làm mới lịch thi"
-              className={`p-3 rounded-2xl border transition ${
-                isDark ? 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 text-slate-300' : 'bg-white/80 border-slate-200 hover:bg-slate-100 text-slate-700'
-              }`}
+              className="p-3 rounded-2xl eg-glass-pill transition cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 text-[var(--color-azure)] ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -262,14 +252,10 @@ export default function StudentDashboard() {
       {/* ── 2. SPOTLIGHT EXAM ACTION HERO CARD ── */}
       {activeSession ? (
         /* Ca thi ĐANG DIỄN RA */
-        <div className={`p-6 lg:p-8 rounded-3xl border relative overflow-hidden transition-all shadow-xl ${
-          isDark
-            ? 'bg-gradient-to-r from-red-950/60 via-amber-950/30 to-slate-900 border-red-500/40 ring-2 ring-red-500/20'
-            : 'bg-gradient-to-r from-red-50 via-amber-50 to-white border-red-300 ring-2 ring-red-200'
-        }`}>
+        <div className="eg-cyber-card p-6 lg:p-8 rounded-3xl border border-rose-500/40 relative overflow-hidden transition-all shadow-xl">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-black bg-red-600 text-white animate-pulse">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                 <span>CA THI ĐANG DIỄN RA — VÀO THI NGAY</span>
               </div>
@@ -277,16 +263,16 @@ export default function StudentDashboard() {
                 {activeSession.session.title || activeSession.session.subjectName}
               </h2>
               <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600 dark:text-slate-300 pt-1">
-                <span className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1 text-red-500" /> Mã ca: {activeSession.session.code}</span>
-                <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1 text-red-500" /> Thời gian: {activeSession.session.durationMinutes} phút</span>
-                <span className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1 text-red-500" /> {activeSession.session.roomName}</span>
-                <span className="flex items-center font-bold text-red-600 dark:text-red-400">Số báo danh: {activeSession.candidateCode}</span>
+                <span className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1 text-[var(--color-azure)]" /> Mã ca: {activeSession.session.code}</span>
+                <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1 text-[var(--color-azure)]" /> Thời gian: {activeSession.session.durationMinutes} phút</span>
+                <span className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1 text-[var(--color-azure)]" /> {activeSession.session.roomName}</span>
+                <span className="flex items-center font-bold text-rose-500">Số báo danh: {activeSession.candidateCode}</span>
               </div>
             </div>
 
             <button
               onClick={() => navigate(`/take-exam/${activeSession.id}`)}
-              className="w-full lg:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-base shadow-xl shadow-red-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-3 shrink-0"
+              className="w-full lg:w-auto px-8 py-4 rounded-full eg-btn-gradient text-white font-extrabold text-base shadow-xl shadow-[var(--accent-glow)] transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-3 shrink-0 cursor-pointer"
             >
               <Monitor className="w-5 h-5" />
               <span>VÀO BUỒNG THI NGAY</span>
@@ -296,15 +282,11 @@ export default function StudentDashboard() {
         </div>
       ) : nextSession ? (
         /* Ca thi SẮP TỚI HÔM NAY (Có đếm ngược) */
-        <div className={`p-6 lg:p-8 rounded-3xl border relative overflow-hidden transition-all shadow-lg ${
-          isDark
-            ? 'bg-gradient-to-r from-blue-950/40 via-slate-900 to-teal-950/30 border-blue-500/30'
-            : 'bg-gradient-to-r from-blue-50/80 via-white to-teal-50/70 border-blue-200'
-        }`}>
+        <div className="eg-cyber-card p-6 lg:p-8 rounded-3xl border border-[var(--color-azure)]/30 relative overflow-hidden transition-all shadow-lg">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                <Clock className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold eg-glass-pill shadow-xs">
+                <Clock className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                 <span>CA THI TIẾP THEO CỦA BẠN</span>
               </div>
               <h2 className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white">
@@ -313,27 +295,25 @@ export default function StudentDashboard() {
               <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span>Phòng: <strong className="text-slate-800 dark:text-slate-200">{nextSession.session.roomName}</strong></span>
                 <span>Thời lượng: <strong className="text-slate-800 dark:text-slate-200">{nextSession.session.durationMinutes} phút</strong></span>
-                <span>Số báo danh: <strong className="text-blue-600 dark:text-blue-400 font-mono">{nextSession.candidateCode}</strong></span>
+                <span>Số báo danh: <strong className="text-[var(--color-azure)] font-mono">{nextSession.candidateCode}</strong></span>
                 {nextSession.seatPin && (
-                  <span>Mã PIN bàn: <strong className="font-mono bg-blue-500/10 px-2 py-0.5 rounded text-blue-600 dark:text-blue-300">{nextSession.seatPin}</strong></span>
+                  <span>Mã PIN bàn: <strong className="font-mono bg-[var(--color-electric)]/10 px-2 py-0.5 rounded text-[var(--color-azure)]">{nextSession.seatPin}</strong></span>
                 )}
               </div>
             </div>
 
             {/* Countdown Box & Direct CTA */}
             <div className="flex items-center gap-4 w-full lg:w-auto">
-              <div className={`px-5 py-3 rounded-2xl border text-center shrink-0 ${
-                isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-blue-200 shadow-sm'
-              }`}>
+              <div className="px-5 py-3 rounded-2xl eg-cyber-card text-center shrink-0">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mở phòng sau</div>
-                <div className="text-2xl font-black font-mono text-teal-600 dark:text-teal-400">
+                <div className="text-2xl font-black font-mono text-[var(--color-azure)]">
                   {formatCountdown(countdown)}
                 </div>
               </div>
 
               <button
                 onClick={() => navigate(`/take-exam/${nextSession.id}`)}
-                className="flex-1 lg:flex-none px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition flex items-center justify-center space-x-2 shrink-0"
+                className="flex-1 lg:flex-none px-6 py-3.5 rounded-full eg-btn-gradient text-white font-bold text-sm shadow-lg shadow-[var(--accent-glow)] transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
               >
                 <Monitor className="w-4 h-4" />
                 <span>Vào Phòng Chờ</span>
@@ -344,10 +324,8 @@ export default function StudentDashboard() {
         </div>
       ) : (
         /* KHÔNG CÓ CA THI HÔM NAY */
-        <div className={`p-6 rounded-3xl border flex items-center space-x-4 ${
-          isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-100/60 border-slate-200'
-        }`}>
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-500 flex items-center justify-center shrink-0">
+        <div className="eg-cyber-card p-6 rounded-3xl flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center shrink-0">
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
@@ -361,26 +339,26 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* ── 3. INTERACTIVE TABS: MY EXAMS & RESULTS ── */}
+      {/* ── 3. INTERACTIVE TABS: MY EXAMS & RESULTS (UNIFIED TAB BAR) ── */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-white/10">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveTab('UPCOMING')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                 activeTab === 'UPCOMING'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'eg-glass-pill shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Lịch thi sắp tới ({upcomingList.length})
             </button>
             <button
               onClick={() => setActiveTab('HISTORY')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                 activeTab === 'HISTORY'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'eg-glass-pill shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Kết quả & Bảng điểm ({historyList.length})
@@ -389,7 +367,7 @@ export default function StudentDashboard() {
 
           <button
             onClick={() => navigate('/exam/result?view=student')}
-            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+            className="text-xs font-bold text-[var(--color-azure)] hover:underline flex items-center space-x-1 cursor-pointer"
           >
             <span>Xem chi tiết tra cứu</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -407,32 +385,30 @@ export default function StudentDashboard() {
               upcomingList.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg ${
-                    isDark
-                      ? 'bg-slate-900/60 border-slate-800/80 hover:border-blue-500/40'
-                      : 'bg-white border-slate-200/90 hover:border-blue-300'
-                  }`}
+                  className="eg-cyber-card p-5 rounded-3xl transition-all duration-200 hover:shadow-lg flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                      {item.session.code}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
-                      {item.session.durationMinutes} phút
-                    </span>
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
+                        {item.session.code}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 font-mono">
+                        {item.session.durationMinutes} phút
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-3 line-clamp-2">
+                      {item.session.title || item.session.subjectName}
+                    </h3>
+
+                    <div className="mt-4 space-y-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      <p className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {new Date(item.session.startTime).toLocaleString('vi-VN')}</p>
+                      <p className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {item.session.roomName}</p>
+                      <p className="flex items-center font-mono">SBD: <strong className="text-slate-800 dark:text-slate-200 ml-1">{item.candidateCode}</strong></p>
+                    </div>
                   </div>
 
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-3 line-clamp-2">
-                    {item.session.title || item.session.subjectName}
-                  </h3>
-
-                  <div className="mt-4 space-y-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    <p className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {new Date(item.session.startTime).toLocaleString('vi-VN')}</p>
-                    <p className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {item.session.roomName}</p>
-                    <p className="flex items-center font-mono">SBD: <strong className="text-slate-800 dark:text-slate-200 ml-1">{item.candidateCode}</strong></p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                     <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
                       Sẵn sàng thi
@@ -440,7 +416,7 @@ export default function StudentDashboard() {
 
                     <button
                       onClick={() => navigate(`/take-exam/${item.id}`)}
-                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center space-x-1"
+                      className="px-4 py-1.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md shadow-[var(--accent-glow)] transition flex items-center space-x-1 cursor-pointer active:scale-95"
                     >
                       <span>Vào thi</span>
                       <ArrowRight className="w-3 h-3" />
@@ -463,9 +439,7 @@ export default function StudentDashboard() {
               historyList.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-5 rounded-2xl border transition-all ${
-                    isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
-                  }`}
+                  className="eg-cyber-card p-5 rounded-3xl transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono font-bold text-slate-400">{item.session.code}</span>
@@ -478,10 +452,10 @@ export default function StudentDashboard() {
                     {item.session.title || item.session.subjectName}
                   </h3>
 
-                  <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div className="mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
                     <div>
                       <div className="text-[10px] uppercase font-bold text-slate-400">Điểm Chính Thức</div>
-                      <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                      <div className="text-2xl font-black text-[var(--color-azure)] mt-0.5 font-mono">
                         {item.officialScore !== null && item.officialScore !== undefined
                           ? `${item.officialScore.toFixed(1)} / 10`
                           : 'Đang chấm'}
@@ -490,7 +464,7 @@ export default function StudentDashboard() {
                     {item.trustScore !== undefined && (
                       <div className="text-right">
                         <div className="text-[10px] uppercase font-bold text-slate-400">Trust Score AI</div>
-                        <div className={`text-sm font-extrabold mt-0.5 ${
+                        <div className={`text-sm font-extrabold mt-0.5 font-mono ${
                           (item.trustScore || 100) >= 80 ? 'text-emerald-500' : 'text-amber-500'
                         }`}>
                           {item.trustScore}%
@@ -500,12 +474,12 @@ export default function StudentDashboard() {
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-400 font-mono">
                       {new Date(item.session.startTime).toLocaleDateString('vi-VN')}
                     </span>
                     <button
                       onClick={() => navigate(`/exam/result?view=student&sessionStudentId=${item.id}`)}
-                      className="px-3 py-1.5 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs font-bold transition flex items-center space-x-1"
+                      className="px-3.5 py-1.5 rounded-full eg-glass-pill-subtle text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
                     >
                       <span>Xem chi tiết & Đáp án</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -521,17 +495,15 @@ export default function StudentDashboard() {
       {/* ── 4. AI PROCTORING & ROOM CHECKLIST (4 PILLARS) ── */}
       <div className="space-y-3 pt-4">
         <div className="flex items-center space-x-2">
-          <ShieldCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+          <ShieldCheck className="w-5 h-5 text-[var(--color-azure)]" />
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
             Bộ Quy Tắc Chuẩn Bị Phòng Thi Biometric AI
           </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className={`p-4 rounded-2xl border transition ${
-            isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-2.5">
+          <div className="eg-cyber-card p-4 rounded-3xl transition">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center mb-2.5">
               <Eye className="w-4 h-4" />
             </div>
             <h4 className="font-bold text-xs text-slate-800 dark:text-white">Ánh Sáng & Góc Quay</h4>
@@ -540,10 +512,8 @@ export default function StudentDashboard() {
             </p>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition ${
-            isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center mb-2.5">
+          <div className="eg-cyber-card p-4 rounded-3xl transition">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center mb-2.5">
               <Laptop className="w-4 h-4" />
             </div>
             <h4 className="font-bold text-xs text-slate-800 dark:text-white">Khóa Màn Hình (SEB)</h4>
@@ -552,10 +522,8 @@ export default function StudentDashboard() {
             </p>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition ${
-            isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2.5">
+          <div className="eg-cyber-card p-4 rounded-3xl transition">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center mb-2.5">
               <Wifi className="w-4 h-4" />
             </div>
             <h4 className="font-bold text-xs text-slate-800 dark:text-white">Mạng & Nguồn Điện</h4>
@@ -564,10 +532,8 @@ export default function StudentDashboard() {
             </p>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition ${
-            isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center mb-2.5">
+          <div className="eg-cyber-card p-4 rounded-3xl transition">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center mb-2.5">
               <AlertCircle className="w-4 h-4" />
             </div>
             <h4 className="font-bold text-xs text-slate-800 dark:text-white">Không Gian Yên Tĩnh</h4>

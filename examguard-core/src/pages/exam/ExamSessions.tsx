@@ -26,7 +26,9 @@ import {
   Heart,
   Flame,
   Sliders,
-  Timer
+  Timer,
+  Laptop,
+  Monitor
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../api/apiClient';
@@ -53,7 +55,7 @@ interface ExamSessionItem {
 
 export default function ExamSessions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [sessions, setSessions] = useState<ExamSessionItem[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,14 +66,15 @@ export default function ExamSessions() {
   const [selectedSessionForCandidates, setSelectedSessionForCandidates] = useState<ExamSessionItem | null>(null);
   const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
 
-  // State Modal Thêm Ca Thi (Dành riêng cho Admin)
+  // State Modal Thêm Ca Thi (Dành cho Giảng viên & Admin)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createPresetRoomId, setCreatePresetRoomId] = useState<string | undefined>(undefined);
   const [createPresetStartTime, setCreatePresetStartTime] = useState<string | undefined>(undefined);
 
-  // Phân quyền: Admin tạo được phòng thi chính khóa; Giảng viên & Admin tạo được phòng Quiz
-  const isAdmin = (user as any)?.role?.name === 'admin' || (user as any)?.role === 'admin' || (user as any)?.department === 'admin';
-  const isTeacher = (user as any)?.role?.name === 'teacher' || (user as any)?.role === 'teacher' || (user as any)?.department === 'teacher';
+  // Phân quyền: Giảng viên & Admin tạo được phòng thi; Sinh viên chỉ xem lịch thi
+  const isAdmin = (user as any)?.role?.name === 'admin' || (user as any)?.role === 'admin' || (user as any)?.department === 'admin' || hasRole('admin') || hasRole('superadmin');
+  const isTeacher = (user as any)?.role?.name === 'teacher' || (user as any)?.role === 'teacher' || (user as any)?.department === 'teacher' || hasRole('teacher') || hasRole('academic');
+  const canCreateSession = isAdmin || isTeacher;
 
   // State Modal Tạo Phòng Quiz Nhanh (Dành cho Giảng viên & Admin)
   const [isCreateQuizModalOpen, setIsCreateQuizModalOpen] = useState(false);
@@ -192,7 +195,7 @@ export default function ExamSessions() {
     }
     if (now >= start && now <= end) {
       const remainingMinutes = Math.max(0, Math.round((end - now) / 60000));
-      return { key: 'IN_PROGRESS', label: `ĐANG THI (Còn ${remainingMinutes}p)`, isEnded: false, isOngoing: true, isUpcoming: false, badgeClass: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 animate-pulse' };
+      return { key: 'IN_PROGRESS', label: `ĐANG THI (Còn ${remainingMinutes}p)`, isEnded: false, isOngoing: true, isUpcoming: false, badgeClass: 'bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/30 animate-pulse' };
     }
     const waitMinutes = Math.max(0, Math.round((start - now) / 60000));
     return { key: 'SCHEDULED', label: waitMinutes < 60 ? `SẮP THI (Sau ${waitMinutes}p)` : 'LÊN LỊCH', isEnded: false, isOngoing: false, isUpcoming: true, badgeClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30' };
@@ -225,147 +228,238 @@ export default function ExamSessions() {
     return matchSearch && matchStatus && matchType;
   });
 
+  const activeSession = sessions.find(s => s.status === 'IN_PROGRESS') || sessions[0];
+  const inProgressCount = sessions.filter(s => s.status === 'IN_PROGRESS').length;
+  const completedCount = sessions.filter(s => s.status === 'COMPLETED').length;
+  const scheduledCount = sessions.filter(s => s.status === 'SCHEDULED' || (!['IN_PROGRESS', 'COMPLETED'].includes(s.status))).length;
+
   return (
-    <div className="space-y-6 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+    <div className="space-y-6 font-sans select-none">
+      <div className="w-full max-w-[1600px] mx-auto space-y-5">
+        {/* ── 1. HEADER BENTO (CYBER-LUXURY GLASS) ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
-            <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span className="text-cyan-600 dark:text-cyan-400 font-semibold">ExamGuard AI</span>
-              <span>•</span>
-              <span>Khảo thí & Thi Trực Tuyến</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center space-x-3">
-              <span>QUẢN LÝ LỊCH THI & CA THI QUIZ</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-                {sessions.length} CA THI
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight eg-text-gradient">
+                Lịch Thi & Ca Thi Khảo Thí
+              </h1>
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {inProgressCount > 0 ? `${inProgressCount} ca đang diễn ra` : 'Hệ thống sẵn sàng'}
               </span>
-            </h1>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">
+              Điều phối phòng thi, sơ đồ ca thi Gantt timeline và tích hợp giám thị AI 3D WebGL.
+            </p>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {/* 1. Chỉ ADMIN mới có quyền tạo Ca thi / Phòng thi chính thức */}
-            {isAdmin && (
+          <div className="flex items-center flex-wrap gap-2.5">
+            {canCreateSession && (
               <button
                 onClick={() => {
                   setCreatePresetRoomId(undefined);
                   setCreatePresetStartTime(undefined);
                   setIsCreateModalOpen(true);
                 }}
-                className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
-                title="Admin Khảo thí: Lên lịch ca thi chính khóa phòng P302"
+                className="flex items-center space-x-1.5 px-4 py-2 eg-btn-gradient text-white rounded-full text-xs font-bold shadow-md transition active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>+ Thêm Ca Thi (Admin)</span>
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>+ Thêm Ca Thi</span>
               </button>
             )}
 
-            {/* 2. GIẢNG VIÊN & ADMIN: Được quyền tạo nhanh Phòng Quiz Arena */}
-            {(isTeacher || isAdmin) && (
+            {canCreateSession && (
               <button
                 onClick={openCreateQuizModal}
-                className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer"
-                title="Giảng viên: Tạo nhanh phòng Quiz Arena cho lớp học"
+                className="flex items-center space-x-1.5 px-4 py-2 eg-glass-pill text-xs font-bold transition active:scale-95 cursor-pointer"
               >
-                <Zap className="w-4 h-4 fill-slate-950" />
-                <span>⚡ Tạo Phòng Quiz</span>
+                <Zap className="w-3.5 h-3.5" />
+                <span>Tạo Phòng Quiz</span>
               </button>
             )}
 
             <button
               onClick={() => navigate('/take-exam')}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 cursor-pointer"
+              className="flex items-center space-x-1.5 px-4 py-2 eg-glass-pill-subtle rounded-full text-xs font-bold transition active:scale-95 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-white" />
-              <span>Vào Làm Bài Quiz</span>
-            </button>
-            <button
-              onClick={() => navigate('/exam-papers')}
-              className="flex items-center space-x-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>Ngân Hàng Đề Thi</span>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Cổng Thí Sinh</span>
             </button>
           </div>
         </div>
 
-        {/* Toolbar điều khiển & lọc */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+        {/* ── 2. ASYMMETRIC BENTO OVERVIEW (CÓ CÁI CHÍNH CÁI PHỤ) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1 (Hero Col 2): Tiêu điểm ca thi đang diễn ra */}
+          <div className="lg:col-span-2 relative overflow-hidden eg-cyber-card border border-[var(--color-azure)]/30 p-5 shadow-2xl flex flex-col justify-between group">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-500 dark:text-rose-300">
+                  Ca thi tiêu điểm thời gian thực
+                </span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[var(--color-azure)]">
+                {activeSession?.code || 'CA-202611'}
+              </span>
+            </div>
+
+            <div className="my-1">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white line-clamp-1">
+                {activeSession?.subject?.name || activeSession?.title || 'Kỹ thuật lập trình C'}
+              </h3>
+              <div className="flex flex-wrap items-center gap-2.5 mt-1 text-xs text-slate-600 dark:text-slate-300">
+                <span className="inline-flex items-center gap-1 font-semibold text-slate-900 dark:text-white">
+                  <Monitor className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+                  {activeSession?.room?.code || 'LAB01'} ({activeSession?.room?.capacity || 24} máy thi)
+                </span>
+                <span className="text-slate-400 dark:text-white/20">•</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  {new Date(activeSession?.startTime || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(activeSession?.endTime || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({activeSession?.durationMinutes || 45} phút)
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                  {activeSession?.studentCount || 1} thí sinh
+                </span>
+                <span className="text-slate-400 dark:text-white/20">•</span>
+                <span className="text-slate-500 dark:text-slate-400">Giám thị: {activeSession?.proctor1?.fullName || 'Hệ thống AI'}</span>
+              </div>
+              <button
+                onClick={() => navigate(`/live-proctor/${activeSession?._id}`)}
+                className="px-4 py-1.5 rounded-full eg-btn-gradient text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Vào Phòng 3D</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Thống kê trạng thái vận hành */}
+          <div className="bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái ca thi</span>
+              <div className="p-2 rounded-full eg-glass-pill">
+                <CalendarRange className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="my-2">
+              <div className="text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                {sessions.length}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Tổng số ca thi hôm nay</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-semibold">
+              <span className="text-emerald-600 dark:text-emerald-400">{inProgressCount} Đang thi</span>
+              <span className="text-slate-500 dark:text-slate-400">{completedCount} Đã xong</span>
+            </div>
+          </div>
+
+          {/* Card 3: Phân loại hình thức khảo thí */}
+          <div className="bg-white/90 dark:bg-[#0B0C1E]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hình thức khảo thí</span>
+              <div className="p-2 rounded-full eg-glass-pill">
+                <Zap className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="my-2">
+              <div className="text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                100%
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Lab PC & Trắc nghiệm Online</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+              <span className="text-[var(--color-azure)] font-bold">ArcFace KYC</span>
+              <span className="text-slate-500 dark:text-slate-400">Zero-Trust</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. TOOLBAR ĐIỀU KHIỂN & LỌC TINH GỌN (GLASS CAPSULE BAR) ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 eg-cyber-card p-3 px-5 shadow-xl">
           <div className="flex items-center space-x-3 flex-1">
-            {/* Chuyển đổi giao diện: Timeline Gantt vs Thẻ Ca Thi */}
-            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            {/* Chuyển đổi giao diện: Timeline Gantt vs Thẻ Ca Thi (Basel 3D Glass Pills) */}
+            <div className="flex items-center space-x-1.5 p-1 rounded-full bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10">
               <button
                 onClick={() => setViewMode('TIMELINE')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                  viewMode === 'TIMELINE' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all flex items-center space-x-2 cursor-pointer ${
+                  viewMode === 'TIMELINE'
+                    ? 'eg-glass-pill shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <CalendarRange className="w-3.5 h-3.5" />
-                <span>Resource Timeline (Gantt)</span>
+                <span>Resource Gantt</span>
               </button>
               <button
                 onClick={() => setViewMode('CARDS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                  viewMode === 'CARDS' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all flex items-center space-x-2 cursor-pointer ${
+                  viewMode === 'CARDS'
+                    ? 'eg-glass-pill shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Thẻ Ca Thi ({sessions.length})</span>
+                <span>Lưới Thẻ ({filtered.length})</span>
               </button>
             </div>
 
-            <div className="relative flex-1 max-w-sm hidden sm:block">
-              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3" />
+            <div className="relative flex-1 max-w-xs hidden sm:block">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Tìm ca thi, môn học..."
+                placeholder="Lọc ca thi, môn học..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[var(--color-azure)] transition-all"
               />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Bộ lọc loại thi */}
-            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Bộ lọc loại thi (Capsule Pills Đồng Bộ 1 Màu) */}
+            <div className="flex items-center space-x-1 p-1 rounded-full bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10">
               <button
                 onClick={() => setTypeFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  typeFilter === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  typeFilter === 'ALL' ? 'eg-glass-pill shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Mọi hình thức
+                Tất cả
               </button>
               <button
                 onClick={() => setTypeFilter('ONLINE_QUIZ')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center space-x-1 cursor-pointer ${
-                  typeFilter === 'ONLINE_QUIZ' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 cursor-pointer ${
+                  typeFilter === 'ONLINE_QUIZ' ? 'eg-glass-pill shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>⚡ Quiz</span>
+                <Zap className="w-3 h-3" />
+                <span>Quiz</span>
               </button>
               <button
                 onClick={() => setTypeFilter('LAB_PC')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  typeFilter === 'LAB_PC' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  typeFilter === 'LAB_PC' ? 'eg-glass-pill shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Máy Lab
+                Lab PC
               </button>
               <button
                 onClick={() => setTypeFilter('BYOD_LAPTOP')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  typeFilter === 'BYOD_LAPTOP' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  typeFilter === 'BYOD_LAPTOP' ? 'eg-glass-pill shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 BYOD
               </button>
             </div>
 
-            {/* Bộ lọc trạng thái */}
-            <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            {/* Bộ lọc trạng thái (Capsule Pills) */}
+            <div className="flex items-center space-x-1 p-1 rounded-full bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10">
               {[
                 { id: 'ALL', label: 'Tất cả' },
                 { id: 'IN_PROGRESS', label: 'Đang thi' },
@@ -375,8 +469,8 @@ export default function ExamSessions() {
                 <button
                   key={st.id}
                   onClick={() => setStatusFilter(st.id)}
-                  className={`px-2 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                    statusFilter === st.id ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    statusFilter === st.id ? 'eg-glass-pill shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {st.label}
@@ -391,7 +485,9 @@ export default function ExamSessions() {
           <ResourceTimelineView
             sessions={filtered}
             rooms={rooms}
+            canCreateSession={canCreateSession}
             onOpenCreateModal={(roomId, defaultTime) => {
+              if (!canCreateSession) return;
               setCreatePresetRoomId(roomId);
               setCreatePresetStartTime(defaultTime);
               setIsCreateModalOpen(true);
@@ -421,85 +517,91 @@ export default function ExamSessions() {
               return (
                 <div
                   key={s._id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/80 dark:hover:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-xl dark:shadow-none flex flex-col justify-between transition-all group"
+                  className="bg-[#0B0C1E]/75 dark:bg-[#0B0C1E]/75 border border-white/10 hover:border-[#3781fc]/50 hover:shadow-[0_0_30px_rgba(25,81,252,0.25)] rounded-3xl p-6 shadow-2xl backdrop-blur-2xl flex flex-col justify-between transition-all duration-300 group"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20">
+                        <span className="font-mono text-xs font-bold text-[#cbe9fd] px-2.5 py-1 rounded-full bg-[#1951fc]/20 border border-[#3781fc]/40">
                           {s.code}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 ${
                           s.examType === 'ONLINE_QUIZ'
-                            ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                             : s.examType === 'BYOD_LAPTOP'
-                            ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30'
-                            : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
+                            ? 'bg-[#7c3aed]/20 text-[#cbe9fd] border border-[#a855f7]/30'
+                            : 'bg-[#1951fc]/20 text-[#cbe9fd] border border-[#3781fc]/30'
                         }`}>
-                          {s.examType === 'ONLINE_QUIZ' ? '⚡ QUIZ' : s.examType === 'BYOD_LAPTOP' ? '💻 BYOD' : '🖥️ LAB'}
+                          {s.examType === 'ONLINE_QUIZ' ? (
+                            <><Zap className="w-3 h-3 text-amber-400" /> QUIZ</>
+                          ) : s.examType === 'BYOD_LAPTOP' ? (
+                            <><Laptop className="w-3 h-3 text-[#a855f7]" /> BYOD</>
+                          ) : (
+                            <><Monitor className="w-3 h-3 text-[#3781fc]" /> LAB</>
+                          )}
                         </span>
                       </div>
 
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${statusInfo.badgeClass}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${statusInfo.badgeClass}`}>
                         {statusInfo.label}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors line-clamp-1">
+                    <h3 className="text-base font-bold text-white group-hover:text-[#cbe9fd] transition-colors line-clamp-1">
                       {s.title}
                     </h3>
 
                     {/* Dải thông tin Lịch làm bài thi chi tiết */}
-                    <div className="flex items-center space-x-2 text-xs font-mono text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 px-3 py-2 rounded-xl">
-                      <Clock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                    <div className="flex items-center space-x-2 text-xs font-mono text-[#cbe9fd] bg-white/5 border border-white/10 px-3.5 py-2 rounded-full">
+                      <Clock className="w-3.5 h-3.5 text-[#3781fc] shrink-0" />
                       <span className="truncate font-semibold">{formatTimeRange(s.startTime, s.endTime)}</span>
                     </div>
 
-                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
+                    <div className="space-y-2 text-xs text-slate-300 bg-[#070814]/80 p-3.5 rounded-2xl border border-white/10">
                       <div className="flex justify-between">
-                        <span className="text-slate-400 dark:text-slate-500">Môn học:</span>
-                        <span className="text-slate-800 dark:text-slate-200 font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
+                        <span className="text-slate-400">Môn học:</span>
+                        <span className="text-white font-medium">{s.subject?.name || 'Kỹ thuật lập trình'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400 dark:text-slate-500">Phòng thi:</span>
-                        <span className="text-slate-800 dark:text-slate-200 font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
+                        <span className="text-slate-400">Phòng thi:</span>
+                        <span className="text-white font-bold">{s.room?.code} ({s.room?.capacity} bàn)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400 dark:text-slate-500">Thời lượng:</span>
-                        <span className="text-slate-800 dark:text-slate-200">{s.durationMinutes} phút</span>
+                        <span className="text-slate-400">Thời lượng:</span>
+                        <span className="text-slate-200">{s.durationMinutes} phút</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400 dark:text-slate-500">Thí sinh đã xếp:</span>
-                        <span className="text-cyan-700 dark:text-cyan-400 font-bold">{s.studentCount !== undefined ? s.studentCount : '—'} thí sinh</span>
+                        <span className="text-slate-400">Thí sinh đã xếp:</span>
+                        <span className="text-[#3781fc] font-bold">{s.studentCount !== undefined ? s.studentCount : '—'} thí sinh</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400 dark:text-slate-500">Cán bộ coi thi:</span>
-                        <span className="text-slate-800 dark:text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
+                        <span className="text-slate-400">Cán bộ coi thi:</span>
+                        <span className="text-slate-200">{s.proctor1?.fullName || 'ThS. Nguyễn Văn Giảng'}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Nút nghiệp vụ & Điều khiển ca thi */}
-                  <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 text-xs font-semibold">
+                  <div className="space-y-2 pt-4 border-t border-white/10 mt-4 text-xs font-semibold">
                     {/* Nút Quản lý Thí sinh & SBD */}
                     <button
                       onClick={() => setSelectedSessionForCandidates(s)}
-                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
+                      className="w-full py-2 bg-white/5 hover:bg-white/10 text-[#cbe9fd] border border-white/10 rounded-full transition flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                      <span>Quản Lý Thí Sinh & Số Báo Danh ({s.studentCount !== undefined ? s.studentCount : '—'})</span>
+                      <Users className="w-3.5 h-3.5 text-[#3781fc]" />
+                      <span>Quản Lý Thí Sinh & SBD ({s.studentCount !== undefined ? s.studentCount : '—'})</span>
                     </button>
 
                     {/* Nút Vào Làm Bài hoặc Thông báo Buồng thi đã đóng */}
                     {statusInfo.isEnded ? (
-                      <div className="w-full py-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-xl flex items-center justify-center space-x-1.5 text-center">
-                        <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                      <div className="w-full py-2 bg-white/[0.03] border border-white/10 text-slate-400 rounded-full flex items-center justify-center space-x-1.5 text-center">
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
                         <span>Buồng Thi Đã Đóng (Đã Thu Bài)</span>
                       </div>
                     ) : (
                       <button
                         onClick={() => navigate('/take-exam')}
-                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-600/20 active:scale-95 cursor-pointer"
+                        className="w-full py-2 bg-gradient-to-r from-[#1951fc] to-[#7c3aed] hover:from-[#3781fc] hover:to-[#8b5cf6] text-white rounded-full transition flex items-center justify-center space-x-1.5 shadow-md shadow-[#1951fc]/30 active:scale-95 cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-white" />
                         <span>Làm Bài Thi Quiz</span>
@@ -516,13 +618,13 @@ export default function ExamSessions() {
                           navigate(`/quiz-arena/host/${s._id}`);
                         }
                       }}
-                      className="w-full py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
+                      className="w-full py-2 eg-btn-gradient text-white font-bold rounded-full transition flex items-center justify-center space-x-1.5 shadow-md active:scale-95 cursor-pointer"
                     >
-                      <Trophy className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                      <Trophy className="w-3.5 h-3.5 text-white" />
                       <span>
                         {(user as any)?.role?.name === 'student' || (user as any)?.role === 'student' 
-                          ? '⚡ Vào Đấu Trường Quiz' 
-                          : '🏆 Mở Đấu Trường Quiz Arena'}
+                          ? 'Vào Đấu Trường Quiz' 
+                          : 'Mở Đấu Trường Quiz Arena'}
                       </span>
                     </button>
 
@@ -531,12 +633,12 @@ export default function ExamSessions() {
                       <button
                         onClick={() => handleEndSession(s)}
                         disabled={closingSessionId === s._id}
-                        className="w-full py-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
                       >
                         {closingSessionId === s._id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Lock className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                          <Lock className="w-3.5 h-3.5 text-rose-400" />
                         )}
                         <span>Kết Thúc Ca Thi & Đóng Buồng Thi</span>
                       </button>
@@ -545,18 +647,18 @@ export default function ExamSessions() {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => navigate(`/live-proctor/${s._id}`)}
-                        className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-cyan-700 dark:text-cyan-400 rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer"
+                        className="p-2 eg-btn-proctor rounded-full text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-3.5 h-3.5 text-white" />
                         <span>Phòng 3D Live</span>
                       </button>
 
                       <button
                         onClick={() => navigate(`/grading-review/${s._id}`)}
-                        className={`p-2 rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer ${
+                        className={`p-2 rounded-full transition flex items-center justify-center space-x-1 cursor-pointer ${
                           statusInfo.isEnded
-                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-md shadow-indigo-600/30'
-                            : 'bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
+                            ? 'bg-gradient-to-r from-[#1951fc] to-[#7c3aed] text-white font-bold shadow-md shadow-[#1951fc]/30'
+                            : 'bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10'
                         }`}
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
@@ -604,8 +706,8 @@ export default function ExamSessions() {
             </button>
 
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                <Zap className="w-6 h-6 fill-amber-500" />
+              <div className="w-12 h-12 rounded-2xl eg-btn-gradient flex items-center justify-center text-white shadow-md shadow-[var(--accent-glow)]">
+                <Zap className="w-6 h-6 fill-current text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -627,7 +729,7 @@ export default function ExamSessions() {
                   placeholder="Ví dụ: Đấu trường Quiz 15p - Kỹ thuật Lập trình C"
                   value={quizTitle}
                   onChange={e => setQuizTitle(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-azure)]"
                 />
               </div>
 
@@ -639,7 +741,7 @@ export default function ExamSessions() {
                   required
                   value={selectedPaperId}
                   onChange={e => setSelectedPaperId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-azure)]"
                 >
                   {availablePapers.length === 0 ? (
                     <option value="">Chưa có đề thi nào trong ngân hàng</option>
@@ -659,7 +761,7 @@ export default function ExamSessions() {
                       setIsCreateQuizModalOpen(false);
                       navigate('/exam-papers?mode=quiz');
                     }}
-                    className="text-amber-500 hover:text-amber-400 font-bold flex items-center gap-1 cursor-pointer transition"
+                    className="text-[var(--color-azure)] hover:underline font-bold flex items-center gap-1 cursor-pointer transition"
                   >
                     <Zap className="w-3.5 h-3.5 fill-current" />
                     <span>Mở Studio Soạn Đề Quiz →</span>
@@ -671,10 +773,10 @@ export default function ExamSessions() {
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                    <Sliders className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                     <span>Tùy Biến Luật Chơi (Custom Rules)</span>
                   </label>
-                  <span className="text-[10px] text-amber-500 font-mono font-bold">Thời gian thực</span>
+                  <span className="text-[10px] text-[var(--color-azure)] font-mono font-bold">Thời gian thực</span>
                 </div>
 
                 {/* 1. Tính điểm tốc độ vs Chuẩn */}
@@ -684,11 +786,11 @@ export default function ExamSessions() {
                     onClick={() => setScoringType('SPEED_BONUS')}
                     className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                       scoringType === 'SPEED_BONUS'
-                        ? 'border-amber-500 bg-amber-500/10 text-amber-400 shadow-sm'
+                        ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/10 text-[var(--color-azure)] shadow-sm'
                         : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
                     }`}
                   >
-                    <Flame className="w-4 h-4 shrink-0 text-amber-500" />
+                    <Flame className="w-4 h-4 shrink-0 text-[var(--color-azure)]" />
                     <div>
                       <div>⚡ Đua Tốc Độ</div>
                       <div className="text-[10px] font-normal text-slate-400">Trả lời nhanh điểm cao</div>
@@ -700,11 +802,11 @@ export default function ExamSessions() {
                     onClick={() => setScoringType('STANDARD')}
                     className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                       scoringType === 'STANDARD'
-                        ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400 shadow-sm'
+                        ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/10 text-[var(--color-azure)] shadow-sm'
                         : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
                     }`}
                   >
-                    <CheckCircle className="w-4 h-4 shrink-0 text-cyan-400" />
+                    <CheckCircle className="w-4 h-4 shrink-0 text-[var(--color-azure)]" />
                     <div>
                       <div>🎯 Điểm Cố Định</div>
                       <div className="text-[10px] font-normal text-slate-400">Đúng nhận điểm chuẩn</div>
@@ -735,11 +837,11 @@ export default function ExamSessions() {
                     onClick={() => setShowLeaderboardLive(!showLeaderboardLive)}
                     className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                       showLeaderboardLive
-                        ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-sm'
+                        ? 'border-[var(--color-azure)] bg-[var(--color-electric)]/10 text-[var(--color-azure)] shadow-sm'
                         : 'border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-300'
                     }`}
                   >
-                    <Trophy className="w-4 h-4 shrink-0 text-indigo-400" />
+                    <Trophy className="w-4 h-4 shrink-0 text-[var(--color-azure)]" />
                     <div>
                       <div>🏆 BXH Trực Tiếp</div>
                       <div className="text-[10px] font-normal text-slate-400">{showLeaderboardLive ? 'Hiện Top 10 mỗi câu' : 'Chỉ hiện cuối giờ'}</div>
@@ -756,7 +858,7 @@ export default function ExamSessions() {
                     <select
                       value={quizSeconds}
                       onChange={e => setQuizSeconds(Number(e.target.value))}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-azure)]"
                     >
                       <option value={10}>10 giây / câu (Siêu tốc)</option>
                       <option value={15}>15 giây / câu (Nhanh)</option>
@@ -774,7 +876,7 @@ export default function ExamSessions() {
                     <select
                       value={timerType}
                       onChange={e => setTimerType(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-azure)]"
                     >
                       <option value="PER_QUESTION_TIMER">⏱️ Đếm ngược tự động</option>
                       <option value="MANUAL_HOST">🕹️ Host chuyển câu thủ công</option>
@@ -783,7 +885,7 @@ export default function ExamSessions() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+              <div className="p-3.5 rounded-xl bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 text-xs text-[var(--color-azure)] leading-relaxed">
                 💡 <strong>Dành riêng cho Giảng viên:</strong> Phòng Quiz là hoạt động tương tác linh hoạt trên lớp, không đòi hỏi đăng ký phòng máy vật lý hay cấp phép từ Ban Khảo thí. Sau khi tạo, bạn sẽ được đưa ngay vào màn hình điều khiển Host Cockpit!
               </div>
 
@@ -798,7 +900,7 @@ export default function ExamSessions() {
                 <button
                   type="submit"
                   disabled={isCreatingQuiz || availablePapers.length === 0}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl eg-btn-gradient text-white font-extrabold text-xs shadow-md transition active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {isCreatingQuiz ? 'Đang Khởi Tạo...' : '🚀 Bắt Đầu Đấu Trường Ngay'}
                 </button>

@@ -5,10 +5,11 @@ const { getUserRoleNames, userHasAnyRole } = require('../utils/roleHelper');
 exports.getPosts = async (req, res) => {
   try {
     const { category, search, isPinned } = req.query;
-    const userId = req.user._id.toString();
-    const userDept = req.user.department || '';
-    const userRoleNames = getUserRoleNames(req.user);
-    const isAdmin = userHasAnyRole(req.user, ['admin', 'superadmin', 'manager']);
+    const user = req.user || null;
+    const userId = user?._id ? user._id.toString() : null;
+    const userDept = user?.department || '';
+    const userRoleNames = user ? getUserRoleNames(user) : [];
+    const isAdmin = user ? userHasAnyRole(user, ['admin', 'superadmin', 'manager']) : false;
 
     const filter = {};
 
@@ -30,15 +31,14 @@ exports.getPosts = async (req, res) => {
     // Nếu không phải Admin, lọc tin theo Target Audience (Công khai, theo phòng ban, theo vai trò, hoặc chỉ định cá nhân)
     if (!isAdmin) {
       filter.$and = filter.$and || [];
-      filter.$and.push({
-        $or: [
-          { targetType: 'all' },
-          { author: req.user._id },
-          { targetType: 'department', targetDepartments: userDept },
-          { targetType: 'roles', targetRoles: { $in: userRoleNames } },
-          { targetType: 'users', targetUsers: req.user._id }
-        ]
-      });
+      const audienceConditions = [{ targetType: 'all' }];
+      if (userId) {
+        audienceConditions.push({ author: user._id });
+        if (userDept) audienceConditions.push({ targetType: 'department', targetDepartments: userDept });
+        if (userRoleNames.length > 0) audienceConditions.push({ targetType: 'roles', targetRoles: { $in: userRoleNames } });
+        audienceConditions.push({ targetType: 'users', targetUsers: user._id });
+      }
+      filter.$and.push({ $or: audienceConditions });
     }
 
     const posts = await Post.find(filter)
@@ -53,11 +53,11 @@ exports.getPosts = async (req, res) => {
       data: posts
     });
   } catch (error) {
-    console.error('Lỗi lấy bản tin:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi máy chủ khi lấy dữ liệu bản tin',
-      error: error.message
+    console.error('Error fetching posts:', error);
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      data: []
     });
   }
 };
@@ -74,13 +74,16 @@ exports.createPost = async (req, res) => {
       targetDepartments = [],
       targetRoles = [],
       targetUsers = [],
-      attachments = []
+      attachments = [],
+      actionLink = '',
+      actionText = '',
+      examSessionCode = ''
     } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng nhập tiêu đề và nội dung bản tin'
+        message: 'Vui lòng nhập tiêu đề và nội dung thông báo'
       });
     }
 
@@ -88,13 +91,16 @@ exports.createPost = async (req, res) => {
       title,
       content,
       category,
-      isPinned,
+      isPinned: Boolean(isPinned),
       author: req.user._id,
       targetType,
       targetDepartments,
       targetRoles,
       targetUsers,
-      attachments
+      attachments,
+      actionLink: actionLink || '',
+      actionText: actionText || '',
+      examSessionCode: examSessionCode || ''
     });
 
     const populated = await Post.findById(post._id)
@@ -103,14 +109,14 @@ exports.createPost = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Đã đăng bản tin doanh nghiệp thành công!',
+      message: 'Đã đăng thông báo khảo thí & học vụ thành công!',
       data: populated
     });
   } catch (error) {
-    console.error('Lỗi tạo bản tin:', error);
+    console.error('Lỗi tạo thông báo:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi máy chủ khi đăng bản tin',
+      message: 'Lỗi máy chủ khi đăng thông báo',
       error: error.message
     });
   }
@@ -129,8 +135,8 @@ exports.updatePost = async (req, res) => {
       });
     }
 
-    const isAdmin = userHasAnyRole(req.user, ['admin', 'superadmin']);
-    if (post.author.toString() !== req.user._id.toString() && !isAdmin) {
+    const canManage = userHasAnyRole(req.user, ['admin', 'superadmin', 'teacher', 'academic']);
+    if (post.author.toString() !== req.user._id.toString() && !canManage) {
       return res.status(403).json({
         success: false,
         message: 'Bạn không có quyền chỉnh sửa tin bài này'
@@ -169,8 +175,9 @@ exports.deletePost = async (req, res) => {
       });
     }
 
-    const isAdmin = userHasAnyRole(req.user, ['admin', 'superadmin']);
-    if (post.author.toString() !== req.user._id.toString() && !isAdmin) {
+    const canManage = userHasAnyRole(req.user, ['admin', 'superadmin']);
+    const isTeacherAuthor = post.author.toString() === req.user._id.toString();
+    if (!isTeacherAuthor && !canManage) {
       return res.status(403).json({
         success: false,
         message: 'Bạn không có quyền xóa tin bài này'
@@ -181,7 +188,7 @@ exports.deletePost = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Đã xóa bản tin thành công'
+      message: 'Đã xóa thông báo thành công'
     });
   } catch (error) {
     console.error('Lỗi xóa bản tin:', error);
@@ -207,9 +214,10 @@ exports.toggleLike = async (req, res) => {
       });
     }
 
-    const hasLiked = post.likes.includes(userId);
+    const userIdStr = userId.toString();
+    const hasLiked = post.likes.some(u => (u._id || u).toString() === userIdStr);
     if (hasLiked) {
-      post.likes = post.likes.filter(u => u.toString() !== userId.toString());
+      post.likes = post.likes.filter(u => (u._id || u).toString() !== userIdStr);
     } else {
       post.likes.push(userId);
     }

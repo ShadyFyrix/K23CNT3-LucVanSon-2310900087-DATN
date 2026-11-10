@@ -74,8 +74,8 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
       }`}
     >
       {/* Background Ambient Glows */}
-      <div className="absolute top-0 left-1/4 -translate-x-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-[450px] h-[450px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 -translate-x-1/2 w-[500px] h-[500px] bg-[var(--color-electric)]/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 right-10 w-[450px] h-[450px] bg-[var(--color-royal)]/10 rounded-full blur-[140px] pointer-events-none" />
 
       {/* ── TOP HEADER ── */}
       <header
@@ -86,15 +86,15 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3.5">
-            <div className="p-2 rounded-2xl bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 border border-blue-500/30 shadow-md">
-              <ShieldCheck className="w-6 h-6 text-blue-500" />
+            <div className="p-2 rounded-2xl eg-btn-gradient text-white border border-white/20 shadow-md">
+              <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                  EXAMGUARD <span className="text-blue-600 dark:text-blue-400">AI</span>
+                  EXAMGUARD <span className="eg-text-gradient">AI</span>
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                   PHÒNG CHỜ VÀO THI
                 </span>
               </div>
@@ -108,7 +108,7 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
           <div className="flex items-center space-x-3 sm:space-x-4">
             {/* Student mini tag */}
             <div className="hidden md:flex items-center space-x-2.5 px-3 py-1.5 rounded-xl border border-slate-700/50 bg-slate-800/40 text-xs">
-              <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold text-[11px]">
+              <div className="w-6 h-6 rounded-full bg-[var(--color-electric)]/20 text-[var(--color-azure)] flex items-center justify-center font-bold text-[11px]">
                 <User className="w-3.5 h-3.5" />
               </div>
               <div>
@@ -132,7 +132,7 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
                   : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-blue-500' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[var(--color-azure)]' : ''}`} />
             </button>
 
             {/* Theme switcher */}
@@ -238,12 +238,12 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
             </div>
           </div>
         ) : (
-          <div className="rounded-3xl p-6 border border-blue-500/20 bg-blue-950/20 text-center space-y-2">
-            <Sparkles className="w-8 h-8 text-blue-400 mx-auto" />
-            <h3 className="text-base font-bold text-slate-200">
+          <div className="rounded-3xl p-6 border border-[var(--color-azure)]/20 bg-[var(--color-electric)]/10 text-center space-y-2">
+            <Sparkles className="w-8 h-8 text-[var(--color-azure)] mx-auto" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-200">
               Hiện tại chưa có ca thi nào đang trong giờ làm bài
             </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
               Vui lòng theo dõi danh sách các ca thi sắp diễn ra bên dưới. Khi đến giờ mở phòng thi, nút xác thực khuôn mặt sẽ tự động kích hoạt.
             </p>
           </div>
@@ -251,12 +251,12 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
 
         {/* ── SECTION: DANH SÁCH TẤT CẢ CA THI CỦA THÍ SINH ── */}
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800/60">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800/60">
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-blue-500" />
+                <Calendar className="w-5 h-5 text-[var(--color-azure)]" />
                 <span>DANH SÁCH CA THI CỦA BẠN</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30 font-bold">
                   {sessions.length} ca thi
                 </span>
               </h3>
@@ -266,14 +266,14 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-800/40 border border-slate-700/60 self-start sm:self-auto text-xs">
+            <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 self-start sm:self-auto text-xs">
               <button
                 type="button"
                 onClick={() => setFilterTab('ALL')}
                 className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer ${
                   filterTab === 'ALL'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'eg-btn-gradient text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Tất cả ({sessions.length})
@@ -283,8 +283,8 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
                 onClick={() => setFilterTab('ACTIVE_UPCOMING')}
                 className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1 cursor-pointer ${
                   filterTab === 'ACTIVE_UPCOMING'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'eg-btn-gradient text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>Chưa thi ({activeCount + upcomingCount})</span>
@@ -297,8 +297,8 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
                 onClick={() => setFilterTab('ENDED')}
                 className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer ${
                   filterTab === 'ENDED'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'eg-btn-gradient text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Đã thi ({endedCount})
@@ -335,7 +335,7 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
                     <div className="space-y-3">
                       {/* Status Header Badge */}
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono text-cyan-400 font-semibold">
+                        <span className="text-[11px] font-mono text-[var(--color-azure)] font-semibold">
                           {s.code}
                         </span>
                         <div>
@@ -383,7 +383,7 @@ export const ExamWaitingLobby: React.FC<ExamWaitingLobbyProps> = ({
 
                         <div className="p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-0.5">
                           <span className="text-[10px] text-slate-500 block">Địa điểm & SBD:</span>
-                          <span className="font-bold text-cyan-300 block truncate">
+                          <span className="font-bold text-[var(--color-azure)] block truncate">
                             {s.roomName}
                           </span>
                           <span className="text-[10px] text-slate-300 font-mono block">

@@ -71,6 +71,17 @@ interface StudentResultData {
     totalQuestions: number;
   };
   questions: QuestionFeedback[];
+  classGradebook?: Array<{
+    rank: number;
+    id: string;
+    candidateCode: string;
+    studentCode: string;
+    studentName: string;
+    score: number;
+    trustScore: number;
+    status: string;
+    submittedAt?: string;
+  }>;
 }
 
 interface ExamSessionItem {
@@ -181,6 +192,80 @@ export default function ExamResult() {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // ──────────────────────────────────────────────────────────
+  // STATE HIGHLIGHT & DANH MỤC BẢNG ĐIỂM
+  // ──────────────────────────────────────────────────────────
+  const [highlightedStudentId, setHighlightedStudentId] = useState<string | null>(null);
+  const querySessionStudentId = searchParams.get('sessionStudentId');
+  const [studentSubTab, setStudentSubTab] = useState<'TRANSCRIPT' | 'PERSONAL' | 'CLASS_GRADEBOOK'>(() => {
+    return (querySessionStudentId || sessionStudentId) ? 'PERSONAL' : 'TRANSCRIPT';
+  });
+  const [studentClassSearch, setStudentClassSearch] = useState('');
+  const [studentAllExams, setStudentAllExams] = useState<any[]>([]);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+
+  const handleHighlightLecturer = (targetTerm?: string) => {
+    const term = (targetTerm ?? studentSearchTerm).trim().toLowerCase();
+    if (!term) {
+      toast.error('Vui lòng nhập tên, MSSV hoặc SBD để tìm thí sinh!');
+      return;
+    }
+    const list = workspaceData?.students || [];
+    const match = list.find(s =>
+      s.studentName?.toLowerCase().includes(term) ||
+      s.studentCode?.toLowerCase().includes(term) ||
+      s.candidateCode?.toLowerCase().includes(term)
+    );
+    if (match) {
+      setHighlightedStudentId(match.id);
+      setTimeout(() => {
+        const row = document.getElementById(`row-lecturer-${match.id}`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      toast.success(`🎯 Đã định vị thí sinh: ${match.studentName} (${match.candidateCode})`);
+    } else {
+      toast.error(`Không tìm thấy thí sinh nào khớp với "${term}"`);
+    }
+  };
+
+  const handleHighlightStudent = (targetTerm?: string) => {
+    const term = (targetTerm ?? studentClassSearch).trim().toLowerCase();
+    if (!term) {
+      toast.error('Vui lòng nhập tên, MSSV hoặc SBD để tìm kiếm!');
+      return;
+    }
+    const list = studentResult?.classGradebook || (workspaceData?.students?.map((s, i) => ({
+      rank: i + 1,
+      id: s.id,
+      candidateCode: s.candidateCode,
+      studentCode: s.studentCode,
+      studentName: s.studentName,
+      score: Number(s.officialScore ?? s.adjustedScore ?? s.autoGradeScore ?? 0),
+      trustScore: s.trustScore,
+      status: s.status === 'SUBMITTED' ? 'Đã nộp bài' : (s.status || 'Đã nộp bài')
+    }))) || [];
+
+    const match = list.find(s =>
+      s.studentName?.toLowerCase().includes(term) ||
+      s.studentCode?.toLowerCase().includes(term) ||
+      s.candidateCode?.toLowerCase().includes(term)
+    );
+    if (match) {
+      setHighlightedStudentId(match.id);
+      setTimeout(() => {
+        const row = document.getElementById(`row-student-${match.id}`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      toast.success(`🎯 Đã định vị thí sinh: ${match.studentName} - Hạng #${match.rank} (${match.score}đ)`);
+    } else {
+      toast.error(`Không tìm thấy thí sinh nào khớp với "${term}"`);
+    }
+  };
+
   // 1. Tải danh sách ca thi cho Giảng viên
   const fetchSessionList = async () => {
     try {
@@ -219,7 +304,8 @@ export default function ExamResult() {
   const fetchStudentResult = async (customStudentId?: string) => {
     try {
       setStudentLoading(true);
-      const targetId = customStudentId || previewStudentInfo?.id || sessionStudentId || 'fallback_student';
+      const querySessionStudentId = searchParams.get('sessionStudentId');
+      const targetId = customStudentId || previewStudentInfo?.id || querySessionStudentId || sessionStudentId || 'fallback_student';
       const isLecturerView = !!previewStudentInfo || !isStudentRole;
       const res = await apiClient.get(`/api/exam/results/${targetId}?asLecturer=${isLecturerView}`);
       if (res.data) {
@@ -239,6 +325,35 @@ export default function ExamResult() {
     }
   };
 
+  // 3.1 Tải danh sách toàn bộ môn thi đã hoàn thành của Sinh viên (Bảng Điểm Tổng Hợp)
+  const fetchStudentTranscript = async () => {
+    try {
+      setTranscriptLoading(true);
+      const res = await apiClient.get('/api/exam/student-schedule', {
+        params: {
+          email: user?.email,
+          studentCode: (user as any)?.studentCode
+        }
+      });
+      if (res.data?.success) {
+        // Lọc môn thi đã kết thúc/đã nộp và khử trùng lặp theo ca thi duy nhất
+        const sessions = (res.data.sessions || []).filter((s: any) => s.isEnded || s.status === 'SUBMITTED');
+        const uniqueSessionsMap = new Map();
+        sessions.forEach((s: any) => {
+          const sKey = s.session?.id || s.session?.code || s.id;
+          if (!uniqueSessionsMap.has(sKey)) {
+            uniqueSessionsMap.set(sKey, s);
+          }
+        });
+        setStudentAllExams(Array.from(uniqueSessionsMap.values()));
+      }
+    } catch (err: any) {
+      console.warn('Lỗi tải danh sách môn thi của sinh viên:', err.message);
+    } finally {
+      setTranscriptLoading(false);
+    }
+  };
+
   // Khởi động dữ liệu ban đầu
   useEffect(() => {
     fetchSessionList();
@@ -253,8 +368,36 @@ export default function ExamResult() {
   useEffect(() => {
     if (viewMode === 'student') {
       fetchStudentResult();
+      if (user?.email) {
+        fetchStudentTranscript();
+      }
     }
-  }, [viewMode, sessionStudentId, previewStudentInfo]);
+  }, [viewMode, sessionStudentId, previewStudentInfo, user?.email]);
+
+  // Thống kê GPA & kết quả học kỳ của sinh viên
+  const transcriptStats = useMemo(() => {
+    if (!studentAllExams.length) return { gpa: 0, passed: 0, avgTrust: 100 };
+    let totalScore = 0;
+    let scoredCount = 0;
+    let passedCount = 0;
+    let totalTrust = 0;
+
+    studentAllExams.forEach(ex => {
+      const score = ex.officialScore !== null && ex.officialScore !== undefined ? Number(ex.officialScore) : null;
+      if (score !== null && !isNaN(score)) {
+        totalScore += score;
+        scoredCount++;
+        if (score >= 5.0) passedCount++;
+      }
+      totalTrust += (ex.trustScore || 100);
+    });
+
+    return {
+      gpa: scoredCount > 0 ? (totalScore / scoredCount) : 0,
+      passed: passedCount,
+      avgTrust: Math.round(totalTrust / studentAllExams.length)
+    };
+  }, [studentAllExams]);
 
   // Hành động Giảng viên: Công bố điểm cho Sinh viên
   const handlePublishGrades = async () => {
@@ -391,6 +534,30 @@ export default function ExamResult() {
     );
   }, [workspaceData, studentSearchTerm]);
 
+  // Danh sách điểm toàn ca thi dành cho sinh viên tra cứu
+  const classStudentsList = useMemo(() => {
+    let list: any[] = [];
+    if (studentResult?.classGradebook && studentResult.classGradebook.length > 0) {
+      list = [...studentResult.classGradebook];
+    } else if (workspaceData?.students && workspaceData.students.length > 0) {
+      list = workspaceData.students.map((st, idx) => ({
+        rank: idx + 1,
+        id: st.id,
+        candidateCode: st.candidateCode,
+        studentCode: st.studentCode,
+        studentName: st.studentName,
+        score: Number(st.officialScore ?? st.adjustedScore ?? st.autoGradeScore ?? 0),
+        trustScore: st.trustScore,
+        status: st.status === 'SUBMITTED' ? 'Đã nộp bài' : (st.status || 'Đã nộp bài'),
+        submittedAt: st.submittedAt
+      }));
+    }
+    return list.sort((a, b) => Number(b.score) - Number(a.score)).map((item, idx) => ({
+      ...item,
+      rank: idx + 1
+    }));
+  }, [studentResult, workspaceData]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans select-none">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -422,30 +589,30 @@ export default function ExamResult() {
           <div className="flex items-center bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800/90 shadow-xl self-start md:self-auto">
             <button
               onClick={() => handleSwitchView('lecturer')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                 viewMode === 'lecturer'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
+                  ? 'eg-btn-gradient text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <UserSquare2 className="w-4 h-4 text-purple-300" />
+              <UserSquare2 className="w-4 h-4 text-white" />
               <span>Chế độ Giảng viên (Ca thi)</span>
-              <span className="px-1.5 py-0.5 rounded bg-purple-400/20 text-purple-200 text-[10px] font-mono font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[10px] font-mono font-bold">
                 GV
               </span>
             </button>
 
             <button
               onClick={() => handleSwitchView('student')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                 viewMode === 'student'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/20'
+                  ? 'eg-btn-gradient text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <GraduationCap className="w-4 h-4 text-cyan-300" />
+              <GraduationCap className="w-4 h-4 text-white" />
               <span>Chế độ Sinh viên (Cá nhân)</span>
-              <span className="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-200 text-[10px] font-mono font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[10px] font-mono font-bold">
                 SV
               </span>
             </button>
@@ -508,10 +675,10 @@ export default function ExamResult() {
                   <button
                     onClick={handlePublishGrades}
                     disabled={isPublishing || !workspaceData}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-lg active:scale-95 ${
+                    className={`px-4 py-2.5 rounded-full text-xs font-bold transition flex items-center space-x-2 shadow-lg active:scale-95 cursor-pointer ${
                       workspaceData?.session?.gradingStatus === 'PUBLISHED'
                         ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700'
-                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20'
+                        : 'eg-btn-gradient text-white shadow-md shadow-[var(--accent-glow)]'
                     }`}
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -525,7 +692,7 @@ export default function ExamResult() {
                   {/* Nút Rà soát chuyên sâu 1 lần */}
                   <button
                     onClick={() => navigate(`/grading-review/${selectedSessionId}`)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 transition flex items-center space-x-1.5"
+                    className="px-4 py-2.5 rounded-full text-xs font-bold eg-glass-pill transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
                     title="Chuyển sang màn hình can thiệp đáp án và chấm lại tự động"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -548,7 +715,7 @@ export default function ExamResult() {
 
                   <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-center">
                     <span className="text-[10px] text-slate-500 block uppercase font-bold">Điểm Trung Bình</span>
-                    <span className="text-xl font-black text-purple-400 font-mono">
+                    <span className="text-xl font-black text-[var(--color-azure)] font-mono">
                       {workspaceData.statistics?.avgScore != null
                         ? Number(workspaceData.statistics.avgScore).toFixed(2)
                         : '0.00'}
@@ -583,9 +750,9 @@ export default function ExamResult() {
             <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
               <button
                 onClick={() => setLecturerSubTab('GRADEBOOK')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                   lecturerSubTab === 'GRADEBOOK'
-                    ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
+                    ? 'eg-glass-pill shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -595,9 +762,9 @@ export default function ExamResult() {
 
               <button
                 onClick={() => setLecturerSubTab('ANSWER_KEY')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                   lecturerSubTab === 'ANSWER_KEY'
-                    ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
+                    ? 'eg-glass-pill shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -609,19 +776,47 @@ export default function ExamResult() {
             {/* TAB CON 1: BẢNG ĐIỂM THÍ SINH (GRADEBOOK) */}
             {lecturerSubTab === 'GRADEBOOK' && (
               <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      value={studentSearchTerm}
-                      onChange={e => setStudentSearchTerm(e.target.value)}
-                      placeholder="Tìm theo Tên, MSSV hoặc SBD..."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                    />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-1 max-w-lg">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={studentSearchTerm}
+                        onChange={e => {
+                          setStudentSearchTerm(e.target.value);
+                          if (!e.target.value.trim() && highlightedStudentId) {
+                            setHighlightedStudentId(null);
+                          }
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleHighlightLecturer();
+                        }}
+                        placeholder="Tìm theo Tên, MSSV hoặc SBD..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[var(--color-azure)]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleHighlightLecturer()}
+                      className="px-3.5 py-2 eg-btn-gradient text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md active:scale-95 cursor-pointer shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Highlight Thí Sinh</span>
+                    </button>
+                    {highlightedStudentId && (
+                      <button
+                        type="button"
+                        onClick={() => setHighlightedStudentId(null)}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition cursor-pointer shrink-0"
+                        title="Bỏ Highlight"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <span className="text-xs text-slate-400 self-end sm:self-center">
-                    Bấm nút <b>"Xem chi tiết bài làm"</b> để đối chiếu bài thi của từng thí sinh
+                    Bấm <b>"Highlight Thí Sinh"</b> để tự động định vị & làm nổi bật dòng của sinh viên
                   </span>
                 </div>
 
@@ -650,13 +845,31 @@ export default function ExamResult() {
                           const rawScore = st.officialScore ?? st.adjustedScore ?? st.autoGradeScore;
                           const hasScore = rawScore !== null && rawScore !== undefined && !isNaN(Number(rawScore));
                           const scoreNum = hasScore ? Number(rawScore) : null;
+                          const isHighlighted = highlightedStudentId === st.id;
 
                           return (
-                            <tr key={st.id || idx} className="hover:bg-slate-800/40 transition">
+                            <tr
+                              id={`row-lecturer-${st.id}`}
+                              key={st.id || idx}
+                              className={`transition-all duration-300 ${
+                                isHighlighted
+                                  ? 'bg-[var(--color-electric)]/25 border-l-4 border-l-[var(--color-azure)] ring-2 ring-[var(--color-azure)]/50 shadow-xl'
+                                  : 'hover:bg-slate-800/40'
+                              }`}
+                            >
                               <td className="py-3 px-4 font-mono text-slate-500">{idx + 1}</td>
                               <td className="py-3 px-4 font-mono font-bold text-cyan-400">{st.candidateCode}</td>
                               <td className="py-3 px-4 font-mono text-slate-300">{st.studentCode}</td>
-                              <td className="py-3 px-4 font-bold text-white">{st.studentName}</td>
+                              <td className="py-3 px-4 font-bold text-white">
+                                <div className="flex items-center gap-2">
+                                  <span>{st.studentName}</span>
+                                  {isHighlighted && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[var(--color-azure)] text-white shadow-sm flex items-center gap-1 animate-pulse">
+                                      🎯 ĐANG CHỌN
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="py-3 px-4 text-center font-mono font-black text-sm">
                                 <span className={scoreNum !== null && scoreNum >= 5.0 ? 'text-emerald-400' : 'text-red-400'}>
                                   {scoreNum !== null ? scoreNum.toFixed(2) : '—'}
@@ -677,7 +890,7 @@ export default function ExamResult() {
                               <td className="py-3 px-4 text-right">
                                 <button
                                   onClick={() => handleInspectCandidate(st)}
-                                  className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-semibold text-[11px] transition flex items-center space-x-1 ml-auto"
+                                  className="px-3.5 py-1.5 rounded-full eg-btn-gradient text-white font-bold text-[11px] transition flex items-center space-x-1 ml-auto shadow-xs cursor-pointer"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                   <span>Xem bài làm</span>
@@ -801,11 +1014,11 @@ export default function ExamResult() {
           <div className="space-y-6 animate-in fade-in-50 duration-300">
             {/* Banner nếu Giảng viên đang xem trước bài của thí sinh */}
             {previewStudentInfo && (
-              <div className="bg-purple-950/40 border border-purple-500/40 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+              <div className="bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/30 rounded-2xl p-4 flex items-center justify-between shadow-lg">
                 <div className="flex items-center space-x-3 text-xs">
-                  <Eye className="w-5 h-5 text-purple-400" />
+                  <Eye className="w-5 h-5 text-[var(--color-azure)]" />
                   <div>
-                    <span className="text-purple-300 font-bold block">
+                    <span className="text-[var(--color-azure)] font-bold block">
                       ĐANG XEM TRƯỚC BÀI THI CỦA THÍ SINH: {previewStudentInfo.name && previewStudentInfo.name !== 'undefined' ? previewStudentInfo.name : (studentResult?.student?.name || 'Lục Văn Sơn')}
                     </span>
                     <span className="text-slate-400 font-mono text-[11px]">
@@ -818,7 +1031,7 @@ export default function ExamResult() {
                     setPreviewStudentInfo(null);
                     handleSwitchView('lecturer');
                   }}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                  className="px-3.5 py-1.5 eg-btn-gradient text-white rounded-full text-xs font-bold transition flex items-center space-x-1 shadow-md cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Quay lại Bảng Điểm Giảng Viên</span>
@@ -826,6 +1039,219 @@ export default function ExamResult() {
               </div>
             )}
 
+            {/* ── BỘ CHUYỂN TAB CHÍNH CỦA SINH VIÊN ── */}
+            {!previewStudentInfo && (
+              <div className="flex items-center space-x-2 border-b border-slate-800 pb-3 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setStudentSubTab('TRANSCRIPT')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
+                    studentSubTab === 'TRANSCRIPT'
+                      ? 'eg-glass-pill shadow-xs text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4 text-[var(--color-azure)]" />
+                  <span>📊 Bảng Điểm Tổng Hợp ({studentAllExams.length} Môn Thi)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStudentSubTab('PERSONAL')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
+                    studentSubTab === 'PERSONAL'
+                      ? 'eg-glass-pill shadow-xs text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 text-emerald-400" />
+                  <span>📝 Chi Tiết Bài Làm & Đối Chiếu Đáp Án</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudentSubTab('CLASS_GRADEBOOK');
+                    if (!workspaceData?.students && studentResult?.session?.code) {
+                      fetchLecturerWorkspace(studentResult.session.code);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-2 cursor-pointer shrink-0 ${
+                    studentSubTab === 'CLASS_GRADEBOOK'
+                      ? 'eg-glass-pill shadow-xs text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>📋 Bảng Điểm Ca Thi ({classStudentsList.length} Thí Sinh)</span>
+                </button>
+              </div>
+            )}
+
+            {/* TAB CON 1: BẢNG ĐIỂM TỔNG HỢP CÁC MÔN THI ĐÃ HOÀN THÀNH */}
+            {studentSubTab === 'TRANSCRIPT' && !previewStudentInfo && (
+              <div className="space-y-6">
+                {/* KPI Tổng Quan Kết Quả Học Kỳ */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-2xl eg-cyber-card text-center">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase">Điểm Trung Bình (GPA)</div>
+                    <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
+                      {transcriptStats.gpa.toFixed(2)} / 10
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl eg-cyber-card text-center">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase">Môn Đã Thi</div>
+                    <div className="text-2xl font-black text-[var(--color-azure)] font-mono mt-1">
+                      {studentAllExams.length}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl eg-cyber-card text-center">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase">Môn Đạt (≥ 5.0)</div>
+                    <div className="text-2xl font-black text-cyan-400 font-mono mt-1">
+                      {transcriptStats.passed} / {studentAllExams.length}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl eg-cyber-card text-center">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase">Uy Tín AI Trung Bình</div>
+                    <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
+                      {transcriptStats.avgTrust}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bảng Danh Sách Môn Thi & Kết Quả */}
+                <div className="rounded-2xl border border-slate-800 overflow-hidden">
+                  <div className="p-4 bg-slate-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-[var(--color-azure)]" />
+                        <span>DANH SÁCH HỌC PHẦN ĐÃ HOÀN THÀNH & KẾT QUẢ THI</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Bấm vào bất kỳ môn thi nào để xem đối chiếu lời giải hoặc bảng điểm ca thi.</p>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">Học kỳ Khảo thí 2026/2027</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-800">
+                        <tr>
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Môn Học / Học Phần</th>
+                          <th className="py-3 px-4">Mã Ca Thi & Phòng</th>
+                          <th className="py-3 px-4">Ngày Thi</th>
+                          <th className="py-3 px-4 text-center">Điểm Thi</th>
+                          <th className="py-3 px-4 text-center">Xếp Loại</th>
+                          <th className="py-3 px-4 text-center">Uy Tín AI</th>
+                          <th className="py-3 px-4 text-center">Trạng Thái</th>
+                          <th className="py-3 px-4 text-right">Chi Tiết</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-sans">
+                        {studentAllExams.map((exam, idx) => {
+                          const score = exam.officialScore !== null && exam.officialScore !== undefined ? Number(exam.officialScore) : null;
+                          const isSelected = studentResult?.session?.code === exam.session?.code;
+
+                          return (
+                            <tr
+                              key={exam.id || idx}
+                              className={`transition-colors ${
+                                isSelected ? 'bg-[var(--color-electric)]/10 border-l-2 border-l-[var(--color-azure)]' : 'hover:bg-slate-800/40'
+                              }`}
+                            >
+                              <td className="py-3 px-4 font-mono text-slate-500">{idx + 1}</td>
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-white">{exam.session?.title || exam.session?.subjectName}</div>
+                                <div className="text-[10px] font-mono text-slate-400">{exam.session?.code}</div>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-slate-400">
+                                <div>{exam.session?.roomName || 'Phòng Lab P302'}</div>
+                                <div className="text-[10px] text-cyan-400">SBD: {exam.candidateCode}</div>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-slate-300">
+                                {new Date(exam.session?.startTime).toLocaleDateString('vi-VN')}
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono font-black text-sm">
+                                {score !== null ? (
+                                  <span className={score >= 8.5 ? 'text-emerald-400' : score >= 5.0 ? 'text-cyan-400' : 'text-red-400'}>
+                                    {score.toFixed(2)}
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-400 text-xs">Đang chấm</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {score !== null ? (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    score >= 9.0 ? 'bg-indigo-500/10 text-indigo-400' :
+                                    score >= 8.0 ? 'bg-emerald-500/10 text-emerald-400' :
+                                    score >= 6.5 ? 'bg-cyan-500/10 text-cyan-400' :
+                                    score >= 5.0 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'
+                                  }`}>
+                                    {score >= 9.0 ? 'Xuất sắc' : score >= 8.0 ? 'Giỏi' : score >= 6.5 ? 'Khá' : score >= 5.0 ? 'Trung bình' : 'Chưa đạt'}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="px-2 py-0.5 rounded-full font-mono text-[11px] font-bold bg-emerald-500/10 text-emerald-400">
+                                  {exam.trustScore || 100}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                  exam.session?.gradingStatus === 'PUBLISHED'
+                                    ? 'bg-emerald-500/15 text-emerald-400'
+                                    : 'bg-amber-500/15 text-amber-400'
+                                }`}>
+                                  {exam.session?.gradingStatus === 'PUBLISHED' ? 'Đã công bố điểm' : 'Đang rà soát'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end space-x-1.5">
+                                  <button
+                                    onClick={() => {
+                                      fetchStudentResult(exam.id);
+                                      setStudentSubTab('PERSONAL');
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg eg-btn-gradient text-white text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                    title="Xem đáp án và lời giải chi tiết"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>Bài làm</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      fetchStudentResult(exam.id);
+                                      setStudentSubTab('CLASS_GRADEBOOK');
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg eg-glass-pill text-[var(--color-azure)] text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                    title="Xem bảng điểm và thứ hạng toàn ca thi"
+                                  >
+                                    <Award className="w-3 h-3" />
+                                    <span>Ca thi</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {studentAllExams.length === 0 && (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-slate-500 text-xs">
+                              {transcriptLoading ? 'Đang tải danh sách môn thi...' : 'Chưa có dữ liệu môn thi hoàn thành.'}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* CÁC TAB CHI TIẾT (PERSONAL HOẶC CLASS_GRADEBOOK) */}
+            {(studentSubTab !== 'TRANSCRIPT' || previewStudentInfo) && (
+              <>
             {studentLoading ? (
               <div className="py-24 text-center text-slate-400">
                 <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-3" />
@@ -880,7 +1306,7 @@ export default function ExamResult() {
 
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Số báo danh (SBD):</span>
-                    <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-bold rounded">
+                    <span className="px-2 py-0.5 bg-[var(--color-electric)]/15 border border-[var(--color-azure)]/30 text-[var(--color-azure)] font-mono font-bold rounded">
                       {studentResult?.student?.candidateCode || 'SBD-001'}
                     </span>
                   </div>
@@ -903,14 +1329,14 @@ export default function ExamResult() {
                 <div className="flex flex-col sm:flex-row items-center gap-3">
                   <button
                     onClick={() => fetchStudentResult()}
-                    className="w-full sm:flex-1 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-cyan-500/20 flex items-center justify-center space-x-1.5"
+                    className="w-full sm:flex-1 py-3 eg-btn-gradient text-white text-xs font-bold rounded-xl transition shadow-md flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Kiểm tra Trạng thái Công bố</span>
                   </button>
                   <button
                     onClick={() => navigate('/')}
-                    className="w-full sm:flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                    className="w-full sm:flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition cursor-pointer"
                   >
                     Trở về Trang chủ
                   </button>
@@ -919,7 +1345,7 @@ export default function ExamResult() {
             ) : !studentResult || !studentResult.scores ? (
               <div className="py-16 text-center text-slate-400">
                 <p>Không có dữ liệu bài thi để hiển thị</p>
-                <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-indigo-600 rounded-lg text-xs">
+                <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 eg-btn-gradient text-white rounded-lg text-xs font-bold cursor-pointer">
                   Về trang chủ
                 </button>
               </div>
@@ -927,10 +1353,10 @@ export default function ExamResult() {
               /* TRƯỜNG HỢP 2: ĐÃ CÔNG BỐ ĐIỂM (XEM ĐÁP ÁN ĐỐI CHIẾU & GIẢI THÍCH) */
               <div className="space-y-6">
                 {/* Banner Điểm Số Sinh Viên */}
-                <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-[var(--color-royal)]/20 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div>
-                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">HỌC KỲ HIỆN TẠI</span>
+                      <span className="text-xs font-bold text-[var(--color-azure)] uppercase tracking-wider">HỌC KỲ HIỆN TẠI</span>
                       <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
                         {studentResult.session.title}
                       </h2>
@@ -939,6 +1365,38 @@ export default function ExamResult() {
                         <span>•</span>
                         <span>SBD: <b className="text-slate-200 font-mono">{studentResult.student.candidateCode}</b></span>
                       </p>
+
+                      {/* Bộ chuyển nhanh môn thi & Nút quay lại Bảng điểm tổng hợp */}
+                      <div className="mt-3 flex items-center flex-wrap gap-2 text-xs">
+                        {studentAllExams.length > 1 && (
+                          <div className="flex items-center space-x-1.5">
+                            <span className="text-slate-400">Đổi môn thi:</span>
+                            <select
+                              value={studentResult?.session?.code || ''}
+                              onChange={(e) => {
+                                const found = studentAllExams.find(ex => ex.session?.code === e.target.value);
+                                if (found) {
+                                  fetchStudentResult(found.id);
+                                }
+                              }}
+                              className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[var(--color-azure)] font-medium"
+                            >
+                              {studentAllExams.map((ex) => (
+                                <option key={ex.id} value={ex.session?.code}>
+                                  {ex.session?.title || ex.session?.subjectName} ({ex.officialScore !== null ? `${Number(ex.officialScore).toFixed(1)}đ` : 'Đang chấm'})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setStudentSubTab('TRANSCRIPT')}
+                          className="px-3 py-1 rounded-xl eg-glass-pill text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                        >
+                          ← Bảng điểm tổng hợp ({studentAllExams.length} môn)
+                        </button>
+                      </div>
                     </div>
 
                     {/* Điểm chính thức & Uy tín */}
@@ -959,10 +1417,10 @@ export default function ExamResult() {
 
                       <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-center min-w-[120px] shadow-lg">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-center space-x-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                          <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                           <span>ĐIỂM UY TÍN</span>
                         </div>
-                        <div className="text-3xl font-black font-mono text-cyan-400">
+                        <div className="text-3xl font-black font-mono text-[var(--color-azure)]">
                           {studentResult.scores.trustScore}
                           <span className="text-xs text-slate-500 font-normal"> / 100</span>
                         </div>
@@ -976,7 +1434,7 @@ export default function ExamResult() {
                               setOverrideScoreInput(String(studentResult.scores.officialScore ?? 0));
                               setShowOverrideModal(true);
                             }}
-                            className="px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl text-xs font-bold shadow-xl shadow-purple-600/30 transition flex items-center space-x-2"
+                            className="px-4 py-3 eg-btn-gradient text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
                             title="Giảng viên duyệt phúc khảo điều chỉnh điểm chính thức"
                           >
                             <SlidersHorizontal className="w-4 h-4" />
@@ -991,22 +1449,25 @@ export default function ExamResult() {
                 {/* Hạn phúc khảo Notice */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3 text-xs text-slate-300">
-                    <Calendar className="w-4 h-4 text-cyan-400" />
+                    <Calendar className="w-4 h-4 text-[var(--color-azure)]" />
                     <span>Hạn chót nộp đơn phúc khảo: <b>{new Date(studentResult.session.appealDeadline || Date.now() + 7 * 86400000).toLocaleDateString('vi-VN')}</b></span>
                   </div>
 
                   <button
                     onClick={() => setShowAppealModal(true)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition"
+                    className="px-4 py-2 eg-glass-pill text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     Gửi yêu cầu phúc khảo
                   </button>
                 </div>
 
-                {/* Danh sách từng câu hỏi & Đối chiếu */}
+
+
+                {/* PHÂN HỆ CON 1: BÀI LÀM CÁ NHÂN */}
+                {studentSubTab === 'PERSONAL' && (
                 <div className="space-y-4">
                   <h3 className="text-base font-bold text-white flex items-center space-x-2 pt-2">
-                    <FileText className="w-5 h-5 text-indigo-400" />
+                    <FileText className="w-5 h-5 text-[var(--color-azure)]" />
                     <span>CHI TIẾT BÀI LÀM & ĐỐI CHIẾU ĐÁP ÁN:</span>
                   </h3>
 
@@ -1156,7 +1617,174 @@ export default function ExamResult() {
                     );
                   })}
                 </div>
+                )}
+
+                {/* PHÂN HỆ CON 2: DANH MỤC BẢNG ĐIỂM TOÀN CA THI (CHO SINH VIÊN TRA CỨU & HIGHLIGHT) */}
+                {studentSubTab === 'CLASS_GRADEBOOK' && (
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+                    {/* Toolbar tìm kiếm & Nút Highlight */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 flex-1 max-w-xl">
+                        <div className="relative flex-1">
+                          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={studentClassSearch}
+                            onChange={e => {
+                              setStudentClassSearch(e.target.value);
+                              if (!e.target.value.trim() && highlightedStudentId) {
+                                setHighlightedStudentId(null);
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleHighlightStudent();
+                            }}
+                            placeholder="Tìm tên bạn, MSSV hoặc SBD trong ca thi..."
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[var(--color-azure)]"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const myTerm = user?.fullName || studentResult?.student?.name || studentResult?.student?.candidateCode || '';
+                            setStudentClassSearch(myTerm);
+                            handleHighlightStudent(myTerm);
+                          }}
+                          className="px-3 py-2 eg-glass-pill text-[var(--color-azure)] rounded-xl text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 cursor-pointer shrink-0"
+                          title="Tự động tìm kiếm và highlight vị trí của bạn trong bảng điểm"
+                        >
+                          <UserSquare2 className="w-3.5 h-3.5" />
+                          <span>Định Vị Bài Của Tôi</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleHighlightStudent()}
+                          className="px-3.5 py-2 eg-btn-gradient text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md active:scale-95 cursor-pointer shrink-0"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Highlight Thí Sinh</span>
+                        </button>
+
+                        {highlightedStudentId && (
+                          <button
+                            type="button"
+                            onClick={() => setHighlightedStudentId(null)}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition cursor-pointer shrink-0"
+                            title="Bỏ Highlight"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <span className="text-xs text-slate-400 self-end sm:self-center">
+                        Bấm <b>"Highlight Thí Sinh"</b> để cuộn đến & làm nổi bật dòng của sinh viên
+                      </span>
+                    </div>
+
+                    {/* Bảng Danh mục Điểm Thi */}
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-800">
+                          <tr>
+                            <th className="py-3 px-4">Hạng</th>
+                            <th className="py-3 px-4">SBD</th>
+                            <th className="py-3 px-4">MSSV</th>
+                            <th className="py-3 px-4">Họ và Tên Thí Sinh</th>
+                            <th className="py-3 px-4 text-center">Điểm Thi</th>
+                            <th className="py-3 px-4 text-center">Xếp Loại</th>
+                            <th className="py-3 px-4 text-center">Uy Tín AI</th>
+                            <th className="py-3 px-4 text-center">Trạng Thái</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 font-sans">
+                          {classStudentsList.map((st, idx) => {
+                            const isHighlighted = highlightedStudentId === st.id;
+                            const currentUserName = user?.fullName?.trim().toLowerCase();
+                            const currentCandidateCode = studentResult?.student?.candidateCode?.trim().toLowerCase();
+                            const currentStudentCode = (studentResult?.student as any)?.studentCode?.trim().toLowerCase();
+
+                            // Nhận diện dòng bài thi của sinh viên hiện tại chính xác duy nhất
+                            const isMe = currentUserName
+                              ? (st.studentName?.trim().toLowerCase() === currentUserName)
+                              : (currentCandidateCode
+                                  ? st.candidateCode?.trim().toLowerCase() === currentCandidateCode
+                                  : (currentStudentCode ? st.studentCode?.trim().toLowerCase() === currentStudentCode : false));
+
+                            const scoreNum = Number(st.score);
+
+                            return (
+                              <tr
+                                id={`row-student-${st.id}`}
+                                key={st.id || idx}
+                                className={`transition-all duration-300 ${
+                                  isHighlighted
+                                    ? 'bg-[var(--color-electric)]/25 border-l-4 border-l-[var(--color-azure)] ring-2 ring-[var(--color-azure)]/50 shadow-xl'
+                                    : isMe
+                                    ? 'bg-slate-800/35 border-l-2 border-l-cyan-500/60'
+                                    : 'hover:bg-slate-800/40'
+                                }`}
+                              >
+                                <td className="py-3 px-4 font-mono font-bold">
+                                  {st.rank === 1 ? '🥇 Top 1' : st.rank === 2 ? '🥈 Top 2' : st.rank === 3 ? '🥉 Top 3' : `#${st.rank}`}
+                                </td>
+                                <td className="py-3 px-4 font-mono font-bold text-cyan-400">{st.candidateCode}</td>
+                                <td className="py-3 px-4 font-mono text-slate-300">{st.studentCode}</td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white">{st.studentName}</span>
+                                    {isHighlighted && (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[var(--color-azure)] text-white shadow-sm flex items-center gap-1 animate-pulse">
+                                        {isMe ? '🎯 BÀI CỦA BẠN' : '🎯 ĐANG CHỌN'}
+                                      </span>
+                                    )}
+                                    {!isHighlighted && isMe && (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                                        (Bạn)
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-center font-mono font-black text-sm">
+                                  <span className={scoreNum >= 9.0 ? 'text-indigo-400 font-extrabold' : scoreNum >= 8.0 ? 'text-cyan-400' : scoreNum >= 5.0 ? 'text-emerald-400' : 'text-red-400'}>
+                                    {scoreNum.toFixed(2)}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    scoreNum >= 9.0 ? 'bg-indigo-500/10 text-indigo-400' : scoreNum >= 8.0 ? 'bg-cyan-500/10 text-cyan-400' : scoreNum >= 6.5 ? 'bg-emerald-500/10 text-emerald-400' : scoreNum >= 5.0 ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'
+                                  }`}>
+                                    {scoreNum >= 9.0 ? 'Xuất sắc' : scoreNum >= 8.0 ? 'Giỏi' : scoreNum >= 6.5 ? 'Khá' : scoreNum >= 5.0 ? 'Trung bình' : 'Chưa đạt'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className="px-2 py-0.5 rounded-full font-mono text-[11px] font-bold bg-emerald-500/10 text-emerald-400">
+                                    {st.trustScore} / 100
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center text-slate-400 text-xs">
+                                  {st.status}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {classStudentsList.length === 0 && (
+                            <tr>
+                              <td colSpan={8} className="py-8 text-center text-slate-500 text-xs">
+                                Đang tải danh sách thí sinh ca thi...
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
+              </>
             )}
           </div>
         )}
@@ -1187,7 +1815,7 @@ export default function ExamResult() {
                 </button>
                 <button
                   onClick={handleSendAppeal}
-                  className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition"
+                  className="flex-1 py-2 eg-btn-gradient text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
                 >
                   Gửi đơn phúc khảo
                 </button>
@@ -1199,10 +1827,10 @@ export default function ExamResult() {
         {/* ── MODAL ĐIỀU CHỈNH ĐIỂM CHÍNH THỨC DÀNH CHO GIẢNG VIÊN ── */}
         {showOverrideModal && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95">
+            <div className="bg-slate-900 border border-[var(--color-azure)]/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--color-electric)]/20 text-[var(--color-azure)] flex items-center justify-center">
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>

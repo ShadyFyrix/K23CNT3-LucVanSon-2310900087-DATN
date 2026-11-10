@@ -1,31 +1,50 @@
 /**
  * EXAMGUARD AI — OFFICIAL COLOR SYSTEM & DESIGN TOKENS
- * Phong cách: Academic Enterprise & Biometric Security (Trầm, nghiêm túc, dịu mắt)
- * Đường dẫn khuyến nghị: src/constants/theme.constants.ts
+ * Phong cách: Cyber-Electric Dark Luxury & Frosted Glass
+ * Khóa màu chuẩn: #03195b, #0b2cb1, #1951fc, #3781fc, #cbe9fd (Zir Tech / Basel Design 2026)
+ * Điểm nhấn ánh tím Neon: #7c3aed, #a855f7 (Solana NFT / High-Tech Futuristic)
  */
 
 export const EXAMGUARD_COLORS = {
   /**
-   * 1. MÀU CHỦ ĐẠO (PRIMARY - DEEP ACADEMIC NAVY)
-   * Dùng cho Header, Sidebar chính, Nút bấm chính (Primary CTA), Tiêu đề thương hiệu
+   * 1. BẢNG MÀU CHỦ ĐẠO (PRIMARY GRADIENT STACK TỪ ẢNH MẪU 1)
    */
+  palette: {
+    sapphireDeep: '#03195b',  // Cấp 1: Deep Sapphire Midnight Base
+    royalCobalt: '#0b2cb1',   // Cấp 2: Royal Electric Blue
+    electricBlue: '#1951fc',  // Cấp 3: Vibrant Electric Blue (Màu lõi)
+    azureGlow: '#3781fc',     // Cấp 4 & 5: Radiant Sky Azure Glow
+    frostedIce: '#cbe9fd',    // Cấp 6: Frosted Ice Specular Highlight
+  },
+
   primary: {
-    50: '#EFF6FF',
-    100: '#DBEAFE',
-    200: '#BFDBFE',
-    300: '#93C5FD',
-    400: '#60A5FA',
-    500: '#2563EB',
-    600: '#1D4ED8', // Màu nút bấm chính & Active state
-    700: '#1E40AF', // Màu chủ đạo chuẩn (Brand Primary)
-    800: '#1E3A8A', // Màu Header / Khu vực điều hướng trọng tâm
-    900: '#172554', // Nền tối sâu
-    DEFAULT: '#1E40AF',
+    50: '#F0F7FF',
+    100: '#CBE9FD', // Frosted Ice
+    200: '#93C5FD',
+    300: '#60A5FA',
+    400: '#3781FC', // Azure Glow
+    500: '#1951FC', // Vibrant Electric Blue (Primary Brand CTA)
+    600: '#0B2CB1', // Royal Electric Blue
+    700: '#08218A',
+    800: '#03195B', // Deep Sapphire
+    900: '#020E38',
+    950: '#01071F',
+    DEFAULT: '#1951FC',
   },
 
   /**
-   * 2. MÀU ĐIỂM NHẤN SINH TRẮC HỌC AI (SECONDARY - MUTED BIOMETRIC TEAL)
-   * Dùng cho khung quét Face KYC 5 góc, đường lưới 3D Pose, chỉ báo Liveness
+   * 2. MÀU ĐIỂM NHẤN TÍM NEON & AMBIENT GLOW (TỪ ẢNH MẪU 2)
+   */
+  neon: {
+    violet: '#7C3AED',
+    purple: '#8B5CF6',
+    glow: '#A855F7',
+    fuchsia: '#C026D3',
+    DEFAULT: '#7C3AED',
+  },
+
+  /**
+   * 3. MÀU SINH TRẮC HỌC AI & TRẠNG THÁI KHẢO THÍ (BIOMETRICS)
    */
   biometric: {
     50: '#F0FDFA',
@@ -33,102 +52,57 @@ export const EXAMGUARD_COLORS = {
     200: '#99F6E4',
     400: '#2DD4BF',
     500: '#14B8A6',
-    600: '#0D9488', // Màu chuẩn cho khung nhận diện AI (Dịu mắt, không chói)
+    600: '#0D9488',
     700: '#0F766E',
-    800: '#115E59',
     DEFAULT: '#0D9488',
   },
 
   /**
-   * 3. HỆ MÀU NỀN & BỀ MẶT TRUNG TÍNH (NEUTRAL SLATE)
-   * Tối ưu chống mỏi mắt cho thí sinh làm bài thi (65%-35% Split View) & Giám thị
+   * 4. HỆ MÀU BỀ MẶT TỐI DEEP OBSIDIAN (TỪ ẢNH MẪU 2)
    */
-  slate: {
-    50: '#F8FAFC',  // Nền tổng thể giao diện làm bài (Light mode)
-    100: '#F1F5F9', // Nền khu vực đề thi / Khung phụ
-    200: '#E2E8F0', // Đường viền (Border) chuẩn
-    300: '#CBD5E1', // Nút/Ô câu hỏi chưa chọn
-    400: '#94A3B8', // Icon phụ / Placeholder
-    500: '#64748B', // Chữ mô tả phụ (Muted text)
-    600: '#475569', // Chữ nội dung đề thi (Secondary text)
-    700: '#334155', // Nền Card trong chế độ Giám sát tối
-    800: '#1E293B', // Nền Panel Giám thị (Proctor Surface)
-    900: '#0F172A', // Nền chính Dashboard Giám sát 3D / Phòng chờ
-    950: '#020617',
+  surface: {
+    darkBg: '#070814',       // Nền đen sâu thăm thẳm
+    darkCanvas: '#0A0C1E',   // Canvas làm việc
+    darkCard: '#11142F',     // Thẻ Bento Glass
+    darkCardSub: '#171B3E',  // Thẻ con / Input
+    darkBorder: 'rgba(255, 255, 255, 0.08)',
+    glowBorder: 'rgba(25, 81, 252, 0.35)',
+    specular: 'rgba(203, 233, 253, 0.2)',
   },
 
   /**
-   * 4. MÀU NGỮ NGHĨA & TRẠNG THÁI HỆ THỐNG (SEMANTIC STATUS)
-   * Đã giảm độ chói để giữ sự điềm tĩnh trong phòng thi
+   * 5. MÀU TRẠNG THÁI CHUẨN
    */
   status: {
     success: {
       light: '#ECFDF5',
       border: '#A7F3D0',
-      main: '#059669', // Đã KYC APPROVED / Check-in hợp lệ / Đáp án đúng
+      main: '#10B981',
       dark: '#065F46',
     },
     warning: {
       light: '#FFFBEB',
       border: '#FDE68A',
-      main: '#D97706', // Nghi vấn (Suspicious) / Cờ xem lại câu hỏi / Đi muộn
+      main: '#F59E0B',
       dark: '#92400E',
     },
     danger: {
       light: '#FEF2F2',
       border: '#FECACA',
-      main: '#DC2626', // Vi phạm AI (Violation) / Tráo người (Impersonation)
+      main: '#EF4444',
       dark: '#991B1B',
     },
     info: {
       light: '#F0F9FF',
       border: '#BAE6FD',
-      main: '#0284C7', // Đã nộp bài (Checkout) / Thông báo hệ thống
-      dark: '#075985',
+      main: '#3781FC',
+      dark: '#0B2CB1',
     },
     proctorExemption: {
       light: '#F5F3FF',
       border: '#DDD6FE',
-      main: '#6D28D9', // Miễn trừ Giám thị ghé bàn (STAFF_EXEMPTION - 0đ trừ)
+      main: '#8B5CF6',
       dark: '#4C1D95',
     },
   },
-
-  /**
-   * 5. MÀU TRẠNG THÁI BÀN THI 3D & MA TRẬN CÂU HỎI (DESK & QUESTION MATRIX)
-   * Ánh xạ trực tiếp với sinh_vien_ca_thi.trang_thai trong SYSTEM_BLUEPRINT
-   */
-  examDeskState: {
-    not_checkin: '#94A3B8',       // Xám đá: Chưa check-in
-    checkin: '#059669',           // Xanh ngọc trầm: Đang làm bài bình thường
-    suspicious: '#D97706',        // Vàng hổ phách: Điểm uy tín < 50 hoặc nghi vấn
-    suspended: '#EA580C',         // Cam trầm: Đình chỉ thi / Khóa bài làm
-    checkout: '#0284C7',          // Xanh dương dịu: Đã nộp bài hoàn tất
-    violation_blink: '#DC2626',   // Đỏ trầm: Phát hiện vi phạm mới
-    proctor_override: '#6D28D9',  // Tím nhã nhặn: Cán bộ coi thi đang kiểm tra tại bàn
-  },
-
-  /**
-   * 6. THANG MÀU ĐIỂM UY TÍN (REPUTATION / TRUST SCORE 0 - 100)
-   */
-  trustScore: {
-    excellent: '#059669', // 90 - 100 điểm (An toàn tuyệt đối - Chu kỳ cam 20s)
-    good: '#0D9488',      // 70 - 89 điểm (Ổn định - Chu kỳ cam 15s)
-    warning: '#D97706',   // 50 - 69 điểm (Cần lưu ý - Chu kỳ cam 10s)
-    critical: '#DC2626',  // < 50 điểm (Báo động đỏ / Nghi vấn cao)
-  },
-} as const;
-
-// Export Type để hỗ trợ Autocomplete & Type-Safety trên toàn bộ dự án React
-export type ExamGuardColorTheme = typeof EXAMGUARD_COLORS;
-export type DeskStatusKey = keyof typeof EXAMGUARD_COLORS.examDeskState;
-
-/**
- * Hàm Helper lấy màu tự động theo Điểm Uy Tín (diem_uy_tin: 0 -> 100)
- */
-export const getTrustScoreColor = (score: number): string => {
-  if (score >= 90) return EXAMGUARD_COLORS.trustScore.excellent;
-  if (score >= 70) return EXAMGUARD_COLORS.trustScore.good;
-  if (score >= 50) return EXAMGUARD_COLORS.trustScore.warning;
-  return EXAMGUARD_COLORS.trustScore.critical;
 };

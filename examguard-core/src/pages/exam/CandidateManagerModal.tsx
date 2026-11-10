@@ -374,7 +374,7 @@ export function CandidateManagerModal({
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-20">
           <div className="space-y-1">
             <div className="flex items-center space-x-2 text-xs text-slate-400">
-              <span className="font-mono text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+              <span className="font-mono text-[var(--color-azure)] font-bold bg-[var(--color-electric)]/10 px-2 py-0.5 rounded border border-[var(--color-azure)]/20">
                 {session.code}
               </span>
               <span>•</span>
@@ -418,7 +418,7 @@ export function CandidateManagerModal({
         {/* Stats Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-950/60 border-b border-slate-800/80">
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-electric)]/10 flex items-center justify-center text-[var(--color-azure)]">
               <Users className="w-5 h-5" />
             </div>
             <div>
@@ -448,7 +448,7 @@ export function CandidateManagerModal({
           </div>
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-electric)]/10 flex items-center justify-center text-[var(--color-azure)]">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -479,7 +479,7 @@ export function CandidateManagerModal({
               <button
                 onClick={() => setFilterKyc('ALL')}
                 className={`px-2.5 py-1 rounded-lg font-medium transition ${
-                  filterKyc === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  filterKyc === 'ALL' ? 'bg-[var(--color-electric)] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 Tất cả ({totalCount})
@@ -512,8 +512,8 @@ export function CandidateManagerModal({
               }}
               className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
                 showAutoSbdForm
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
-                  : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                  ? 'eg-btn-gradient text-white shadow-md'
+                  : 'bg-[var(--color-electric)]/10 hover:bg-[var(--color-electric)]/20 text-[var(--color-azure)] border border-[var(--color-azure)]/30'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -527,8 +527,8 @@ export function CandidateManagerModal({
               }}
               className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
                 showAddStudentForm
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                  : 'bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                  ? 'eg-btn-gradient text-white shadow-md'
+                  : 'bg-[var(--color-electric)]/10 hover:bg-[var(--color-electric)]/20 text-[var(--color-azure)] border border-[var(--color-azure)]/30'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -539,11 +539,11 @@ export function CandidateManagerModal({
 
         {/* Panel 1: Form Sinh SBD Tự Động */}
         {showAutoSbdForm && (
-          <div className="p-5 bg-gradient-to-r from-slate-900 to-indigo-950/40 border-b border-cyan-500/30 animate-in fade-in duration-200">
+          <div className="p-5 bg-slate-900 border-b border-[var(--color-azure)]/30 animate-in fade-in duration-200">
             <div className="max-w-4xl space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-white flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <Sparkles className="w-4 h-4 text-[var(--color-azure)]" />
                   <span>Quy Tắc Tự Động Đánh Số Báo Danh (SBD) Cho Ca Thi</span>
                 </h4>
                 <button
@@ -562,7 +562,7 @@ export function CandidateManagerModal({
                     value={sbdPrefix}
                     onChange={e => setSbdPrefix(e.target.value)}
                     placeholder="VD: SBD-, CA1-, 23IT-"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-[var(--color-azure)] outline-none"
                   />
                   <span className="text-[10px] text-slate-500">VD: SBD-001, SBD-002...</span>
                 </div>
@@ -574,7 +574,7 @@ export function CandidateManagerModal({
                     min="1"
                     value={sbdStartNum}
                     onChange={e => setSbdStartNum(parseInt(e.target.value) || 1)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-[var(--color-azure)] outline-none"
                   />
                   <span className="text-[10px] text-slate-500">Mặc định: 1</span>
                 </div>
@@ -584,7 +584,7 @@ export function CandidateManagerModal({
                   <select
                     value={sbdPadLength}
                     onChange={e => setSbdPadLength(parseInt(e.target.value) || 3)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-[var(--color-azure)] outline-none"
                   >
                     <option value={2}>2 chữ số (01, 02...)</option>
                     <option value={3}>3 chữ số (001, 002...)</option>
@@ -598,7 +598,7 @@ export function CandidateManagerModal({
                   <select
                     value={sbdSortBy}
                     onChange={e => setSbdSortBy(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:ring-1 focus:ring-cyan-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:ring-1 focus:ring-[var(--color-azure)] outline-none"
                   >
                     <option value="NAME">Họ Tên Thí Sinh (A → Z)</option>
                     <option value="STUDENT_CODE">Mã Sinh Viên (MSSV)</option>
@@ -609,8 +609,8 @@ export function CandidateManagerModal({
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <div className="text-xs text-cyan-300 flex items-center space-x-1.5">
-                  <Info className="w-3.5 h-3.5 text-cyan-400" />
+                <div className="text-xs text-[var(--color-azure)] flex items-center space-x-1.5">
+                  <Info className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>
                     Ví dụ kết quả: <strong>{sbdPrefix}{String(sbdStartNum).padStart(sbdPadLength, '0')}</strong>,{' '}
                     <strong>{sbdPrefix}{String(sbdStartNum + 1).padStart(sbdPadLength, '0')}</strong>... áp dụng cho {candidates.length} thí sinh.
@@ -620,9 +620,9 @@ export function CandidateManagerModal({
                 <button
                   onClick={handleGenerateSbd}
                   disabled={isGeneratingSbd || candidates.length === 0}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition disabled:opacity-50 shadow-md shadow-cyan-500/20"
+                  className="px-4 py-2 eg-btn-gradient text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 transition disabled:opacity-50 shadow-md shadow-[var(--accent-glow)]"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
                   <span>{isGeneratingSbd ? 'Đang cập nhật SBD...' : 'Áp Dụng Đánh SBD Ngay'}</span>
                 </button>
               </div>
@@ -632,11 +632,11 @@ export function CandidateManagerModal({
 
         {/* Panel 2: Form Thêm Thí Sinh Vào Ca */}
         {showAddStudentForm && (
-          <div className="p-5 bg-gradient-to-r from-slate-900 to-indigo-950/30 border-b border-indigo-500/30 animate-in fade-in duration-200">
+          <div className="p-5 bg-slate-900/90 border-b border-[var(--color-azure)]/30 animate-in fade-in duration-200">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-white flex items-center space-x-2">
-                  <UserPlus className="w-4 h-4 text-indigo-400" />
+                  <UserPlus className="w-4 h-4 text-[var(--color-azure)]" />
                   <span>Chọn Thí Sinh Từ Danh Sách Lớp / Toàn Trường Để Thêm Vào Ca Thi</span>
                 </h4>
                 <button
@@ -679,7 +679,7 @@ export function CandidateManagerModal({
                   <button
                     onClick={handleBulkAddClass}
                     disabled={isBulkAddingClass || isAddingStudent}
-                    className="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-500/20 disabled:opacity-50 whitespace-nowrap"
+                    className="px-3.5 py-2 eg-btn-gradient text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-md shadow-[var(--accent-glow)] disabled:opacity-50 whitespace-nowrap"
                     title="Thêm tất cả các sinh viên đang hiển thị theo bộ lọc vào ca thi"
                   >
                     <Users className="w-3.5 h-3.5" />
@@ -709,7 +709,7 @@ export function CandidateManagerModal({
                         className="flex items-center justify-between p-3 bg-slate-950/90 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl transition"
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 border border-indigo-500/30 text-indigo-300 font-bold flex items-center justify-center text-xs">
+                          <div className="w-9 h-9 rounded-full bg-[var(--color-electric)]/15 border border-[var(--color-azure)]/30 text-[var(--color-azure)] font-bold flex items-center justify-center text-xs">
                             {st.fullName?.charAt(0) || 'S'}
                           </div>
                           <div>
@@ -743,7 +743,7 @@ export function CandidateManagerModal({
                           <button
                             onClick={() => handleAddStudent(st)}
                             disabled={isAddingStudent || isBulkAddingClass}
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition disabled:opacity-50 flex items-center space-x-1 shadow-sm"
+                            className="px-3 py-1.5 eg-btn-gradient text-white text-xs font-bold rounded-lg transition disabled:opacity-50 flex items-center space-x-1 shadow-sm cursor-pointer"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
                             <span>+ Thêm vào ca</span>
@@ -774,7 +774,7 @@ export function CandidateManagerModal({
               </p>
               <button
                 onClick={() => setShowAddStudentForm(true)}
-                className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5"
+                className="mt-3 px-4 py-2 eg-btn-gradient text-white rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 shadow-md cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>+ Thêm thí sinh ngay</span>
@@ -821,7 +821,7 @@ export function CandidateManagerModal({
                               <button
                                 onClick={() => handleSaveEdit(item)}
                                 disabled={isSavingEdit}
-                                className="p-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white"
+                                className="p-1 rounded eg-btn-gradient text-white"
                                 title="Lưu"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -836,12 +836,12 @@ export function CandidateManagerModal({
                             </div>
                           ) : (
                             <div className="flex items-center space-x-1.5">
-                              <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/20">
                                 {item.candidateCode || 'CHƯA CÓ'}
                               </span>
                               <button
                                 onClick={() => handleStartEdit(item)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-cyan-400 transition"
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[var(--color-azure)] transition"
                                 title="Sửa SBD"
                               >
                                 <Edit2 className="w-3 h-3" />
@@ -853,15 +853,15 @@ export function CandidateManagerModal({
                         {/* Thí sinh */}
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-700 to-indigo-700 flex items-center justify-center font-bold text-white text-xs">
+                            <div className="w-8 h-8 rounded-full eg-btn-gradient flex items-center justify-center font-bold text-white text-xs shadow-sm">
                               {student?.fullName?.charAt(0) || 'S'}
                             </div>
                             <div>
-                              <p className="font-bold text-white group-hover:text-cyan-300 transition-colors">
+                              <p className="font-bold text-white group-hover:text-[var(--color-azure)] transition-colors">
                                 {student?.fullName || 'Thí sinh'}
                               </p>
                               <p className="text-[11px] text-slate-400">
-                                MSSV: <span className="font-mono text-cyan-400 font-semibold">{student?.studentCode}</span>
+                                MSSV: <span className="font-mono text-[var(--color-azure)] font-semibold">{student?.studentCode}</span>
                                 {student?.email && <span className="ml-2 text-slate-500">({student.email})</span>}
                               </p>
                             </div>
@@ -913,7 +913,7 @@ export function CandidateManagerModal({
                               </span>
                               <button
                                 onClick={() => setKycCandidate(item)}
-                                className="px-2 py-1 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-lg text-[10px] font-bold flex items-center space-x-1 shadow-sm transition active:scale-95"
+                                className="px-2 py-1 eg-btn-gradient text-white rounded-lg text-[10px] font-bold flex items-center space-x-1 shadow-sm transition active:scale-95"
                                 title="Đăng ký khuôn mặt ngay"
                               >
                                 <Camera className="w-3 h-3" />
@@ -929,7 +929,7 @@ export function CandidateManagerModal({
                             item.status === 'SUBMITTED'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : item.status === 'IN_PROGRESS'
-                              ? 'bg-cyan-500/10 text-cyan-400 animate-pulse border border-cyan-500/20'
+                              ? 'bg-[var(--color-electric)]/10 text-[var(--color-azure)] animate-pulse border border-[var(--color-azure)]/20'
                               : 'bg-slate-800 text-slate-400'
                           }`}>
                             {item.status === 'SUBMITTED' ? 'ĐÃ NỘP BÀI' : item.status === 'IN_PROGRESS' ? 'ĐANG THI' : 'SẴN SÀNG'}

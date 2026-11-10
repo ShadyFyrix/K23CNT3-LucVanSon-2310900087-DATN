@@ -165,17 +165,13 @@ export default function StudentPortalPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans animate-in fade-in duration-300">
       {/* ── 1. DIGITAL STUDENT BADGE HEADER ── */}
-      <div className={`p-6 lg:p-8 rounded-3xl border relative overflow-hidden transition-all shadow-xl ${
-        isDark
-          ? 'bg-gradient-to-r from-slate-900 via-blue-950/40 to-slate-900 border-slate-800'
-          : 'bg-gradient-to-r from-blue-50/90 via-teal-50/70 to-white border-blue-200/80 shadow-md'
-      }`}>
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <div className="eg-hero-card p-6 lg:p-8 rounded-3xl relative overflow-hidden transition-all shadow-xl">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-[var(--color-electric)]/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="flex items-center space-x-5">
             <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 ring-4 ring-white/10 overflow-hidden">
+              <div className="w-20 h-20 rounded-2xl eg-btn-gradient text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-[var(--accent-glow)] ring-4 ring-white/10 overflow-hidden">
                 {user?.facePhoto || studentProfile?.facePhoto ? (
                   <img
                     src={user?.facePhoto || studentProfile?.facePhoto}
@@ -205,7 +201,7 @@ export default function StudentPortalPage() {
                 <h1 className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white">
                   {studentProfile?.fullName || user?.fullName || 'Sinh viên Dự thi'}
                 </h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30 font-mono">
                   {studentProfile?.studentCode || 'MSSV: 2310900087'}
                 </span>
               </div>
@@ -221,7 +217,7 @@ export default function StudentPortalPage() {
                     Face ID: Đã kích hoạt hồ sơ
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-electric)]/15 text-[var(--color-azure)] border border-[var(--color-azure)]/30">
                     <ScanFace className="w-3.5 h-3.5 mr-1" />
                     Face ID: Xác thực tại Cổng thi
                   </span>
@@ -233,20 +229,16 @@ export default function StudentPortalPage() {
 
           {/* Quick Metrics */}
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Ca Thi Sắp Tới</div>
-              <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] font-mono mt-0.5">
                 {upcomingSessions.length}
               </div>
             </div>
 
-            <div className={`flex-1 lg:flex-none px-4 py-3 rounded-2xl border text-center min-w-[110px] ${
-              isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white/80 border-slate-200'
-            }`}>
+            <div className="flex-1 lg:flex-none px-4 py-3 rounded-2xl eg-cyber-card text-center min-w-[110px]">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Điểm TB (GPA)</div>
-              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <div className="text-xl font-extrabold text-[var(--color-azure)] font-mono mt-0.5">
                 {averageScore}
               </div>
             </div>
@@ -299,13 +291,13 @@ export default function StudentPortalPage() {
         </div>
       )}
 
-      {/* ── 3. NAVIGATION TABS ── */}
-      <div className="flex items-center space-x-2 border-b pb-3 border-slate-200 dark:border-slate-800">
+      {/* ── 3. NAVIGATION TABS (UNIFIED CAPSULE BAR) ── */}
+      <div className="flex flex-wrap items-center gap-2 border-b pb-3 border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('SCHEDULE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'SCHEDULE'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -315,9 +307,9 @@ export default function StudentPortalPage() {
 
         <button
           onClick={() => setActiveTab('TRANSCRIPT')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'TRANSCRIPT'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -327,9 +319,9 @@ export default function StudentPortalPage() {
 
         <button
           onClick={() => setActiveTab('PROFILE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'PROFILE'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -339,9 +331,9 @@ export default function StudentPortalPage() {
 
         <button
           onClick={() => setActiveTab('RULES')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'RULES'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              ? 'eg-glass-pill shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -362,32 +354,30 @@ export default function StudentPortalPage() {
             upcomingSessions.map((item: any) => (
               <div
                 key={item.id}
-                className={`p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg ${
-                  isDark
-                    ? 'bg-slate-900/60 border-slate-800/80 hover:border-blue-500/40'
-                    : 'bg-white border-slate-200 hover:border-blue-300'
-                }`}
+                className="eg-cyber-card p-5 rounded-3xl transition-all duration-200 hover:shadow-lg flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                    {item.session.code}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400">
-                    {item.session.durationMinutes} phút
-                  </span>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/20">
+                      {item.session.code}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {item.session.durationMinutes} phút
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-3 line-clamp-2">
+                    {item.session.title || item.session.subjectName}
+                  </h3>
+
+                  <div className="mt-4 space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {new Date(item.session.startTime).toLocaleString('vi-VN')}</p>
+                    <p className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {item.session.roomName}</p>
+                    <p className="flex items-center font-mono">Số báo danh: <strong className="text-slate-800 dark:text-slate-200 ml-1">{item.candidateCode}</strong></p>
+                  </div>
                 </div>
 
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-3 line-clamp-2">
-                  {item.session.title || item.session.subjectName}
-                </h3>
-
-                <div className="mt-4 space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <p className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {new Date(item.session.startTime).toLocaleString('vi-VN')}</p>
-                  <p className="flex items-center"><Monitor className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {item.session.roomName}</p>
-                  <p className="flex items-center font-mono">Số báo danh: <strong className="text-slate-800 dark:text-slate-200 ml-1">{item.candidateCode}</strong></p>
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="mt-5 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                   <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
                     Sẵn sàng
@@ -395,7 +385,7 @@ export default function StudentPortalPage() {
 
                   <button
                     onClick={() => navigate(`/take-exam/${item.id}`)}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center space-x-1"
+                    className="px-4 py-1.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md transition flex items-center space-x-1 cursor-pointer"
                   >
                     <span>Vào thi</span>
                     <ArrowRight className="w-3 h-3" />
@@ -437,7 +427,7 @@ export default function StudentPortalPage() {
                   <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
                       <div className="text-[10px] uppercase font-bold text-slate-400">Điểm Chính Thức</div>
-                      <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                      <div className="text-2xl font-black text-[var(--color-azure)] font-mono mt-0.5">
                         {item.officialScore !== null && item.officialScore !== undefined
                           ? `${item.officialScore.toFixed(1)} / 10`
                           : 'Đang chấm'}
@@ -461,7 +451,7 @@ export default function StudentPortalPage() {
                     </span>
                     <button
                       onClick={() => navigate(`/exam/result?view=student&sessionStudentId=${item.id}`)}
-                      className="px-3 py-1.5 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs font-bold transition flex items-center space-x-1"
+                      className="px-3.5 py-1.5 rounded-full eg-glass-pill-subtle text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
                     >
                       <span>Xem đáp án & Phúc khảo</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -562,7 +552,7 @@ export default function StudentPortalPage() {
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-3">
               <button
                 onClick={handleOpenEdit}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center space-x-2"
+                className="px-5 py-2.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Chỉnh sửa thông tin cá nhân</span>
@@ -638,7 +628,7 @@ export default function StudentPortalPage() {
             <button
               type="submit"
               disabled={isSavingProfile}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center justify-center space-x-1.5"
+              className="flex-1 px-5 py-2.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md transition flex items-center justify-center space-x-1.5 cursor-pointer"
             >
               {isSavingProfile && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
               <span>Lưu thay đổi</span>
@@ -708,7 +698,7 @@ export default function StudentPortalPage() {
             <button
               type="submit"
               disabled={isSavingPassword}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition flex items-center justify-center space-x-1.5"
+              className="flex-1 px-4 py-2.5 rounded-full eg-btn-gradient text-white text-xs font-bold shadow-md shadow-[var(--accent-glow)] transition flex items-center justify-center space-x-1.5 cursor-pointer"
             >
               {isSavingPassword && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
               <span>Đổi mật khẩu ngay</span>
@@ -723,7 +713,7 @@ export default function StudentPortalPage() {
           isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
         }`}>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-electric)]/10 text-[var(--color-azure)] flex items-center justify-center">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>

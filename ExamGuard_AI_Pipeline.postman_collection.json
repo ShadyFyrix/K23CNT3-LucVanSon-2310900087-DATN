@@ -1,720 +1,1091 @@
 {
-	"info": {
-		"_postman_id": "examguard-ai-pipeline-v3",
-		"name": "ExamGuard AI - E2E Testing Pipeline",
-		"description": "Bộ sưu tập kiểm thử toàn diện End-to-End theo đúng luồng Pipeline của Hệ thống Thi trực tuyến ExamGuard AI (Sinh viên Lục Văn Sơn - 2310900087 - K23CNT3). Hỗ trợ kiểm thử tự động lưu Token, SessionId, CandidateId.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "00. System Healthcheck & Polyglot Sync",
-			"item": [
-				{
-					"name": "0.1 Healthcheck Core Server (Port 3011)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url_core}}/api/face/health",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "face", "health"]
-						},
-						"description": "Kiểm tra kết nối tới Core Server và trạng thái sẵn sàng của Face AI"
-					},
-					"response": []
-				},
-				{
-					"name": "0.2 Healthcheck Python Face AI (Port 8000)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url_ai}}/health",
-							"host": ["{{base_url_ai}}"],
-							"path": ["health"]
-						},
-						"description": "Kiểm tra Microservice Python FastAPI Face AI (YuNet + ArcFace)"
-					},
-					"response": []
-				},
-				{
-					"name": "0.3 Healthcheck Python Flask Registry (Port 5000)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url_flask}}/api/flask/health",
-							"host": ["{{base_url_flask}}"],
-							"path": ["api", "flask", "health"]
-						},
-						"description": "Kiểm tra kết nối đồng thời tới MySQL 8.0 và MongoDB 7.0"
-					},
-					"response": []
-				},
-				{
-					"name": "0.4 Lấy thống kê Polyglot DB (Flask Service)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url_flask}}/api/flask/stats",
-							"host": ["{{base_url_flask}}"],
-							"path": ["api", "flask", "stats"]
-						},
-						"description": "Thống kê dữ liệu phân tầng giữa MySQL và MongoDB"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "01. Authentication & Onboarding (Identity)",
-			"item": [
-				{
-					"name": "1.1 Đăng nhập Thí sinh (Lục Văn Sơn)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.environment.set(\"student_token\", jsonData.token);",
-									"    console.log(\"Saved student_token:\", jsonData.token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"son.luc@sinhvien.edu.vn\",\n  \"password\": \"123456\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/auth/login",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "auth", "login"]
-						},
-						"description": "Đăng nhập sinh viên Lục Văn Sơn, tự động lưu token vào student_token"
-					},
-					"response": []
-				},
-				{
-					"name": "1.2 Đăng nhập Giảng viên / Giám thị",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.environment.set(\"teacher_token\", jsonData.token);",
-									"    console.log(\"Saved teacher_token:\", jsonData.token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"anguyen@examguard.edu.vn\",\n  \"password\": \"123456\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/auth/login",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "auth", "login"]
-						},
-						"description": "Đăng nhập Giảng viên / Giám thị, tự động lưu teacher_token"
-					},
-					"response": []
-				},
-				{
-					"name": "1.3 Kiểm tra trạng thái KYC khuôn mặt Thí sinh",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/face/registration-status/2310900087",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "face", "registration-status", "2310900087"]
-						},
-						"description": "Kiểm tra sinh viên 2310900087 đã được trích xuất 5 góc khuôn mặt chưa"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "02. Exam Preparation & Scheduling (Teacher/Admin)",
-			"item": [
-				{
-					"name": "2.1 Lấy danh sách Ngân hàng Đề thi",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/papers",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "papers"]
-						},
-						"description": "Lấy danh sách đề thi đã soạn (bao gồm DE-C-2026-01)"
-					},
-					"response": []
-				},
-				{
-					"name": "2.2 Lấy danh sách Ca thi (Exam Sessions)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"var sessions = jsonData.data || jsonData;",
-									"if (Array.isArray(sessions) && sessions.length > 0) {",
-									"    var target = sessions.find(s => s.code === 'CA-20261015-01') || sessions[0];",
-									"    pm.environment.set(\"session_id\", target._id || target.id);",
-									"    console.log(\"Saved session_id:\", target._id || target.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/sessions",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "sessions"]
-						},
-						"description": "Lấy danh sách ca thi và tự động lưu session_id của Ca 1 (P302)"
-					},
-					"response": []
-				},
-				{
-					"name": "2.3 Lấy chi tiết Ca thi & Danh sách chỗ ngồi",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"var candidates = jsonData.data ? jsonData.data.candidates : jsonData.candidates;",
-									"if (candidates && candidates.length > 0) {",
-									"    var me = candidates.find(c => c.candidateCode === '20261015-001') || candidates[0];",
-									"    pm.environment.set(\"session_student_id\", me._id || me.id);",
-									"    console.log(\"Saved session_student_id:\", me._id || me.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/sessions/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "sessions", "{{session_id}}"]
-						},
-						"description": "Lấy chi tiết phòng thi P302 và lấy session_student_id của thí sinh Lục Văn Sơn (20261015-001)"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "03. Student Check-In Gate & Exam Taking",
-			"item": [
-				{
-					"name": "3.1 Lấy đề thi đã tẩy dữ liệu nhạy cảm (Zero-Knowledge Questions)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/questions/{{session_student_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "questions", "{{session_student_id}}"]
-						},
-						"description": "Kiểm tra API bảo mật: Đề thi trả về cho thí sinh hoàn toàn KHÔNG có đáp án đúng (correctAnswer) và giải thích (explanation)"
-					},
-					"response": []
-				},
-				{
-					"name": "3.2 Thí sinh lưu tiến độ bài làm (Save Progress)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"currentQuestionIndex\": 5,\n  \"answers\": {\n    \"0\": 1,\n    \"1\": 2,\n    \"2\": 1,\n    \"3\": 0,\n    \"4\": 1\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/save-progress",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "save-progress"]
-						},
-						"description": "Auto-save câu trả lời theo thời gian thực đề phòng mất điện hoặc rớt mạng"
-					},
-					"response": []
-				},
-				{
-					"name": "3.3 Thí sinh nộp bài thi (Submit Exam & Auto-Grading)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"answers\": {\n    \"0\": 1,\n    \"1\": 2,\n    \"2\": 1,\n    \"3\": 0,\n    \"4\": 1,\n    \"5\": 1,\n    \"6\": 2,\n    \"7\": 0,\n    \"8\": 1,\n    \"9\": 2,\n    \"10\": 2,\n    \"11\": 2,\n    \"12\": 2,\n    \"13\": 1,\n    \"14\": 1,\n    \"15\": 2,\n    \"16\": 1,\n    \"17\": 1,\n    \"18\": \"Truyền tham trị sao chép giá trị, con trỏ truyền địa chỉ ô nhớ.\",\n    \"19\": \"int countEven(int a[], int n) { int c=0; for(int i=0;i<n;i++) if(a[i]%2==0) c++; return c; }\"\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/submit",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "submit"]
-						},
-						"description": "Nộp bài thi và kích hoạt Chấm điểm tự động tức thì (Auto-grading Engine)"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "04. Realtime AI Proctoring & Anti-Cheat Suite",
-			"item": [
-				{
-					"name": "4.1 Lấy trạng thái phòng thi trực tiếp 3D (Live Room State)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/proctor/live/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "proctor", "live", "{{session_id}}"]
-						},
-						"description": "Lấy sơ đồ ma trận chỗ ngồi phòng P302 và trạng thái từng thí sinh (Trust Score, Bàn thi)"
-					},
-					"response": []
-				},
-				{
-					"name": "4.2 Giả lập vi phạm chống gian lận trình duyệt (Tab Switch)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"studentId\": \"{{session_student_id}}\",\n  \"eventType\": \"TAB_SWITCH\",\n  \"details\": \"Thí sinh chuyển sang tab trình duyệt khác\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/proctor/anti-cheat-event",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "proctor", "anti-cheat-event"]
-						},
-						"description": "Bắn sự kiện vi phạm chuyển Tab, hệ thống tự động trừ điểm uy tín (Trust Score)"
-					},
-					"response": []
-				},
-				{
-					"name": "4.3 Giám thị phát lệnh cảnh báo thí sinh (Send Warning)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"message\": \"Yêu cầu bạn ngồi thẳng và nhìn trực diện vào màn hình!\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/proctor/send-warning",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "proctor", "send-warning"]
-						},
-						"description": "Gửi thông điệp cảnh báo trực tiếp lên màn hình thí sinh"
-					},
-					"response": []
-				},
-				{
-					"name": "4.4 Giám thị cộng bù giờ cho thí sinh (Extra Time)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"extraMinutes\": 5,\n  \"reason\": \"Sự cố mạng chập chờn 5 phút đầu\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/proctor/extra-time",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "proctor", "extra-time"]
-						},
-						"description": "Cộng thêm 5 phút bù giờ cho bài thi của thí sinh"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "05. Teacher Single-Review & Grade Publishing",
-			"item": [
-				{
-					"name": "5.1 Workspace rà soát 1 lần & Cảnh báo sai đề",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/grading/review/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "grading", "review", "{{session_id}}"]
-						},
-						"description": "Giảng viên xem thống kê phổ điểm, danh sách câu hỏi và cảnh báo bất thường (Miskey Alert)"
-					},
-					"response": []
-				},
-				{
-					"name": "5.2 Công nhận thêm đáp án đúng / Sửa đáp án đề thi",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"questionId\": \"13\",\n  \"action\": \"ADD_VALID_ANSWER\",\n  \"acceptedAnswers\": [0, 1],\n  \"reason\": \"Công nhận cả 2 phương án do câu hỏi có cách diễn đạt mở\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/grading/adjust-question",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "grading", "adjust-question"]
-						},
-						"description": "Sửa hoặc công nhận thêm đáp án đúng cho câu hỏi số 14"
-					},
-					"response": []
-				},
-				{
-					"name": "5.3 Chấm lại tức thì toàn bộ ca thi (1-Click Recalculate)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/grading/recalculate/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "grading", "recalculate", "{{session_id}}"]
-						},
-						"description": "Cập nhật điểm số cho toàn bộ thí sinh trong phòng sau khi sửa đề chỉ trong 1.5 giây"
-					},
-					"response": []
-				},
-				{
-					"name": "5.4 Giảng viên ký duyệt bảng điểm (Approve Grades)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"reviewNotes\": \"Đã kiểm tra kỹ 20 bài thi, xác nhận dữ liệu chính xác.\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/grading/approve/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "grading", "approve", "{{session_id}}"]
-						},
-						"description": "Phê duyệt điểm số, chuyển trạng thái ca thi sang APPROVED"
-					},
-					"response": []
-				},
-				{
-					"name": "5.5 Thí sinh xem kết quả chi tiết & Lời giải thích",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{student_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/exams/results/{{session_student_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exams", "results", "{{session_student_id}}"]
-						},
-						"description": "Sau khi công bố điểm, Thí sinh tra cứu kết quả kèm đáp án chuẩn và giải thích sư phạm"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "06. Đấu Trường Quiz Arena (Gamification & Soạn Đề Studio)",
-			"item": [
-				{
-					"name": "6.1 Soạn đề thi Quiz Arena trong Assessment Studio (POST /api/exam/papers)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"title\": \"[Quiz] Đấu Trường Lập Trình Web & JavaScript Modern\",\n  \"code\": \"QUIZ-JS-2026\",\n  \"durationMinutes\": 15,\n  \"totalScore\": 10.0,\n  \"paperType\": \"STRUCTURED_QUIZ\",\n  \"submissionMode\": \"ONLINE_ONLY\",\n  \"structureType\": \"PURE_MCQ\",\n  \"isQuizArena\": true,\n  \"quizSettings\": {\n    \"defaultTimePerQuestion\": 20,\n    \"speedBonus\": true\n  },\n  \"totalQuestions\": 3,\n  \"questions\": [\n    {\n      \"stt\": 1,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.0,\n      \"prompt\": \"Biến khai báo bằng const trong JavaScript có đặc điểm gì?\",\n      \"options\": [\n        \"Có thể gán lại giá trị bất kỳ lúc nào\",\n        \"Bắt buộc phải khởi tạo giá trị khi khai báo và không thể re-assign\",\n        \"Có phạm vi function-scope giống var\",\n        \"Tự động gán undefined nếu chưa có giá trị\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [1],\n      \"timeLimitSeconds\": 15,\n      \"explanation\": \"const yêu cầu khởi tạo ngay khi khai báo và không thể gán lại (re-assign).\"\n    },\n    {\n      \"stt\": 2,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Phương thức nào chuyển đổi đối tượng JavaScript thành chuỗi JSON?\",\n      \"options\": [\n        \"JSON.parse()\",\n        \"JSON.toString()\",\n        \"JSON.stringify()\",\n        \"Object.toJSON()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [2],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"JSON.stringify() dùng để serialize đối tượng JS thành chuỗi JSON chuẩn.\"\n    },\n    {\n      \"stt\": 3,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Toán tử Promise nào chờ TẤT CẢ các promise hoàn thành hoặc bị reject đầu tiên?\",\n      \"options\": [\n        \"Promise.all()\",\n        \"Promise.race()\",\n        \"Promise.any()\",\n        \"Promise.allSettled()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [0],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"Promise.all() chờ tất cả promise resolve, hoặc reject ngay khi 1 promise thất bại.\"\n    }\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/exam/papers",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "exam", "papers"]
-						},
-						"description": "Lưu đề thi trắc nghiệm Quiz Arena với thời gian đếm ngược từng câu, speed bonus và đáp án chuẩn vào MongoDB"
-					},
-					"response": []
-				},
-				{
-					"name": "6.2 Giảng viên khởi tạo phòng Quiz Arena kèm Custom Rules (POST /api/quiz-arena/create-room)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"title\": \"Đấu trường Quiz 15p - Lập Trình Web Cạnh Tranh\",\n  \"examPaperId\": \"{{quiz_paper_id}}\",\n  \"gameRules\": {\n    \"scoringType\": \"SPEED_BONUS\",\n    \"timerType\": \"PER_QUESTION_TIMER\",\n    \"secondsPerQuestion\": 20,\n    \"enableHearts\": true,\n    \"maxHearts\": 3,\n    \"showLeaderboard\": true\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/quiz-arena/create-room",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "quiz-arena", "create-room"]
-						},
-						"description": "Giảng viên tạo phòng chơi Đấu trường Quiz, tự động sinh mã PIN 6 số và thiết lập luật chơi tùy biến (3 tim, speed bonus, timer)"
-					},
-					"response": []
-				},
-				{
-					"name": "6.3 Giảng viên cập nhật Luật chơi tùy biến Realtime (PUT /api/quiz-arena/rules/:sessionId)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"scoringType\": \"SPEED_BONUS\",\n  \"timerType\": \"PER_QUESTION_TIMER\",\n  \"secondsPerQuestion\": 15,\n  \"enableHearts\": true,\n  \"maxHearts\": 3,\n  \"showLeaderboard\": true\n}"
-						},
-						"url": {
-							"raw": "{{base_url_core}}/api/quiz-arena/rules/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "quiz-arena", "rules", "{{session_id}}"]
-						},
-						"description": "Điều chỉnh luật chơi của sàn đấu ngay trong lúc sảnh chờ hoặc giữa các câu hỏi"
-					},
-					"response": []
-				},
-				{
-					"name": "6.4 Lấy trạng thái sàn đấu thời gian thực (GET /api/quiz-arena/state/:sessionId)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/quiz-arena/state/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "quiz-arena", "state", "{{session_id}}"]
-						},
-						"description": "Host lấy thông tin sàn đấu: Mã PIN, số thí sinh đã vào phòng, phân phối đáp án realtime và Top 10 bảng xếp hạng"
-					},
-					"response": []
-				},
-				{
-					"name": "6.5 Đồng bộ điểm số đấu trường sang cơ sở dữ liệu chính thức (POST /api/quiz-arena/sync-grades/:sessionId)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{teacher_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url_core}}/api/quiz-arena/sync-grades/{{session_id}}",
-							"host": ["{{base_url_core}}"],
-							"path": ["api", "quiz-arena", "sync-grades", "{{session_id}}"]
-						},
-						"description": "Quy đổi điểm đấu trường Quiz sang thang điểm 10 và lưu vào bảng điểm chính thức của Ca thi"
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "base_url_core",
-			"value": "http://localhost:3011"
-		},
-		{
-			"key": "base_url_flask",
-			"value": "http://127.0.0.1:5000"
-		},
-		{
-			"key": "base_url_ai",
-			"value": "http://127.0.0.1:8000"
-		},
-		{
-			"key": "student_token",
-			"value": ""
-		},
-		{
-			"key": "teacher_token",
-			"value": ""
-		},
-		{
-			"key": "session_id",
-			"value": ""
-		},
-		{
-			"key": "session_student_id",
-			"value": ""
-		}
-	]
+  "info": {
+    "_postman_id": "examguard-ai-pipeline-v3",
+    "name": "ExamGuard AI - E2E Testing Pipeline",
+    "description": "Bộ sưu tập kiểm thử toàn diện End-to-End theo đúng luồng Pipeline của Hệ thống Thi trực tuyến ExamGuard AI (Sinh viên Lục Văn Sơn - 2310900087 - K23CNT3). Hỗ trợ kiểm thử tự động lưu Token, SessionId, CandidateId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00. System Healthcheck & Polyglot Sync",
+      "item": [
+        {
+          "name": "0.1 Healthcheck Core Server (Port 3011)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_core}}/api/face/health",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "face",
+                "health"
+              ]
+            },
+            "description": "Kiểm tra kết nối tới Core Server và trạng thái sẵn sàng của Face AI"
+          },
+          "response": []
+        },
+        {
+          "name": "0.2 Healthcheck Python Face AI (Port 8000)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_ai}}/health",
+              "host": [
+                "{{base_url_ai}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Kiểm tra Microservice Python FastAPI Face AI (YuNet + ArcFace)"
+          },
+          "response": []
+        },
+        {
+          "name": "0.3 Healthcheck Python Flask Registry (Port 5000)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_flask}}/api/flask/health",
+              "host": [
+                "{{base_url_flask}}"
+              ],
+              "path": [
+                "api",
+                "flask",
+                "health"
+              ]
+            },
+            "description": "Kiểm tra kết nối đồng thời tới MySQL 8.0 và MongoDB 7.0"
+          },
+          "response": []
+        },
+        {
+          "name": "0.4 Lấy thống kê Polyglot DB (Flask Service)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_flask}}/api/flask/stats",
+              "host": [
+                "{{base_url_flask}}"
+              ],
+              "path": [
+                "api",
+                "flask",
+                "stats"
+              ]
+            },
+            "description": "Thống kê dữ liệu phân tầng giữa MySQL và MongoDB"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01. Authentication & Onboarding (Identity)",
+      "item": [
+        {
+          "name": "1.1 Đăng nhập Thí sinh (Lục Văn Sơn)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"student_token\", jsonData.token);",
+                  "    console.log(\"Saved student_token:\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"son.luc@sinhvien.edu.vn\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/auth/login",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập sinh viên Lục Văn Sơn, tự động lưu token vào student_token"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Đăng nhập Giảng viên / Giám thị",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"teacher_token\", jsonData.token);",
+                  "    console.log(\"Saved teacher_token:\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"anguyen@examguard.edu.vn\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/auth/login",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập Giảng viên / Giám thị, tự động lưu teacher_token"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Kiểm tra trạng thái KYC khuôn mặt Thí sinh",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/face/registration-status/2310900087",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "face",
+                "registration-status",
+                "2310900087"
+              ]
+            },
+            "description": "Kiểm tra sinh viên 2310900087 đã được trích xuất 5 góc khuôn mặt chưa"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Exam Preparation & Scheduling (Teacher/Admin)",
+      "item": [
+        {
+          "name": "2.1 Lấy danh sách Ngân hàng Đề thi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/papers",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "papers"
+              ]
+            },
+            "description": "Lấy danh sách đề thi đã soạn (bao gồm DE-C-2026-01)"
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Lấy danh sách Ca thi (Exam Sessions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "var sessions = jsonData.data || jsonData;",
+                  "if (Array.isArray(sessions) && sessions.length > 0) {",
+                  "    var target = sessions.find(s => s.code === 'CA-20261015-01') || sessions[0];",
+                  "    pm.environment.set(\"session_id\", target._id || target.id);",
+                  "    console.log(\"Saved session_id:\", target._id || target.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/sessions",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "sessions"
+              ]
+            },
+            "description": "Lấy danh sách ca thi và tự động lưu session_id của Ca 1 (P302)"
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Lấy chi tiết Ca thi & Danh sách chỗ ngồi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "var candidates = jsonData.data ? jsonData.data.candidates : jsonData.candidates;",
+                  "if (candidates && candidates.length > 0) {",
+                  "    var me = candidates.find(c => c.candidateCode === '20261015-001') || candidates[0];",
+                  "    pm.environment.set(\"session_student_id\", me._id || me.id);",
+                  "    console.log(\"Saved session_student_id:\", me._id || me.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/sessions/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "sessions",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Lấy chi tiết phòng thi P302 và lấy session_student_id của thí sinh Lục Văn Sơn (20261015-001)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. Student Check-In Gate & Exam Taking",
+      "item": [
+        {
+          "name": "3.1 Lấy đề thi đã tẩy dữ liệu nhạy cảm (Zero-Knowledge Questions)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/questions/{{session_student_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "questions",
+                "{{session_student_id}}"
+              ]
+            },
+            "description": "Kiểm tra API bảo mật: Đề thi trả về cho thí sinh hoàn toàn KHÔNG có đáp án đúng (correctAnswer) và giải thích (explanation)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Thí sinh lưu tiến độ bài làm (Save Progress)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"currentQuestionIndex\": 5,\n  \"answers\": {\n    \"0\": 1,\n    \"1\": 2,\n    \"2\": 1,\n    \"3\": 0,\n    \"4\": 1\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/save-progress",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "save-progress"
+              ]
+            },
+            "description": "Auto-save câu trả lời theo thời gian thực đề phòng mất điện hoặc rớt mạng"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Thí sinh nộp bài thi (Submit Exam & Auto-Grading)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"answers\": {\n    \"0\": 1,\n    \"1\": 2,\n    \"2\": 1,\n    \"3\": 0,\n    \"4\": 1,\n    \"5\": 1,\n    \"6\": 2,\n    \"7\": 0,\n    \"8\": 1,\n    \"9\": 2,\n    \"10\": 2,\n    \"11\": 2,\n    \"12\": 2,\n    \"13\": 1,\n    \"14\": 1,\n    \"15\": 2,\n    \"16\": 1,\n    \"17\": 1,\n    \"18\": \"Truyền tham trị sao chép giá trị, con trỏ truyền địa chỉ ô nhớ.\",\n    \"19\": \"int countEven(int a[], int n) { int c=0; for(int i=0;i<n;i++) if(a[i]%2==0) c++; return c; }\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/submit",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "submit"
+              ]
+            },
+            "description": "Nộp bài thi và kích hoạt Chấm điểm tự động tức thì (Auto-grading Engine)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. Realtime AI Proctoring & Anti-Cheat Suite",
+      "item": [
+        {
+          "name": "4.1 Lấy trạng thái phòng thi trực tiếp 3D (Live Room State)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/proctor/live/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "proctor",
+                "live",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Lấy sơ đồ ma trận chỗ ngồi phòng P302 và trạng thái từng thí sinh (Trust Score, Bàn thi)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Giả lập vi phạm chống gian lận trình duyệt (Tab Switch)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"studentId\": \"{{session_student_id}}\",\n  \"eventType\": \"TAB_SWITCH\",\n  \"details\": \"Thí sinh chuyển sang tab trình duyệt khác\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/proctor/anti-cheat-event",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "proctor",
+                "anti-cheat-event"
+              ]
+            },
+            "description": "Bắn sự kiện vi phạm chuyển Tab, hệ thống tự động trừ điểm uy tín (Trust Score)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Giám thị phát lệnh cảnh báo thí sinh (Send Warning)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"message\": \"Yêu cầu bạn ngồi thẳng và nhìn trực diện vào màn hình!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/proctor/send-warning",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "proctor",
+                "send-warning"
+              ]
+            },
+            "description": "Gửi thông điệp cảnh báo trực tiếp lên màn hình thí sinh"
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Giám thị cộng bù giờ cho thí sinh (Extra Time)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"sessionStudentId\": \"{{session_student_id}}\",\n  \"extraMinutes\": 5,\n  \"reason\": \"Sự cố mạng chập chờn 5 phút đầu\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/proctor/extra-time",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "proctor",
+                "extra-time"
+              ]
+            },
+            "description": "Cộng thêm 5 phút bù giờ cho bài thi của thí sinh"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05. Teacher Single-Review & Grade Publishing",
+      "item": [
+        {
+          "name": "5.1 Workspace rà soát 1 lần & Cảnh báo sai đề",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/grading/review/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "grading",
+                "review",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Giảng viên xem thống kê phổ điểm, danh sách câu hỏi và cảnh báo bất thường (Miskey Alert)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Công nhận thêm đáp án đúng / Sửa đáp án đề thi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"questionId\": \"13\",\n  \"action\": \"ADD_VALID_ANSWER\",\n  \"acceptedAnswers\": [0, 1],\n  \"reason\": \"Công nhận cả 2 phương án do câu hỏi có cách diễn đạt mở\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/grading/adjust-question",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "grading",
+                "adjust-question"
+              ]
+            },
+            "description": "Sửa hoặc công nhận thêm đáp án đúng cho câu hỏi số 14"
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Chấm lại tức thì toàn bộ ca thi (1-Click Recalculate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/grading/recalculate/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "grading",
+                "recalculate",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Cập nhật điểm số cho toàn bộ thí sinh trong phòng sau khi sửa đề chỉ trong 1.5 giây"
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Giảng viên ký duyệt bảng điểm (Approve Grades)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewNotes\": \"Đã kiểm tra kỹ 20 bài thi, xác nhận dữ liệu chính xác.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/grading/approve/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "grading",
+                "approve",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Phê duyệt điểm số, chuyển trạng thái ca thi sang APPROVED"
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 Thí sinh xem kết quả chi tiết & Lời giải thích",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/exams/results/{{session_student_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exams",
+                "results",
+                "{{session_student_id}}"
+              ]
+            },
+            "description": "Sau khi công bố điểm, Thí sinh tra cứu kết quả kèm đáp án chuẩn và giải thích sư phạm"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06. Đấu Trường Quiz Arena (Gamification & Soạn Đề Studio)",
+      "item": [
+        {
+          "name": "6.1 Soạn đề thi Quiz Arena trong Assessment Studio (POST /api/exam/papers)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Quiz] Đấu Trường Lập Trình Web & JavaScript Modern\",\n  \"code\": \"QUIZ-JS-2026\",\n  \"durationMinutes\": 15,\n  \"totalScore\": 10.0,\n  \"paperType\": \"STRUCTURED_QUIZ\",\n  \"submissionMode\": \"ONLINE_ONLY\",\n  \"structureType\": \"PURE_MCQ\",\n  \"isQuizArena\": true,\n  \"quizSettings\": {\n    \"defaultTimePerQuestion\": 20,\n    \"speedBonus\": true\n  },\n  \"totalQuestions\": 3,\n  \"questions\": [\n    {\n      \"stt\": 1,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.0,\n      \"prompt\": \"Biến khai báo bằng const trong JavaScript có đặc điểm gì?\",\n      \"options\": [\n        \"Có thể gán lại giá trị bất kỳ lúc nào\",\n        \"Bắt buộc phải khởi tạo giá trị khi khai báo và không thể re-assign\",\n        \"Có phạm vi function-scope giống var\",\n        \"Tự động gán undefined nếu chưa có giá trị\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [1],\n      \"timeLimitSeconds\": 15,\n      \"explanation\": \"const yêu cầu khởi tạo ngay khi khai báo và không thể gán lại (re-assign).\"\n    },\n    {\n      \"stt\": 2,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Phương thức nào chuyển đổi đối tượng JavaScript thành chuỗi JSON?\",\n      \"options\": [\n        \"JSON.parse()\",\n        \"JSON.toString()\",\n        \"JSON.stringify()\",\n        \"Object.toJSON()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [2],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"JSON.stringify() dùng để serialize đối tượng JS thành chuỗi JSON chuẩn.\"\n    },\n    {\n      \"stt\": 3,\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"score\": 3.5,\n      \"prompt\": \"Toán tử Promise nào chờ TẤT CẢ các promise hoàn thành hoặc bị reject đầu tiên?\",\n      \"options\": [\n        \"Promise.all()\",\n        \"Promise.race()\",\n        \"Promise.any()\",\n        \"Promise.allSettled()\"\n      ],\n      \"selectionMode\": \"SINGLE\",\n      \"correctAnswers\": [0],\n      \"timeLimitSeconds\": 20,\n      \"explanation\": \"Promise.all() chờ tất cả promise resolve, hoặc reject ngay khi 1 promise thất bại.\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/exam/papers",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "exam",
+                "papers"
+              ]
+            },
+            "description": "Lưu đề thi trắc nghiệm Quiz Arena với thời gian đếm ngược từng câu, speed bonus và đáp án chuẩn vào MongoDB"
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Giảng viên khởi tạo phòng Quiz Arena kèm Custom Rules (POST /api/quiz-arena/create-room)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Đấu trường Quiz 15p - Lập Trình Web Cạnh Tranh\",\n  \"examPaperId\": \"{{quiz_paper_id}}\",\n  \"gameRules\": {\n    \"scoringType\": \"SPEED_BONUS\",\n    \"timerType\": \"PER_QUESTION_TIMER\",\n    \"secondsPerQuestion\": 20,\n    \"enableHearts\": true,\n    \"maxHearts\": 3,\n    \"showLeaderboard\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/quiz-arena/create-room",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "quiz-arena",
+                "create-room"
+              ]
+            },
+            "description": "Giảng viên tạo phòng chơi Đấu trường Quiz, tự động sinh mã PIN 6 số và thiết lập luật chơi tùy biến (3 tim, speed bonus, timer)"
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Giảng viên cập nhật Luật chơi tùy biến Realtime (PUT /api/quiz-arena/rules/:sessionId)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scoringType\": \"SPEED_BONUS\",\n  \"timerType\": \"PER_QUESTION_TIMER\",\n  \"secondsPerQuestion\": 15,\n  \"enableHearts\": true,\n  \"maxHearts\": 3,\n  \"showLeaderboard\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url_core}}/api/quiz-arena/rules/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "quiz-arena",
+                "rules",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Điều chỉnh luật chơi của sàn đấu ngay trong lúc sảnh chờ hoặc giữa các câu hỏi"
+          },
+          "response": []
+        },
+        {
+          "name": "6.4 Lấy trạng thái sàn đấu thời gian thực (GET /api/quiz-arena/state/:sessionId)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/quiz-arena/state/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "quiz-arena",
+                "state",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Host lấy thông tin sàn đấu: Mã PIN, số thí sinh đã vào phòng, phân phối đáp án realtime và Top 10 bảng xếp hạng"
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 Đồng bộ điểm số đấu trường sang cơ sở dữ liệu chính thức (POST /api/quiz-arena/sync-grades/:sessionId)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_core}}/api/quiz-arena/sync-grades/{{session_id}}",
+              "host": [
+                "{{base_url_core}}"
+              ],
+              "path": [
+                "api",
+                "quiz-arena",
+                "sync-grades",
+                "{{session_id}}"
+              ]
+            },
+            "description": "Quy đổi điểm đấu trường Quiz sang thang điểm 10 và lưu vào bảng điểm chính thức của Ca thi"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07. Real-Time Pose & CCTV Surveillance (MediaPipe, OpenCV & Flask)",
+      "item": [
+        {
+          "name": "01. Giám sát Thể chất Thí sinh (Candidate Inspect Frame - Token Bucket)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "sessionStudentId",
+                  "value": "{{sessionStudentId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "trustScore",
+                  "value": "95",
+                  "type": "text"
+                },
+                {
+                  "key": "frame",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/surveillance/candidate/inspect-frame",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "surveillance",
+                "candidate",
+                "inspect-frame"
+              ]
+            },
+            "description": "Phân tích tư thế thể chất thí sinh với thuật toán Token Bucket rate limiting và trả về cache khi tần suất gửi < 4.5s."
+          }
+        },
+        {
+          "name": "02. Đăng ký Giám sát Camera Phòng thi (Register CCTV Stream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"P101_LAB\",\n  \"streamUrl\": \"rtsp://admin:pass@192.168.1.100:554/stream1\",\n  \"targetFps\": 3\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/surveillance/cctv/register",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "surveillance",
+                "cctv",
+                "register"
+              ]
+            },
+            "description": "Kích hoạt luồng RTSP camera phòng thi với cơ chế Decimation lấy mẫu thưa 3.0 FPS và Single-slot buffer."
+          }
+        },
+        {
+          "name": "03. Dừng Giám sát Camera Phòng thi (Stop CCTV Stream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"P101_LAB\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/surveillance/cctv/stop",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "surveillance",
+                "cctv",
+                "stop"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04. Xem Danh sách Camera CCTV & Chỉ số FPS (Active CCTV Streams)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/surveillance/cctv/streams",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "surveillance",
+                "cctv",
+                "streams"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05. Đo Lường Tải Trọng & Chống Nghẽn Server (Surveillance Metrics)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/surveillance/metrics",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "surveillance",
+                "metrics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06. Webhook Bắn Sự kiện sang Node.js Core (Surveillance Webhook Ingestion)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-internal-ai-key",
+                "value": "FaceAI_Internal_Microservice_Secret_Key_999"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity_id\": \"{{sessionStudentId}}\",\n  \"event_type\": \"POSTURE_STANDING\",\n  \"severity\": \"HIGH\",\n  \"penalty\": 15,\n  \"source\": \"CANDIDATE_WEBCAM\",\n  \"metadata\": {\n    \"confidence\": 0.92,\n    \"angles\": {\n      \"torso_tilt\": 12,\n      \"knee_angle\": 172,\n      \"hip_angle\": 168\n    }\n  },\n  \"timestamp\": \"2026-11-09T03:49:46.058Z\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:3011/api/proctor/webhook",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "3011",
+              "path": [
+                "api",
+                "proctor",
+                "webhook"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url_core",
+      "value": "http://localhost:3011"
+    },
+    {
+      "key": "base_url_flask",
+      "value": "http://127.0.0.1:5000"
+    },
+    {
+      "key": "base_url_ai",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "student_token",
+      "value": ""
+    },
+    {
+      "key": "teacher_token",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "session_student_id",
+      "value": ""
+    }
+  ]
 }

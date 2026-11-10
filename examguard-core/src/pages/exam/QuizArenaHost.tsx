@@ -350,9 +350,9 @@ export default function QuizArenaHost() {
             <div className="flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={handleStartGame}
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-lg shadow-xl shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+                className="px-8 py-4 rounded-2xl eg-btn-gradient text-white font-black text-lg shadow-xl shadow-[var(--accent-glow)] transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 cursor-pointer"
               >
-                <Play className="w-6 h-6 fill-slate-950" /> BẮT ĐẦU TRẬN ĐẤU
+                <Play className="w-6 h-6 fill-white" /> BẮT ĐẦU TRẬN ĐẤU
               </button>
             </div>
           </div>
@@ -489,9 +489,9 @@ export default function QuizArenaHost() {
 
                   <button
                     onClick={handleNextQuestion}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition transform hover:-translate-y-0.5"
+                    className="px-6 py-2.5 rounded-xl eg-btn-gradient text-white font-black text-sm flex items-center gap-2 shadow-lg shadow-[var(--accent-glow)] transition transform hover:-translate-y-0.5 cursor-pointer"
                   >
-                    CÂU TIẾP THEO <FastForward className="w-4 h-4 fill-slate-950" />
+                    CÂU TIẾP THEO <FastForward className="w-4 h-4 fill-white" />
                   </button>
                 </div>
               )}
@@ -629,7 +629,7 @@ export default function QuizArenaHost() {
             <div className="flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={handleSyncOfficialGrades}
-                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition transform hover:-translate-y-0.5"
+                className="px-6 py-3.5 rounded-xl eg-btn-gradient text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-[var(--accent-glow)] transition transform hover:-translate-y-0.5 cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" /> ĐỒNG BỘ ĐIỂM VÀO BẢNG ĐIỂM HỆ THỐNG
               </button>

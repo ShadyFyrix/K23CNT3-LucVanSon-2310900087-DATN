@@ -86,7 +86,7 @@ export default function FaceKyc() {
           </p>
           <button
             onClick={() => navigate('/')}
-            className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-blue-600/20 cursor-pointer active:scale-95"
+            className="mt-6 w-full py-3 eg-btn-gradient text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md cursor-pointer active:scale-95"
           >
             Quay lại Cổng Thí Sinh
           </button>
@@ -168,7 +168,7 @@ export default function FaceKyc() {
           <div className="flex items-center space-x-3">
             <button
               onClick={handleSelfKyc}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition active:scale-95 cursor-pointer"
+              className="flex items-center space-x-2 px-4 py-2.5 eg-btn-gradient text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 cursor-pointer"
             >
               <Camera className="w-4 h-4" />
               <span>Quét Face ID Cho Tôi ({currentUser?.fullName || 'Bản thân'})</span>
@@ -186,7 +186,7 @@ export default function FaceKyc() {
         {/* 4 Thẻ Thống Kê Tổng Quan */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex items-center space-x-4 shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/20 flex items-center justify-center text-[var(--color-azure)] shrink-0">
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
@@ -195,14 +195,14 @@ export default function FaceKyc() {
                 <span className="text-xl font-bold text-slate-900 dark:text-white">{studentKycCount}</span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">/ {studentTotal} SV</span>
               </div>
-              <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-semibold mt-0.5">
+              <p className="text-[10px] text-[var(--color-azure)] font-semibold mt-0.5">
                 {studentTotal > 0 ? Math.round((studentKycCount / studentTotal) * 100) : 0}% hoàn thành
               </p>
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex items-center space-x-4 shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[var(--color-electric)]/10 border border-[var(--color-azure)]/20 flex items-center justify-center text-[var(--color-azure)] shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -211,7 +211,7 @@ export default function FaceKyc() {
                 <span className="text-xl font-bold text-slate-900 dark:text-white">{teacherKycCount}</span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">/ {teacherTotal} GV</span>
               </div>
-              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
+              <p className="text-[10px] text-[var(--color-azure)] font-semibold mt-0.5">
                 {teacherTotal > 0 ? Math.round((teacherKycCount / teacherTotal) * 100) : 0}% hoàn thành
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function FaceKyc() {
               onClick={() => setActiveTab('STUDENT')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                 activeTab === 'STUDENT'
-                  ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-md'
+                  ? 'eg-btn-gradient text-white shadow-md'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -267,7 +267,7 @@ export default function FaceKyc() {
               onClick={() => setActiveTab('TEACHER')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                 activeTab === 'TEACHER'
-                  ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-md'
+                  ? 'eg-btn-gradient text-white shadow-md'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -361,16 +361,16 @@ export default function FaceKyc() {
                         <td className="py-3 px-4 text-center font-mono text-slate-400 dark:text-slate-500">{idx + 1}</td>
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
+                            <div className="w-8 h-8 rounded-xl bg-[var(--color-electric)]/15 border border-[var(--color-azure)]/30 flex items-center justify-center text-[var(--color-azure)] font-bold text-xs shrink-0 shadow-xs">
                               {name.charAt(0)}
                             </div>
                             <div>
-                              <p className="font-bold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">{name}</p>
+                              <p className="font-bold text-slate-900 dark:text-white group-hover:text-[var(--color-azure)] transition-colors">{name}</p>
                               <p className="text-[11px] text-slate-400 dark:text-slate-500">{item.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400">{code}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-[var(--color-azure)]">{code}</td>
                         <td className="py-3 px-4 text-slate-600 dark:text-slate-400">{deptOrClass}</td>
                         <td className="py-3 px-4">
                           {isKyc ? (
@@ -391,7 +391,7 @@ export default function FaceKyc() {
                             className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs ${
                               isKyc
                                 ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-                                : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-600/20'
+                                : 'eg-btn-gradient text-white shadow-md'
                             }`}
                           >
                             <Camera className="w-3.5 h-3.5" />

@@ -196,28 +196,28 @@ export function CreateSessionModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative my-8 animate-in fade-in zoom-in-95">
+      <div className="eg-cyber-card border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative my-8 animate-in fade-in zoom-in-95">
         {/* Nút đóng */}
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/60 hover:bg-slate-800 transition"
+          className="absolute right-5 top-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Tiêu đề Modal */}
-        <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-800">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+        <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="w-12 h-12 rounded-2xl eg-btn-gradient flex items-center justify-center text-white shadow-lg shadow-[var(--accent-glow)]">
             <Plus className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center space-x-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
               <span>LÊN LỊCH & THÊM CA THI MỚI</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-electric)]/10 text-[var(--color-azure)] border border-[var(--color-azure)]/20">
                 PROCTOR SCHEDULER
               </span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Tạo ca thi trắc nghiệm trực tuyến, gán phòng máy và thiết lập giám thị coi thi.
             </p>
           </div>
@@ -225,20 +225,20 @@ export function CreateSessionModal({
 
         {fetchingData ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-            <p className="text-xs text-slate-400">Đang tải danh mục môn học, đề thi & phòng thi...</p>
+            <Loader2 className="w-8 h-8 text-[var(--color-azure)] animate-spin" />
+            <p className="text-xs text-slate-500 dark:text-slate-400">Đang tải danh mục môn học, đề thi & phòng thi...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Hàng 1: Mã ca thi & Tên ca thi */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>Mã ca thi *</span>
                   <button
                     type="button"
                     onClick={() => setCode(generateSessionCode())}
-                    className="text-[10px] text-cyan-400 hover:underline flex items-center space-x-1"
+                    className="text-[10px] text-[var(--color-azure)] hover:underline flex items-center space-x-1 font-semibold"
                   >
                     <Sparkles className="w-3 h-3" />
                     <span>Tạo lại</span>
@@ -250,12 +250,12 @@ export function CreateSessionModal({
                   onChange={e => setCode(e.target.value)}
                   required
                   placeholder="VD: CA-20261019-P302"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 />
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Tên ca thi *
                 </label>
                 <input
@@ -264,7 +264,7 @@ export function CreateSessionModal({
                   onChange={e => setTitle(e.target.value)}
                   required
                   placeholder="VD: Thi Kết thúc Học phần Kỹ thuật Lập trình - Ca 2"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 />
               </div>
             </div>
@@ -272,15 +272,15 @@ export function CreateSessionModal({
             {/* Hàng 2: Chọn Môn học & Chọn Đề thi */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Học phần / Môn học *</span>
                 </label>
                 <select
                   value={selectedSubject}
                   onChange={e => setSelectedSubject(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 >
                   <option value="">-- Chọn môn thi --</option>
                   {courses.map(c => (
@@ -292,15 +292,15 @@ export function CreateSessionModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Bộ Đề thi Quiz gắn vào *</span>
                 </label>
                 <select
                   value={selectedPaper}
                   onChange={e => handlePaperChange(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 >
                   <option value="">-- Chọn đề thi --</option>
                   {papers.map(p => (
@@ -315,15 +315,15 @@ export function CreateSessionModal({
             {/* Hàng 3: Chọn Phòng thi & Thời gian thi */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Phòng thi / Lab *</span>
                 </label>
                 <select
                   value={selectedRoom}
                   onChange={e => handleRoomChange(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 >
                   <option value="">-- Chọn phòng thi --</option>
                   {rooms.map(r => (
@@ -335,8 +335,8 @@ export function CreateSessionModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Bắt đầu thi *</span>
                 </label>
                 <input
@@ -344,13 +344,13 @@ export function CreateSessionModal({
                   value={startTime}
                   onChange={e => setStartTime(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30 font-mono"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Thời lượng (phút) *</span>
                 </label>
                 <input
@@ -360,14 +360,14 @@ export function CreateSessionModal({
                   value={durationMinutes}
                   onChange={e => setDurationMinutes(Number(e.target.value))}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30 font-mono"
                 />
               </div>
             </div>
 
             {/* Hàng 4: Hình thức thi (LAB_PC, BYOD, ONLINE_QUIZ) */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Hình thức thi & Môi trường thiết bị:
               </label>
               <div className="grid grid-cols-3 gap-3">
@@ -376,22 +376,19 @@ export function CreateSessionModal({
                     key: 'LAB_PC',
                     title: 'Máy Lab Trường',
                     desc: 'Cố định IP & camera phòng thi',
-                    icon: Monitor,
-                    color: 'cyan'
+                    icon: Monitor
                   },
                   {
                     key: 'BYOD_LAPTOP',
                     title: 'Laptop Cá Nhân',
                     desc: 'Sinh viên mang laptop vào phòng',
-                    icon: Laptop,
-                    color: 'indigo'
+                    icon: Laptop
                   },
                   {
                     key: 'ONLINE_QUIZ',
                     title: 'Quiz Trực Tuyến',
                     desc: 'Giám sát webcam & AI Face từ xa',
-                    icon: Globe,
-                    color: 'emerald'
+                    icon: Globe
                   }
                 ].map(item => {
                   const Icon = item.icon;
@@ -402,13 +399,13 @@ export function CreateSessionModal({
                       onClick={() => setExamType(item.key as any)}
                       className={`p-3 rounded-2xl border cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-slate-800 border-cyan-500 shadow-md ring-1 ring-cyan-500/50'
-                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                          ? 'bg-[var(--color-electric)]/10 border-[var(--color-azure)] shadow-md ring-1 ring-[var(--color-azure)]/50'
+                          : 'bg-slate-50 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
-                        <Icon className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-slate-400'}`} />
-                        <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                        <Icon className={`w-4 h-4 ${isSelected ? 'text-[var(--color-azure)]' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-bold ${isSelected ? 'text-[var(--color-azure)]' : 'text-slate-700 dark:text-slate-300'}`}>
                           {item.title}
                         </span>
                       </div>
@@ -422,14 +419,14 @@ export function CreateSessionModal({
             {/* Hàng 5: Cán bộ coi thi (Giám thị 1 & Giám thị 2) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-purple-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Cán bộ coi thi 1 (Chính)</span>
                 </label>
                 <select
                   value={proctor1}
                   onChange={e => setProctor1(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 >
                   <option value="">-- Chọn Giám thị 1 --</option>
                   {teachers.map(t => (
@@ -441,14 +438,14 @@ export function CreateSessionModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-purple-400" />
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                   <span>Cán bộ coi thi 2 (Phụ / Giám sát)</span>
                 </label>
                 <select
                   value={proctor2}
                   onChange={e => setProctor2(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-[var(--color-azure)] focus:ring-1 focus:ring-[var(--color-azure)]/30"
                 >
                   <option value="">-- Không có hoặc chọn Giám thị 2 --</option>
                   {teachers.map(t => (
@@ -461,18 +458,18 @@ export function CreateSessionModal({
             </div>
 
             {/* Buttons Action */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-end space-x-3">
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800 text-xs font-semibold transition"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition"
               >
                 Hủy bỏ
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 transition flex items-center space-x-2 active:scale-95 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl eg-btn-gradient text-white text-xs font-bold shadow-lg shadow-[var(--accent-glow)] transition flex items-center space-x-2 active:scale-95 disabled:opacity-50"
               >
                 {loading ? (
                   <>

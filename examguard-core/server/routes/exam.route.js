@@ -1,7 +1,32 @@
+/**
+ * =========================================================================
+ * EXAM ROUTES (Tuân thủ Single Responsibility & Clean Routing)
+ * Định tuyến các API theo phân hệ:
+ *   - /papers:       Ủy quyền cho ExamPaperController
+ *   - /rooms:        Ủy quyền cho ExamSessionController
+ *   - /sessions:     Ủy quyền cho ExamSessionController
+ *   - /questions...: Ủy quyền cho ExamSubmissionController
+ * =========================================================================
+ */
+
 const express = require('express');
 const router = express.Router();
-const examController = require('../controllers/exam.controller');
+const examPaperController = require('../controllers/examPaper.controller');
+const examSessionController = require('../controllers/examSession.controller');
+const examSubmissionController = require('../controllers/examSubmission.controller');
 const proctorController = require('../controllers/proctor.controller');
+const authMiddleware = require('../middlewares/authMiddleware');
+const { userHasAnyRole } = require('../utils/roleHelper');
+
+const requireStaffRole = (req, res, next) => {
+  if (!req.user || !userHasAnyRole(req.user, ['admin', 'superadmin', 'teacher', 'academic'])) {
+    return res.status(403).json({
+      success: false,
+      message: 'Chỉ Giảng viên hoặc Quản trị viên Khảo thí mới có quyền tạo ca thi!'
+    });
+  }
+  next();
+};
 
 const multer = require('multer');
 const path = require('path');
@@ -37,39 +62,47 @@ const upload = multer({
   }
 });
 
-// Đề thi (Exam Papers)
-router.post('/upload-paper-file', upload.single('file'), examController.uploadPaperFile);
-router.post('/papers', examController.createExamPaper);
-router.get('/papers', examController.getExamPapers);
-router.get('/papers/:id', examController.getExamPaperDetail);
-router.put('/papers/:id', examController.updateExamPaper);
+// ==============================
+// 1. ĐỀ THI (EXAM PAPERS)
+// ==============================
+router.post('/upload-paper-file', upload.single('file'), examPaperController.uploadPaperFile);
+router.post('/papers', examPaperController.createExamPaper);
+router.get('/papers', examPaperController.getExamPapers);
+router.get('/papers/:id', examPaperController.getExamPaperDetail);
+router.put('/papers/:id', examPaperController.updateExamPaper);
 
-// Phòng thi (Exam Rooms)
-router.get('/rooms', examController.getExamRooms);
-router.post('/rooms', examController.createExamRoom);
+// ==============================
+// 2. PHÒNG THI (EXAM ROOMS)
+// ==============================
+router.get('/rooms', examSessionController.getExamRooms);
+router.post('/rooms', examSessionController.createExamRoom);
 
-// Ca thi (Exam Sessions)
-router.post('/sessions', examController.createExamSession);
-router.get('/sessions', examController.getExamSessions);
-router.get('/sessions/:id', examController.getExamSessionDetail);
-router.post('/sessions/:sessionId/assign-students', examController.assignStudentsToSession);
-router.put('/sessions/:sessionId/students/:examStudentId', examController.updateExamStudent);
-router.post('/sessions/:sessionId/generate-candidate-codes', examController.bulkGenerateCandidateCodes);
-router.post('/sessions/:sessionId/add-student', examController.addStudentToSession);
-router.post('/sessions/:sessionId/bulk-add-students', examController.bulkAddStudentsToSession);
-router.delete('/sessions/:sessionId/students/:examStudentId', examController.removeStudentFromSession);
-router.post('/sessions/:sessionId/end-session', examController.endExamSession);
+// ==============================
+// 3. CA THI & THÍ SINH (EXAM SESSIONS)
+// ==============================
+router.post('/sessions', authMiddleware, requireStaffRole, examSessionController.createExamSession);
+router.get('/sessions', examSessionController.getExamSessions);
+router.get('/sessions/:id', examSessionController.getExamSessionDetail);
+router.post('/sessions/:sessionId/assign-students', examSessionController.assignStudentsToSession);
+router.put('/sessions/:sessionId/students/:examStudentId', examSessionController.updateExamStudent);
+router.post('/sessions/:sessionId/generate-candidate-codes', examSessionController.bulkGenerateCandidateCodes);
+router.post('/sessions/:sessionId/add-student', examSessionController.addStudentToSession);
+router.post('/sessions/:sessionId/bulk-add-students', examSessionController.bulkAddStudentsToSession);
+router.delete('/sessions/:sessionId/students/:examStudentId', examSessionController.removeStudentFromSession);
+router.post('/sessions/:sessionId/end-session', examSessionController.endExamSession);
 
-// Thí sinh làm bài thi (Candidate Workspace)
-router.get('/questions/:sessionStudentId', examController.getSanitizedQuestions);
-router.post('/save-progress', examController.saveProgress);
-router.post('/submit', examController.submitExam);
+// ==============================
+// 4. THÍ SINH LÀM BÀI (CANDIDATE WORKSPACE)
+// ==============================
+router.get('/questions/:sessionStudentId', examSubmissionController.getSanitizedQuestions);
+router.post('/save-progress', examSubmissionController.saveProgress);
+router.post('/submit', examSubmissionController.submitExam);
 router.post('/unlock-late-student', proctorController.unlockLateStudent);
 
-// Tra cứu kết quả kèm đáp án & lời giải thích
-router.get('/results/:sessionStudentId', examController.getStudentExamResult);
-
-// Lịch thi và tiến độ các môn thi của thí sinh (Hỗ trợ Sảnh thi & 2 môn liên tiếp)
-router.get('/student-schedule', examController.getStudentExamSchedule);
+// ==============================
+// 5. TRA CỨU KẾT QUẢ & LỊCH THI
+// ==============================
+router.get('/results/:sessionStudentId', examSubmissionController.getStudentExamResult);
+router.get('/student-schedule', examSubmissionController.getStudentExamSchedule);
 
 module.exports = router;

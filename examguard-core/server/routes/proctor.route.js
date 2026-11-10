@@ -40,4 +40,7 @@ router.get('/statistics/:sessionId', proctorController.getLiveStatistics);
 // Dòng thời gian sự kiện & vi phạm
 router.get('/timeline/:sessionId', proctorController.getTimeline);
 
+// Webhook nhận sự kiện vi phạm từ Flask Surveillance Microservice (Tư thế & Camera phòng thi)
+router.post('/webhook', proctorController.handleSurveillanceWebhook);
+
 module.exports = router;

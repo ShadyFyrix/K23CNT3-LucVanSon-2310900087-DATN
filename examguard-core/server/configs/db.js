@@ -12,6 +12,7 @@ const ExamRoom = require('../models/examRoom.model');
 const ExamPaper = require('../models/examPaper.model');
 const ExamSession = require('../models/examSession.model');
 const ExamStudent = require('../models/examStudent.model');
+const Post = require('../models/post.model');
 
 const connectDB = async () => {
   try {
@@ -382,6 +383,56 @@ const seedRolesAndBlueprintData = async () => {
         startedAt: new Date(now.getTime() - 12 * 60 * 1000)
       });
       console.log(`✨ Đã xếp chỗ Thí sinh: ${studentObj.fullName} (SBD: 20261015-001, Bàn: R2-C3, PIN: 849201)`);
+    }
+
+    // 7. TẠO DỮ LIỆU BẢN TIN KHẢO THÍ & HỌC VỤ MẪU (Post Seeder)
+    const postCount = await Post.countDocuments();
+    if (postCount === 0) {
+      await Post.create([
+        {
+          title: '[KHẢO THÍ] Lịch Thi Học Kỳ 1 & Kế Hoạch Vận Hành Buồng Thi 3D Biometric AI',
+          content: `Hội đồng Khảo thí thông báo chính thức Thời khóa biểu thi Kết thúc Học phần KHKT Học kỳ 1. Tất cả thí sinh và cán bộ coi thi bắt buộc tuân thủ quy trình kiểm định sinh trắc học Face ID trước giờ mở phòng 15 phút.\n\n📌 Yêu cầu trọng tâm:\n1. Thí sinh mang thẻ sinh viên hoặc CCCD gắn chip để đối soát tại cửa buồng thi.\n2. Kiểm tra tài khoản ExamGuard AI trên Cổng sinh viên, kiểm tra trạng thái KYC đã hoàn tất hay chưa.\n3. Đúng giờ G, hệ thống sẽ mở cổng làm bài và kích hoạt giám thị AI đa góc.`,
+          category: 'announcement',
+          isPinned: true,
+          author: adminUser._id,
+          targetType: 'all',
+          actionLink: '/exam-sessions',
+          actionText: 'Xem Lịch Thi & Sơ Đồ Phòng Máy [Gantt]',
+          examSessionCode: 'CA-20261025-P302-300'
+        },
+        {
+          title: '[CÔNG BỐ ĐIỂM] Bảng Điểm Thi & Đáp Án Học Phần Kỹ Thuật Lập Trình (KTLT)',
+          content: `Bộ môn Kỹ thuật Lập trình đã hoàn tất công tác chấm trắc nghiệm tự động và rọc phách điểm thi thực hành ca thi kết thúc học phần.\n\n📊 Thống kê sơ bộ ca thi:\n• Điểm trung bình: 7.85 / 10.00\n• Tỷ lệ đạt (>= 5.0): 94.2%\n• Điểm cao nhất: 10.00 (Thí sinh Nguyễn Công Tùng & Lục Văn Sơn)\n• Uy tín AI trung bình: 98/100 (Không phát hiện gian lận nghiêm trọng)\n\nSinh viên vui lòng bấm nút "Tra Cứu Bảng Điểm & Đáp Án Chi Tiết" bên dưới để đối chiếu bài làm, thang điểm chi tiết. Hạn chót gửi đơn phúc khảo trực tuyến: 17/11/2026.`,
+          category: 'announcement',
+          isPinned: true,
+          author: teacherUser._id,
+          targetType: 'all',
+          actionLink: '/exam/result?view=student',
+          actionText: 'Tra Cứu Bảng Điểm & Đáp Án Chi Tiết',
+          examSessionCode: 'CA-20261025-P302-300'
+        },
+        {
+          title: '[QUY CHẾ] Quy Định Phòng Thi Chuẩn Zero-Trust & Chế Tài Xử Lý Gian Lận AI',
+          content: `Ban Giám thị Khảo thí ban hành Quyết định số 482/QĐ-KT về việc áp dụng Giám thị Đa tầng AI (Edge CCTV + Face Verification 5 góc):\n\n🚫 Các hành vi vi phạm sẽ bị hệ thống tự động ghi biên bản điện tử và trừ điểm uy tín (Trust Score):\n1. Quay đầu góc nghiêng quá 35 độ kéo dài trên 5 giây.\n2. Xuất hiện khuôn mặt thứ hai hoặc vắng mặt khỏi vùng quét camera.\n3. Chuyển tab trình duyệt hoặc kết nối màn hình phụ / USB không hợp lệ.\n4. Sử dụng tai nghe bluetooth hoặc thiết bị ngoại vi trái phép.`,
+          category: 'policy',
+          isPinned: false,
+          author: adminUser._id,
+          targetType: 'all',
+          actionLink: '/student',
+          actionText: 'Xem Quy Chế Phòng Thi SEB'
+        },
+        {
+          title: '[HƯỚNG DẪN] Cẩm Nang Chuẩn Bị Thiết Bị & Thao Tác Vào Buồng Thi Trực Tuyến',
+          content: `Dành cho tất cả sinh viên tham dự các ca thi trực tuyến và thi phòng máy Lab:\n1. Đăng nhập Cổng sinh viên trước 10 phút.\n2. Kiểm tra quyền truy cập Camera & Micro trên trình duyệt Chrome/Edge.\n3. Khi hệ thống hiển thị "Phòng Chờ Vào Thi", chờ cán bộ coi thi kích hoạt ca thi và tiến hành quét sinh trắc học Face ID 5 góc để mở đề.`,
+          category: 'event',
+          isPinned: false,
+          author: teacherUser._id,
+          targetType: 'all',
+          actionLink: '/exam/take',
+          actionText: 'Thử Nghiệm Buồng Thi Thí Sinh'
+        }
+      ]);
+      console.log('✨ Đã khởi tạo 4 Thông báo Khảo thí & Công bố điểm mẫu!');
     }
 
     console.log("==================================================================");

@@ -3,6 +3,7 @@ const router = express.Router();
 const roomController = require('../controllers/room.controller');
 
 router.post('/', roomController.createRoom);
+router.post('/analyze-photo', roomController.analyzeRoomPhoto);
 router.get('/', roomController.getRooms);
 router.put('/:id', roomController.updateRoom);
 router.delete('/:id', roomController.deleteRoom);

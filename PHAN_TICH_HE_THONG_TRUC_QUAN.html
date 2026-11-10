@@ -1,0 +1,2769 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Phân Tích Hệ Thống — ExamGuard AI v3.3</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Mermaid.js for Vector UML Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eefdfc',
+              100: '#d5fbf8',
+              500: '#0ea5a0',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            },
+            dark: {
+              bg: '#0B0F17',
+              card: '#111827',
+              border: '#1F2937',
+              hover: '#1E293B',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.7);
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .dark .glass-card {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    /* Print optimization */
+    @media print {
+      aside, #nav-header, #quick-search-box, .no-print {
+        display: none !important;
+      }
+      main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 0 !important;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .page-break {
+        page-break-after: always;
+      }
+    }
+    /* UML Diagram Zoom & Pan System */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      min-height: 280px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .mermaid-zoom-container:hover {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+    }
+    .dark .mermaid-zoom-container:hover {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    }
+    .mermaid-zoom-container.cursor-grabbing {
+      cursor: grabbing !important;
+    }
+    .mermaid-viewport {
+      transform-origin: 0 0;
+      transition: transform 0.06s ease-out;
+      will-change: transform;
+      display: inline-block;
+      min-width: 100%;
+    }
+    .mermaid-zoom-container svg, #modal-canvas-viewport svg {
+      max-width: none !important;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    .uml-toolbar-btn {
+      transition: all 0.15s ease-in-out;
+    }
+    .uml-toolbar-btn:active {
+      transform: scale(0.92);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-dark-bg text-slate-800 dark:text-slate-200 font-sans antialiased selection:bg-brand-500 selection:text-white transition-colors duration-200 min-h-screen">
+
+  <!-- TOP HEADER -->
+  <header id="nav-header" class="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-dark-border bg-white/90 dark:bg-dark-card/90 backdrop-blur-md transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Project Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">ExamGuard AI</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-700">v3.3 Pro</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Báo Cáo Phân Tích & Đặc Tả Nghiệp Vụ Toàn Diện</p>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="flex-1 max-w-md relative hidden md:block">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input 
+          id="global-search" 
+          type="text" 
+          placeholder="Tìm Use Case, Mã vi phạm, Bảng điểm, Tech..." 
+          class="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-800 dark:text-slate-200 placeholder-slate-400"
+        />
+      </div>
+
+      <!-- Right Action Tools -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleDarkMode()" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Đổi giao diện Sáng / Tối">
+          <i id="theme-icon" data-lucide="moon" class="w-5 h-5"></i>
+        </button>
+        <button onclick="window.print()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="In hoặc Lưu PDF">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Xuất PDF</span>
+        </button>
+        <a href="#section-usecases" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm transition-all shadow-brand-600/30">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          <span>Khám Phá Use Case</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER WITH SIDEBAR & CONTENT -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-8 items-start">
+    
+    <!-- LEFT STICKY NAVIGATION -->
+    <aside class="hidden lg:block w-64 shrink-0 sticky top-24 space-y-1 text-sm no-print">
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <i data-lucide="compass" class="w-4 h-4"></i>
+          <span>Mục Lục Nhanh</span>
+        </div>
+        <nav class="space-y-1 text-xs">
+          <a href="#section-overview" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span>I. Tổng Quan Hệ Thống</span>
+          </a>
+          <a href="#section-functions" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
+            <span>II. Yêu Cầu Chức Năng</span>
+          </a>
+          <a href="#section-nfr" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="gauge" class="w-4 h-4"></i>
+            <span>III. Phi Chức Năng & Đối Chiếu</span>
+          </a>
+          <a href="#section-actors" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>IV. Tác Nhân & Phân Quyền</span>
+          </a>
+          <a href="#section-usecase-diagram" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="network" class="w-4 h-4"></i>
+            <span>V. Biểu Đồ Use Case Tổng</span>
+          </a>
+          <a href="#section-usecases" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>VI. Đặc Tả 6 Use Case</span>
+          </a>
+          <a href="#section-sequence" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="git-commit" class="w-4 h-4"></i>
+            <span>VII. Biểu Đồ Tuần Tự (Seq)</span>
+          </a>
+          <a href="#section-activity" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+            <span>VIII. Biểu Đồ Hoạt Động</span>
+          </a>
+          <a href="#section-architecture" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <span>IX. Kiến Trúc Microservices</span>
+          </a>
+          <a href="#section-state" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="git-branch" class="w-4 h-4"></i>
+            <span>X. Vòng Đời Trạng Thái</span>
+          </a>
+          <a href="#section-violations" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:text-brand-600 dark:hover:text-teal-400 transition-colors">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span>XI. Ma Trận Vi Phạm & Đánh Giá</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Quick Stats Card -->
+      <div class="p-4 rounded-xl border border-teal-200 dark:border-teal-900/60 bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-dark-card dark:to-teal-950/20 text-xs space-y-2">
+        <div class="font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          <span>Chỉ Số Vận Hành</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-400">
+          <div>Quy mô: <strong class="text-slate-800 dark:text-white">10.000 SV</strong></div>
+          <div>CCU: <strong class="text-slate-800 dark:text-white">1.500</strong></div>
+          <div>Embedding: <strong class="text-slate-800 dark:text-white">512-D</strong></div>
+          <div>Webcam AI: <strong class="text-slate-800 dark:text-white">30 FPS</strong></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN BODY CONTENT -->
+    <main class="flex-1 min-w-0 space-y-12 pb-24">
+
+      <!-- HERO BANNER -->
+      <section class="rounded-2xl p-6 sm:p-8 bg-gradient-to-r from-teal-700 via-teal-800 to-slate-900 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-72 h-72 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 space-y-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-teal-200 text-xs font-semibold backdrop-blur-sm border border-white/10">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Đồ Án Tốt Nghiệp — K23CNT3 Lục Văn Sơn (2310900087)</span>
+          </div>
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+            PHÂN TÍCH HỆ THỐNG KHẢO THÍ THÔNG MINH<br/>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-emerald-200">EXAMGUARD AI v3.3</span>
+          </h1>
+          <p class="text-sm sm:text-base text-teal-100/90 max-w-3xl leading-relaxed">
+            Hệ thống quản lý và giám sát khảo thí trực tuyến tích hợp sinh trắc học khuôn mặt tiên tiến. 
+            Xây dựng trên triết lý cốt lõi <strong>"Biometric Ground-Truth Identity First"</strong> — đảm bảo tính toàn vẹn học thuật và loại bỏ 100% gian lận thi cử.
+          </p>
+          <div class="flex flex-wrap gap-3 pt-2 text-xs font-medium">
+            <span class="px-3 py-1.5 rounded-lg bg-black/30 border border-white/10 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-teal-300"></i> Ngày phân tích: 26/10/2026
+            </span>
+            <span class="px-3 py-1.5 rounded-lg bg-black/30 border border-white/10 flex items-center gap-1.5">
+              <i data-lucide="fingerprint" class="w-3.5 h-3.5 text-teal-300"></i> ArcFace 512-D + YuNet ONNX
+            </span>
+            <span class="px-3 py-1.5 rounded-lg bg-black/30 border border-white/10 flex items-center gap-1.5">
+              <i data-lucide="shield" class="w-3.5 h-3.5 text-teal-300"></i> Zero-Trust Architecture
+            </span>
+            <span class="px-3 py-1.5 rounded-lg bg-black/30 border border-white/10 flex items-center gap-1.5">
+              <i data-lucide="user-check" class="w-3.5 h-3.5 text-teal-300"></i> Staff Exemption Protocol
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- I. TỔNG QUAN HỆ THỐNG -->
+      <section id="section-overview" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">I</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Tổng Quan Hệ Thống</h2>
+          </div>
+          <span class="text-xs text-slate-500">Mục 1/12</span>
+        </div>
+
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 mt-1">
+              <i data-lucide="badge-check" class="w-5 h-5"></i>
+            </div>
+            <div class="space-y-1">
+              <h3 class="font-bold text-base text-slate-900 dark:text-white">Triết lý cốt lõi: "Biometric Ground-Truth Identity First"</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Hệ thống xác định <strong>khuôn mặt là căn cước sinh trắc học số gốc duy nhất</strong> của thí sinh và giám thị, được số hóa và chuẩn hóa thành vector toán học ArcFace 512 chiều. Mọi điểm tiếp xúc nghiệp vụ (xếp chỗ, cấp SBD, điểm danh, mở đề, giám sát ngầm liên tục mỗi 20s và hậu kiểm) đều quy chiếu về vector gốc này.
+              </p>
+            </div>
+          </div>
+
+          <!-- 4 Exam Modes -->
+          <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 pt-2">4 Hình Thức Thi Hỗ Trợ:</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-2 hover:border-teal-400 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">LAB_PC</span>
+                <span class="text-xs text-slate-400">Phòng máy trường</span>
+              </div>
+              <h5 class="font-bold text-sm text-slate-900 dark:text-white">Thi Máy Phòng Lab Tập Trung</h5>
+              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Trình duyệt khóa cứng (Kiosk Browser) + Webcam PC + Camera CCTV trần nhà quét toàn cảnh bàn thi 5 FPS qua RTSP stream.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-2 hover:border-teal-400 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">BYOD_LAPTOP</span>
+                <span class="text-xs text-slate-400">Thiết bị cá nhân</span>
+              </div>
+              <h5 class="font-bold text-sm text-slate-900 dark:text-white">Thi Laptop Cá Nhân (BYOD)</h5>
+              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Safe Exam Browser (SEB) khóa toàn bộ OS + IP Subnet VLAN phòng thi + Seat PIN 6 số + Webcam MediaPipe + Camera CCTV góc rộng.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-2 hover:border-teal-400 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">ONLINE_QUIZ</span>
+                <span class="text-xs text-slate-400">Trắc nghiệm chuẩn</span>
+              </div>
+              <h5 class="font-bold text-sm text-slate-900 dark:text-white">Thi Trắc Nghiệm Trực Tuyến</h5>
+              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                AI Face Tracking liên tục + Anti-tab switch phát hiện ẩn tab + Đếm ngược câu hỏi + Auto-save ngầm mỗi 10 giây và khi chọn đáp án.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-2 hover:border-teal-400 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">QUIZ_ARENA</span>
+                <span class="text-xs text-slate-400">Đấu trường Gamified</span>
+              </div>
+              <h5 class="font-bold text-sm text-slate-900 dark:text-white">Đấu Trường Quiz Tương Tác</h5>
+              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Trắc nghiệm phong cách Kahoot bằng mã PIN 6 số + Socket.IO realtime + Web Audio API nhịp tim + Bảng xếp hạng Top 10 + Bục Podium Top 3.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- II. CHỨC NĂNG CHÍNH CỦA HỆ THỐNG -->
+      <section id="section-functions" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">II</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Yêu Cầu Chức Năng (Functional Requirements)</h2>
+          </div>
+          <span class="text-xs text-slate-500">Bảng 2.1</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <!-- Card 1 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="scan-face" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">1. Face KYC Căn Cước Số Gốc</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Thu thập 5 tư thế góc đầu (Thẳng, Trái, Phải, Ngửa, Cúi). Chống giả mạo MiniFASNet. Trích xuất vector ArcFace 512 chiều chuẩn hóa hợp nhất có trọng số làm căn cước gốc duy nhất.
+            </p>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="log-in" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">2. Check-in Sinh Trắc Học 1:1</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Đối chiếu khuôn mặt trực tiếp trước camera với Vector Căn cước Gốc KYC (Cosine Similarity ≥ 0.75 + Liveness). Tự động cập nhật vị trí bàn xanh trên sơ đồ phòng thi 3D.
+            </p>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="video" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">3. Giám Sát Thời Gian Thực</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Webcam client-side (MediaPipe 30 FPS theo dõi Yaw/Pitch, vắng mặt, chuyển tab) song song Server-side (AI xác thực ngầm mỗi 20s chống tráo người, CCTV YOLOv8 quét tư thế bàn).
+            </p>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="layout-grid" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">4. Khởi Tạo & Chuẩn Bị Ca Thi</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Dựng sơ đồ phòng thi 3D Isometric, gắn camera CCTV kèm vùng ROI Polygon 4 đỉnh. Lập lịch biểu Gantt Chart, xáo trộn tự động xếp chỗ, cấp SBD và phân công cán bộ coi thi.
+            </p>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="file-code" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">5. Soạn Đề (Assessment Studio)</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Đa dạng câu hỏi: MCQ đơn/đa đáp án, Tự luận, Lập trình (Code kèm test cases), Điền khuyết, Âm thanh/Hình ảnh. Nhập đề tự động Word/Excel/JSON, mã hóa đề thi an toàn.
+            </p>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="award" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">6. Chấm Thi & Rọc Phách Ẩn Danh</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Tự động chấm tuyệt đối trắc nghiệm. Chế độ rọc phách Anonymous Hashing khi chấm Tự luận/Code (ẩn danh thí sinh hoàn toàn). Rà soát bảng điểm 1 lần trước khi công bố.
+            </p>
+          </div>
+
+          <!-- Card 7 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="network" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">7. Quản Trị Tổ Chức & Người Dùng</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Cây phân cấp Khoa → Khóa → Lớp → Sinh viên / Giảng viên. Hỗ trợ import hàng loạt Excel, phân quyền RBAC chặt chẽ và quản lý trạng thái hồ sơ KYC.
+            </p>
+          </div>
+
+          <!-- Card 8 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="file-check-2" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">8. Hậu Kiểm, Audit & Phúc Khảo</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Tự động xuất Báo cáo toàn vẹn (Integrity Report) kèm timeline và snapshot bằng chứng bất biến (MongoDB). Xử lý đơn phúc khảo trực tuyến của sinh viên trong thời hạn 7 ngày.
+            </p>
+          </div>
+
+          <!-- Card 9 -->
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-brand-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">9. Đấu Trường Quiz Gamification</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Khởi tạo phòng Quiz tức thì bằng mã PIN 6 số. Luật chơi đa dạng (Speed Bonus, Streak Bonus, Survival 3 Tim), biểu đồ kết quả thời gian thực và vinh danh Podium Top 3.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- III. PHI CHỨC NĂNG & ĐỐI CHIẾU MÃ NGUỒN -->
+      <section id="section-nfr" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">III</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Yêu Cầu Phi Chức Năng & Đối Chiếu Thực Tế</h2>
+          </div>
+          <span class="text-xs text-slate-500">Bảng 2.2 & 2.2b</span>
+        </div>
+
+        <!-- 5 Non-Functional Pillars -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-1.5">
+            <div class="text-brand-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1">
+              <i data-lucide="zap" class="w-4 h-4"></i> Hiệu Suất
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+              AI Face: 70–150ms/frame. Check-in 1:1: &lt; 1.5s. Socket.IO latency &lt; 100ms. Client: 15–30 FPS.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-1.5">
+            <div class="text-brand-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1">
+              <i data-lucide="shield" class="w-4 h-4"></i> Zero-Trust
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+              5 quy tắc bất biến: Rọc phách, Khóa quyền giám thị ngoài giờ, Phân tách soạn-thi, KYC Approved.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-1.5">
+            <div class="text-brand-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1">
+              <i data-lucide="monitor" class="w-4 h-4"></i> Tương Thích
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+              Responsive Chrome, Edge, Safari. Safe Exam Browser (SEB), chuẩn webcam laptop 720p.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-1.5">
+            <div class="text-brand-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1">
+              <i data-lucide="smile" class="w-4 h-4"></i> Dễ Sử Dụng
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+              Dark/Light Mode, Sơ đồ 3D Isometric, Web Audio API tổng hợp trực tiếp không tải MP3 nặng.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-1.5">
+            <div class="text-brand-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1">
+              <i data-lucide="scaling" class="w-4 h-4"></i> Khả Năng Scale
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+              Microservices phân tầng, Polyglot (MySQL + MongoDB + Redis), FastAPI async cho luồng camera.
+            </p>
+          </div>
+        </div>
+
+        <!-- Comparison Table (Theory vs Actual Code) -->
+        <div class="rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-compare" class="w-4 h-4 text-brand-600"></i>
+              Bảng 2.2b. Đối Chiếu Chỉ Số Kỹ Thuật: Thiết Kế Lý Thuyết vs Thực Tế Mã Nguồn
+            </h3>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">Verified with codebase</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-dark-border">
+                <tr>
+                  <th class="py-3 px-4 w-12 text-center">STT</th>
+                  <th class="py-3 px-4">Tham Số / Chỉ Số</th>
+                  <th class="py-3 px-4">Thiết Kế Lý Thuyết</th>
+                  <th class="py-3 px-4">Thực Tế Trong Mã Nguồn</th>
+                  <th class="py-3 px-4">Vị Trí Định Nghĩa Trong Code</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-dark-border text-slate-700 dark:text-slate-300 font-mono">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">1</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Quy mô người dùng</td>
+                  <td class="py-2.5 px-4">10.000 sinh viên</td>
+                  <td class="py-2.5 px-4 text-amber-600 dark:text-amber-400 font-bold">~50–100 SV (Seed Dev)</td>
+                  <td class="py-2.5 px-4 text-slate-500">examguard_db (MySQL)</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">2</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Tải đồng thời (CCU)</td>
+                  <td class="py-2.5 px-4">1.000–1.500 CCU</td>
+                  <td class="py-2.5 px-4">5–20 phiên (Localhost)</td>
+                  <td class="py-2.5 px-4 text-slate-500">Socket.IO Rooms</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">3</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Kích thước Vector Khuôn mặt</td>
+                  <td class="py-2.5 px-4">512-D float32</td>
+                  <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-bold">512 chiều (Khớp 100%)</td>
+                  <td class="py-2.5 px-4 text-slate-500">config.py (EMBEDDING_DIM=512)</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">4</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Mô hình AI nhận diện</td>
+                  <td class="py-2.5 px-4">YuNet + ArcFace</td>
+                  <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-bold">YuNet ONNX (337KB) + ArcFace</td>
+                  <td class="py-2.5 px-4 text-slate-500">examguard-ai/data/models/</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">5</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Ngưỡng Cosine Check-in</td>
+                  <td class="py-2.5 px-4">≥ 0.75</td>
+                  <td class="py-2.5 px-4 text-teal-600 dark:text-teal-400 font-bold">≥ 0.68 (Webcam tối ưu)</td>
+                  <td class="py-2.5 px-4 text-slate-500">SIMILARITY_THRESHOLD=0.68</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">6</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Ngưỡng Liveness Chống Giả Mạo</td>
+                  <td class="py-2.5 px-4">≥ 0.90</td>
+                  <td class="py-2.5 px-4 text-teal-600 dark:text-teal-400 font-bold">≥ 0.55 (Webcam laptop)</td>
+                  <td class="py-2.5 px-4 text-slate-500">LIVENESS_THRESHOLD=0.55</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">7</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Thời gian xử lý AI</td>
+                  <td class="py-2.5 px-4">&lt; 2.0 giây</td>
+                  <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-bold">70ms–150ms / frame</td>
+                  <td class="py-2.5 px-4 text-slate-500">FastAPI /v1/face/verify</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">8</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Giới hạn thời gian vào muộn</td>
+                  <td class="py-2.5 px-4">15 phút</td>
+                  <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-bold">15 phút (Khớp 100%)</td>
+                  <td class="py-2.5 px-4 text-slate-500">lateThresholdMs = 15*60*1000</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">9</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Tần suất Auto-save bài thi</td>
+                  <td class="py-2.5 px-4">10 giây</td>
+                  <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-bold">10 giây + On Select Answer</td>
+                  <td class="py-2.5 px-4 text-slate-500">TakeExam.tsx (AutoSaver)</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 text-center text-slate-400 font-sans">10</td>
+                  <td class="py-2.5 px-4 font-sans font-semibold">Kiến trúc Cổng dịch vụ (Ports)</td>
+                  <td class="py-2.5 px-4">Microservices phân tán</td>
+                  <td class="py-2.5 px-4 font-semibold text-slate-800 dark:text-white">Core: 3011 | AI: 8000 | Flask: 5000</td>
+                  <td class="py-2.5 px-4 text-slate-500">run_system.bat</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- IV. CÁC TÁC NHÂN & MA TRẬN PHÂN QUYỀN -->
+            <section id="section-actors" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">IV</span>
+            <div>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Tác Nhân Tham Gia (Actors) & Mô Hình Kế Thừa</h2>
+              <p class="text-xs text-slate-500">Phân cấp Kế thừa Actor chuẩn UML 2.x & Ma trận Phân quyền Context-Based (CBAC)</p>
+            </div>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Actor Generalization & RBAC</span>
+        </div>
+
+        <!-- Actor Inheritance Hierarchy Architecture Banner -->
+        <div class="p-5 rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-gradient-to-r from-teal-50/80 via-white to-slate-50 dark:from-teal-950/40 dark:via-dark-card dark:to-slate-900/60 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-teal-100 dark:border-teal-900/50 pb-3">
+            <div class="flex items-center gap-2 text-brand-800 dark:text-teal-300 font-bold text-sm">
+              <i data-lucide="git-fork" class="w-5 h-5 text-brand-600"></i>
+              <span>Cây Phân Cấp Kế Thừa Actor (Actor Generalization Hierarchy)</span>
+            </div>
+            <span class="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+              UML 2.x Generalization Pattern
+            </span>
+          </div>
+
+          <!-- Abstract Parent Actor Card -->
+          <div class="p-4 rounded-xl border-2 border-dashed border-teal-400 dark:border-teal-600 bg-teal-50/50 dark:bg-teal-950/30 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-extrabold text-sm text-teal-900 dark:text-teal-200 flex items-center gap-2">
+                <i data-lucide="user-check" class="w-4 h-4 text-brand-600"></i>
+                ACTOR CHA TỔNG QUÁT: Người Dùng Hệ Thống (System User)
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-200 dark:bg-teal-900 text-teal-900 dark:text-teal-100 uppercase">&lt;&lt;Abstract Root&gt;&gt;</span>
+              </span>
+              <span class="text-xs font-semibold text-teal-700 dark:text-teal-300">Được kế thừa bởi tất cả thành viên</span>
+            </div>
+            <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              Mọi tài khoản sau khi được cấp đều tự động sở hữu: 
+              <code class="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-teal-200 dark:border-slate-700 font-mono text-teal-700 dark:text-teal-300">(UC-G01) Đăng nhập Portal/SSO</code>, 
+              <code class="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-teal-200 dark:border-slate-700 font-mono text-teal-700 dark:text-teal-300">(UC-G02) Quản lý Hồ sơ & Đổi Mật khẩu</code>, và đặc biệt là:
+              <strong class="text-rose-600 dark:text-rose-400 font-bold underline">(UC-CORE01) Đăng ký Căn cước Khuôn mặt Gốc (Face KYC 5 góc)</strong>.
+            </p>
+          </div>
+
+          <!-- Why Shared KYC Note -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700 dark:text-slate-300">
+            <div class="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40">
+              <span class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 mb-1">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i> Vì sao Sinh Viên bắt buộc KYC 5 góc?
+              </span>
+              <p class="leading-relaxed text-[11px]">
+                Để trích xuất Vector ArcFace 512-D gốc bất biến. Phục vụ Check-in 1:1 mở đề thi và thuật toán so khớp liên tục mỗi 20s trong ca thi chống tráo người thi hộ (<code>IMPERSONATION_DETECTED</code>).
+              </p>
+            </div>
+            <div class="p-3 rounded-lg bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40">
+              <span class="font-bold text-purple-800 dark:text-purple-300 flex items-center gap-1.5 mb-1">
+                <i data-lucide="briefcase" class="w-4 h-4"></i> Vì sao Giảng Viên cũng BẮT BUỘC KYC 5 góc?
+              </span>
+              <p class="leading-relaxed text-[11px]">
+                Để nạp Vector Giám thị vào <strong>Staff Biometric Whitelist</strong> ca thi. Khi Giám thị đi kiểm tra bàn thi, camera AI nhận diện khuôn mặt thứ 2 là Giám thị $\rightarrow$ kích hoạt <code>STAFF_EXEMPTION</code> (<strong>0 điểm phạt - Không trừ oan thí sinh</strong>) và ký đóng ca thi!
+              </p>
+            </div>
+          </div>
+        </div>
+
+<!-- Actors Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          <div class="p-5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-dark-card space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i> Admin / Cán Bộ Khảo Thí
+              </span>
+              <span class="font-mono text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 font-semibold">admin</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <strong>Toàn quyền hệ thống:</strong> Thiết lập phòng thi 3D, camera CCTV & ROI polygon; Tạo ca thi chính thức (Độc quyền); Phân công giám thị; Phê duyệt hồ sơ KYC ngoại lệ; Công bố điểm thi chính thức; Xem Audit Log toàn hệ thống.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/50 dark:bg-dark-card space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-purple-700 dark:text-purple-400 flex items-center gap-2">
+                <i data-lucide="briefcase" class="w-4 h-4"></i> Giảng Viên (5 Ngữ Cảnh)
+              </span>
+              <span class="font-mono text-xs px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-semibold">teacher</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <strong>5 vai trò linh hoạt:</strong> (1) GV Soạn đề môn phụ trách; (2) Giám thị coi thi 3D (bắt buộc KYC); (3) Cán bộ Thanh tra; (4) Cố vấn học tập; (5) Host Đấu trường Quiz tức thì. <em>Tuyệt đối không được tự tạo ca thi chính thức.</em>
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-dark-card space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i> Sinh Viên / Thí Sinh
+              </span>
+              <span class="font-mono text-xs px-2 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-semibold">student</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <strong>Đối tượng thụ hưởng & thi cử:</strong> Đăng ký Face KYC 5 góc; Xem lịch thi, SBD và vị trí bàn; Check-in 1:1 camera; Làm bài thi có AI bảo vệ; Xem điểm và đối chiếu đáp án; Nộp đơn phúc khảo trong 7 ngày; Chơi Quiz PIN 6 số.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- RBAC Matrix Table -->
+        <div class="rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="key" class="w-4 h-4 text-brand-600"></i>
+              Bảng 2.4. Ma Trận Phân Quyền Chi Tiết Giữa Các Actor
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">Role-Based Access Control</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-dark-border">
+                <tr>
+                  <th class="py-3 px-4">Nhóm Nghiệp Vụ</th>
+                  <th class="py-3 px-4 text-center w-32">Admin / Khảo Thí</th>
+                  <th class="py-3 px-4 text-center w-32">Giảng Viên</th>
+                  <th class="py-3 px-4 text-center w-32">Sinh Viên</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-dark-border text-slate-700 dark:text-slate-300">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Quản trị tổ chức (Khoa / Ngành / Lớp học)</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Đăng ký Face ID KYC 5 góc</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không cần</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Bắt buộc</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Tiên quyết</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Quản lý Ngân hàng đề thi & Soạn câu hỏi</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Toàn quyền</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-teal-600">✅ Môn phụ trách</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 bg-teal-50/40 dark:bg-teal-950/20 font-semibold">
+                  <td class="py-2.5 px-4 text-brand-800 dark:text-teal-300">Tạo ca thi chính thức & Lập lịch Gantt</td>
+                  <td class="py-2.5 px-4 text-center font-extrabold text-brand-600 dark:text-teal-400">⭐ ĐỘC QUYỀN</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-rose-500">🚫 NGHIÊM CẤM</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Cấu hình Phòng thi 3D & Camera CCTV ROI</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Xếp chỗ tự động & cấp Số Báo Danh (SBD)</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Phân công Giám thị (Staff Whitelist)</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Tạo phòng Đấu trường Quiz nhanh bằng PIN</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có (Host)</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Check-in phòng thi sinh trắc học 1:1</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Thí sinh</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Force Check-in (Đặc cách khi lỗi webcam)</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-teal-600">✅ Phòng được gán</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Giám sát Realtime Dashboard 3D</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Mọi phòng</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-teal-600">✅ Phòng được gán</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Cảnh báo / Đình chỉ / Bù giờ sinh viên</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-teal-600">✅ Có</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Chấm bài Tự luận / Code (Rọc phách ẩn danh)</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không chấm</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ GV được phân công</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Công bố điểm thi chính thức</td>
+                  <td class="py-2.5 px-4 text-center font-extrabold text-brand-600 dark:text-teal-400">⭐ ĐỘC QUYỀN</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                </tr>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td class="py-2.5 px-4 font-medium">Xem đáp án & Gửi đơn phúc khảo (7 ngày)</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center text-slate-400">❌ Không</td>
+                  <td class="py-2.5 px-4 text-center font-bold text-emerald-600">✅ Sau công bố</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- V. BIỂU ĐỒ USE CASE TỔNG QUÁT -->
+            <!-- V. BIỂU ĐỒ USE CASE TỔNG QUÁT & LÕI SINH TRẮC HỌC -->
+      <section id="section-usecase-diagram" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">V</span>
+            <div>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Biểu Đồ Use Case Tổng Quát & Kiến Trúc Lõi Sinh Trắc Học</h2>
+              <p class="text-xs text-slate-500">Mô hình phân cấp Kế thừa Actor chuẩn UML 2.x & Lớp lõi Biometric AI Core Layer</p>
+            </div>
+          </div>
+          <span class="text-xs text-slate-500 font-mono hidden sm:inline">UML 2.x Goal-Driven</span>
+        </div>
+
+        <div class="p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-6">
+          
+          <!-- Deep Architectural Comparison Card (Eduface vs ExamGuard AI) -->
+          <div class="p-4 rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/60 dark:bg-teal-950/30 space-y-3">
+            <div class="flex items-center gap-2 text-brand-700 dark:text-teal-300 font-bold text-sm">
+              <i data-lucide="sparkles" class="w-5 h-5 text-brand-600"></i>
+              <span>Phân Tích Kiến Trúc: Bài Học Kế Thừa Actor & "Cùng 1 Core AI — Khác Biệt Về Nghiệp Vụ"</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              <div class="p-3.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-teal-100 dark:border-slate-800 space-y-1.5">
+                <span class="font-bold text-teal-800 dark:text-teal-400 flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-teal-600"></i> 1. Ai là Actor Cha? Actor nào kế thừa?
+                </span>
+                <p>
+                  Trong sơ đồ mẫu (Eduface), <strong>Khách Vãng Lai</strong> là Actor Cha, <strong>Học Viên</strong> là Actor Con kế thừa. Tác giả cũ kẻ 2 dây nối trùng lặp vào chức năng xem/mua khoá học. 
+                  Trong <strong>ExamGuard AI</strong>, chúng tôi chuẩn hoá bằng quan hệ kế thừa chuẩn UML: <strong>Người Dùng Hệ Thống (System User)</strong> là Actor Cha. Cả <strong>Sinh Viên</strong> và <strong>Giảng Viên</strong> đều kế thừa từ đó. Nhờ vậy, chức năng <strong>Đăng ký Face KYC 5 góc</strong> được dùng chung ở tầng Cha mà không bị lặp lại!
+                </p>
+              </div>
+              <div class="p-3.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-teal-100 dark:border-slate-800 space-y-1.5">
+                <span class="font-bold text-teal-800 dark:text-teal-400 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-teal-600"></i> 2. Vì sao Cả Giảng Viên và Sinh Viên Bắt Buộc KYC?
+                </span>
+                <p>
+                  <strong>Sinh viên:</strong> Cần Vector Gốc 512-D để Check-in 1:1 và AI so khớp liên tục 20s/lần chống tráo người.<br/>
+                  <strong>Giảng viên:</strong> Bắt buộc KYC để lấy Vector Gốc tự động nạp vào <strong>Staff Biometric Whitelist</strong>. Khi Giám thị đến bàn kiểm tra bài thi, camera nhận diện mặt Giám thị và kích hoạt cơ chế <code>STAFF_EXEMPTION</code> (<strong>0 điểm phạt - Không trừ oan sinh viên</strong>) và để ký xác nhận đóng ca thi!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mermaid Full UML Diagram -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <i data-lucide="network" class="w-4 h-4 text-brand-600"></i>
+                Biểu Đồ Use Case Chuẩn UML 2.x (Interactive Vector Diagram)
+              </h4>
+              <span class="text-[11px] font-mono text-slate-400">Mermaid.js Render Engine</span>
+            </div>
+            
+            <div class="overflow-x-auto py-4 bg-slate-50/70 dark:bg-slate-900/60 rounded-xl p-4 border border-slate-200/80 dark:border-slate-800">
+              <div class="mermaid">
+flowchart LR
+    classDef rootActor fill:#0f766e,stroke:#115e59,stroke-width:2px,color:#fff;
+    classDef humanActor fill:#1e293b,stroke:#0ea5a0,stroke-width:2px,color:#fff;
+    classDef coreAi fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af;
+    classDef secActor fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fff;
+    classDef bizUc fill:#f8fafc,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef kycUc fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
+
+    subgraph LEFT_ACTORS [1. Tác Nhân Con Người]
+        direction TB
+        User["👤 Người Dùng Hệ Thống (Root User)"]:::rootActor
+        Student["🎓 Sinh Viên (Thí Sinh Dự Thi)"]:::humanActor
+        Teacher["👨‍🏫 Giảng Viên (Giám Thị / Bộ Môn)"]:::humanActor
+        Admin["🛡️ Admin / Khảo Thí (Hội Đồng)"]:::humanActor
+        Guest["🌐 Khách Vãng Lai (Guest)"]:::humanActor
+
+        User -->|Kế thừa| Student
+        User -->|Kế thừa| Teacher
+        User -->|Kế thừa| Admin
+        Guest -.->|Đăng ký tài khoản| User
+    end
+
+    subgraph SYSTEM_BOUNDARY [2. Hệ Thống Giám Sát Thi Thông Minh ExamGuard AI]
+        direction TB
+        
+        subgraph AUTH_LAYER [Tầng Xác Thực Chung]
+            UC_Login(["(UC-G01) Đăng nhập Portal / SSO"]):::bizUc
+            UC_Profile(["(UC-G02) Quản lý Hồ sơ và Đổi MK"]):::bizUc
+        end
+
+        subgraph BIOMETRIC_CORE [Biometric AI Core Layer - Lõi Sinh Trắc Học]
+            direction TB
+            UC_Vector(["(UC-AI01) Mã hoá khuôn mặt thành Vector ArcFace 512-D"]):::coreAi
+            UC_Liveness(["(UC-AI02) Kiểm tra Liveness Anti-Spoofing MiniFASNet"]):::coreAi
+            UC_Cosine(["(UC-AI03) Đối chiếu Cosine Similarity ≥ 0.75"]):::coreAi
+            UC_StaffWL(["(UC-AI04) So khớp Staff Whitelist - STAFF_EXEMPTION"]):::coreAi
+        end
+
+        UC_KYC(["⭐ (UC-CORE01) Đăng ký Căn cước Khuôn mặt Gốc (KYC 5 góc)"]):::kycUc
+
+        subgraph BIZ_STUDENT [Nghiệp Vụ Sinh Viên]
+            UC_S_Checkin(["(UC-S02) Check-in Phòng thi 1:1"]):::bizUc
+            UC_S_Exam(["(UC-S03) Tham gia Thi Trực tuyến và Giám sát AI"]):::bizUc
+            UC_S_Result(["(UC-S04) Tra cứu Điểm và Đáp án Chi tiết"]):::bizUc
+            UC_S_Appeal(["(UC-S05) Nộp đơn Phúc khảo bài thi 7 ngày"]):::bizUc
+            UC_S_PlayQuiz(["(UC-Q02) Tham gia Đấu trường Quiz"]):::bizUc
+        end
+
+        subgraph BIZ_TEACHER [Nghiệp Vụ Giảng Viên và Coi Thi]
+            UC_T_Proctor(["(UC-T01) Điều hành Phòng thi 3D và Giám sát Realtime"]):::bizUc
+            UC_T_Signoff(["(UC-T02) Ký đóng ca thi bằng Face Biometric"]):::bizUc
+            UC_T_Question(["(UC-T03) Quản lý Đề thi và Ngân hàng Câu hỏi"]):::bizUc
+            UC_T_Grade(["(UC-T04) Chấm thi Rọc phách Ẩn danh"]):::bizUc
+            UC_T_HostQuiz(["(UC-Q01) Khởi tạo và Điều khiển Quiz"]):::bizUc
+        end
+
+        subgraph BIZ_ADMIN [Nghiệp Vụ Khảo Thí và Tổ Chức]
+            UC_A_Users(["(UC-A01) Quản trị Tổ chức và Cấp tài khoản"]):::bizUc
+            UC_A_Room(["(UC-A02) Thiết lập Phòng 3D và Camera CCTV"]):::bizUc
+            UC_A_Schedule(["(UC-A03) Lập lịch Ca thi Gantt và Duyệt đề"]):::bizUc
+            UC_A_Seating(["(UC-A04) Xếp chỗ Thí sinh và Gán Giám thị"]):::bizUc
+            UC_A_BlockNoKYC(["(UC-EX04) Tự động Chặn SV Chưa KYC"]):::bizUc
+            UC_A_ApproveKYC(["(UC-A05) Duyệt KYC Ngoại lệ"]):::bizUc
+            UC_A_Audit(["(UC-A06) Kiểm soát Toàn vẹn và Công bố Điểm"]):::bizUc
+        end
+
+        UC_Exempt(["(UC-EX01) Miễn trừ vi phạm Giám thị"]):::bizUc
+        UC_Penalty(["(UC-EX02) Cảnh báo / Đình chỉ / Bù giờ"]):::bizUc
+    end
+
+    subgraph RIGHT_ACTORS [3. Tác Nhân Hỗ Trợ - Secondary Actors]
+        direction TB
+        FaceAI["⚡ Face AI Service (FastAPI 8000)"]:::secActor
+        CCTV_Engine["📹 CCTV Streaming Engine (YOLOv8)"]:::secActor
+        SEB_Agent["🔒 Client Lockdown Agent (SEB)"]:::secActor
+    end
+
+    User --> UC_Login
+    User --> UC_Profile
+
+    Student -->|Bắt buộc| UC_KYC
+    Teacher -->|Bắt buộc| UC_KYC
+    UC_KYC -.->|include| UC_Vector
+    UC_KYC -.->|include| UC_Liveness
+    UC_KYC -.->|include| UC_Login
+
+    Student --> UC_S_Checkin
+    Student --> UC_S_Exam
+    Student --> UC_S_Result
+    Student --> UC_S_PlayQuiz
+
+    UC_S_Checkin -.->|include| UC_Cosine
+    UC_S_Checkin -.->|include| UC_Liveness
+
+    UC_S_Exam -.->|include định kỳ 20s| UC_Cosine
+    UC_Exempt -.->|extend| UC_S_Exam
+    UC_Exempt -.->|include| UC_StaffWL
+    UC_Penalty -.->|extend| UC_S_Exam
+    UC_S_Appeal -.->|extend| UC_S_Result
+
+    Teacher --> UC_T_Proctor
+    Teacher --> UC_T_Question
+    Teacher --> UC_T_Grade
+    Teacher --> UC_T_HostQuiz
+    UC_T_Proctor -.->|include| UC_T_Signoff
+    UC_T_Signoff -.->|include| UC_Cosine
+    Teacher -.->|kích hoạt| UC_Penalty
+
+    Admin --> UC_A_Users
+    Admin --> UC_A_Room
+    Admin --> UC_A_Schedule
+    Admin --> UC_A_Seating
+    Admin --> UC_A_ApproveKYC
+    Admin --> UC_A_Audit
+    UC_A_BlockNoKYC -.->|extend RULE-SEC-05| UC_A_Seating
+
+    UC_Vector --> FaceAI
+    UC_Liveness --> FaceAI
+    UC_Cosine --> FaceAI
+    UC_StaffWL --> FaceAI
+    UC_T_Proctor --> CCTV_Engine
+    UC_S_Exam --> SEB_Agent
+              </div>
+            </div>
+          </div>
+
+          <!-- PlantUML Vector Code Block with Copy Tool -->
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-900 text-slate-100 overflow-hidden shadow-sm">
+            <div class="p-3.5 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
+              <span class="font-mono text-xs font-bold text-teal-400 flex items-center gap-2">
+                <i data-lucide="file-code-2" class="w-4 h-4"></i>
+                Mã Nguồn PlantUML Vector Chuẩn Quốc Tế (ExamGuard_AI_UseCase.puml)
+              </span>
+              <button onclick="copyPlantUmlCode()" class="px-2.5 py-1 rounded bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-semibold flex items-center gap-1 transition-colors">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span id="copy-btn-text">Sao chép Mã</span>
+              </button>
+            </div>
+            <pre class="p-4 text-[11px] font-mono overflow-x-auto max-h-64 scrollbar-thin text-slate-300 leading-relaxed"><code id="plantuml-code-block">@startuml ExamGuard_AI_UseCase_Diagram
+skinparam packageStyle rectangle
+skinparam roundcorner 10
+skinparam actorStyle awesome
+
+actor "Người Dùng Hệ Thống\n(System User)" as User <<Abstract>>
+actor "Sinh Viên\n(Student)" as Student
+actor "Giảng Viên\n(Teacher)" as Teacher
+actor "Cán Bộ Khảo Thí / Admin\n(Admin)" as Admin
+
+actor "Face AI Service\n(FastAPI)" as FaceAI <<Secondary>>
+actor "CCTV Camera Engine\n(YOLOv8)" as CCTV <<Secondary>>
+actor "Client Lockdown\n(SEB Agent)" as SEB <<Secondary>>
+
+' Kế thừa Actor (Generalization)
+User <|-- Student
+User <|-- Teacher
+User <|-- Admin
+
+rectangle "Hệ Thống Giám Sát Thi Thông Minh ExamGuard AI" {
+    package "Biometric AI Core Layer" #EFF6FF {
+        usecase "(UC-AI01) Mã hoá khuôn mặt thành Vector ArcFace 512-D" as UC_Vector
+        usecase "(UC-AI02) Kiểm tra Liveness Anti-Spoofing (MiniFASNet)" as UC_Liveness
+        usecase "(UC-AI03) Đối chiếu Khuôn mặt Cosine Similarity >= 0.75" as UC_Cosine
+        usecase "(UC-AI04) So khớp Staff Whitelist (STAFF_EXEMPTION)" as UC_StaffWhitelist
+    }
+
+    usecase "(UC-CORE01) Đăng ký Căn cước Khuôn mặt Gốc (KYC 5 góc)" as UC_KYC
+
+    ' Sinh viên
+    usecase "(UC-S02) Check-in Phòng thi Sinh trắc học 1:1" as UC_S_Checkin
+    usecase "(UC-S03) Tham gia Thi trực tuyến & Giám sát AI" as UC_S_Exam
+    usecase "(UC-S04) Tra cứu Kết quả thi & Đáp án giải thích" as UC_S_Result
+    usecase "(UC-S05) Nộp đơn Phúc khảo bài thi (trong 7 ngày)" as UC_S_Appeal
+
+    ' Giảng viên
+    usecase "(UC-T01) Điều hành & Giám sát Phòng thi 3D Realtime" as UC_T_Proctor
+    usecase "(UC-T02) Ký đóng ca thi bằng Face Biometric Auth" as UC_T_Signoff
+    usecase "(UC-T04) Chấm thi Rọc phách Ẩn danh (Essay/Code)" as UC_T_Grade
+    usecase "(UC-Q01) Khởi tạo & Điều khiển Quiz Arena" as UC_Q_Host
+    usecase "(UC-Q02) Tham gia Đấu trường Quiz bằng mã PIN" as UC_Q_Play
+
+    ' Admin
+    usecase "(UC-A04) Xếp chỗ Thí sinh & Phân công Giám thị" as UC_A_Seating
+    usecase "(UC-EX04) Tự động Chặn Thí sinh Chưa KYC" as UC_A_BlockNoKYC
+}
+
+' Kết nối KYC bắt buộc cho cả 2 bên
+Student --> UC_KYC
+Teacher --> UC_KYC
+UC_KYC ..> UC_Vector : <<include>>
+UC_KYC ..> UC_Liveness : <<include>>
+
+Student --> UC_S_Checkin
+UC_S_Checkin ..> UC_Cosine : <<include>>
+UC_S_Checkin ..> UC_Liveness : <<include>>
+
+Student --> UC_S_Exam
+UC_S_Exam ..> UC_Cosine : <<include (mỗi 20s)>>
+UC_S_Result <.. UC_S_Appeal : <<extend>>
+
+Teacher --> UC_T_Proctor
+UC_T_Proctor ..> UC_T_Signoff : <<include>>
+UC_T_Signoff ..> UC_Cosine : <<include>>
+
+Admin --> UC_A_Seating
+UC_A_Seating <.. UC_A_BlockNoKYC : <<extend>>
+
+' Phục vụ AI
+FaceAI <-- UC_Vector
+FaceAI <-- UC_Liveness
+FaceAI <-- UC_Cosine
+FaceAI <-- UC_StaffWhitelist
+CCTV <-- UC_T_Proctor
+SEB <-- UC_S_Exam
+@enduml</code></pre>
+          </div>
+
+          <!-- Bảng 2.4c: Danh mục 11 Use Case Cốt lõi Phân Theo 4 Tier -->
+          <div class="rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+              <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-brand-600"></i>
+                Bảng 2.4c. Danh Mục Use Case Hệ Thống Theo 4 Cấp Độ Cốt Lõi (Tier Classification)
+              </h4>
+              <span class="text-xs text-slate-400 font-mono">Prioritized Matrix</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-dark-border">
+                  <tr>
+                    <th class="py-2.5 px-3">Mã UC</th>
+                    <th class="py-2.5 px-3">Tên Nghiệp Vụ Use Case</th>
+                    <th class="py-2.5 px-3">Tác Nhân Chính</th>
+                    <th class="py-2.5 px-3">Tác Nhân Hỗ Trợ</th>
+                    <th class="py-2.5 px-3">Quan Hệ Phụ Thuộc</th>
+                    <th class="py-2.5 px-3 text-center">Cấp Độ Ưu Tiên</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tr class="bg-rose-50/30 dark:bg-rose-950/20 font-semibold">
+                    <td class="font-mono text-brand-600 dark:text-teal-400">UC-CORE01</td>
+                    <td>Đăng ký Căn cước Khuôn mặt Gốc (Face KYC)</td>
+                    <td>Người dùng (SV, GV)</td>
+                    <td>Face AI Service, Admin duyệt</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;include&gt;&gt; UC-AI01, UC-AI02, UC-G01</td>
+                    <td class="text-center text-rose-600 font-bold">⭐⭐⭐⭐⭐ Tier 1</td>
+                  </tr>
+                  <tr class="bg-rose-50/30 dark:bg-rose-950/20 font-semibold">
+                    <td class="font-mono text-brand-600 dark:text-teal-400">UC-S02</td>
+                    <td>Check-in Phòng thi Sinh trắc học 1:1</td>
+                    <td>Sinh viên</td>
+                    <td>Face AI Service, Giám thị</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;include&gt;&gt; UC-AI03, UC-AI02</td>
+                    <td class="text-center text-rose-600 font-bold">⭐⭐⭐⭐⭐ Tier 1</td>
+                  </tr>
+                  <tr class="bg-rose-50/30 dark:bg-rose-950/20 font-semibold">
+                    <td class="font-mono text-brand-600 dark:text-teal-400">UC-S03</td>
+                    <td>Tham gia Thi trực tuyến & Giám sát AI</td>
+                    <td>Sinh viên</td>
+                    <td>Face AI, SEB Agent, Giám thị</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;include&gt;&gt; UC-AI03; &lt;&lt;extend&gt;&gt; UC-EX01, EX02</td>
+                    <td class="text-center text-rose-600 font-bold">⭐⭐⭐⭐⭐ Tier 1</td>
+                  </tr>
+                  <tr class="bg-rose-50/30 dark:bg-rose-950/20 font-semibold">
+                    <td class="font-mono text-brand-600 dark:text-teal-400">UC-T01</td>
+                    <td>Điều hành & Giám sát Phòng thi 3D Realtime</td>
+                    <td>Giảng viên (Giám thị)</td>
+                    <td>CCTV Engine, Redis, Socket.IO</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;include&gt;&gt; UC-T02; &lt;&lt;triggers&gt;&gt; UC-EX02</td>
+                    <td class="text-center text-rose-600 font-bold">⭐⭐⭐⭐⭐ Tier 1</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-teal-600">UC-A04</td>
+                    <td>Xếp chỗ Thí sinh & Phân công Giám thị</td>
+                    <td>Admin / Khảo thí</td>
+                    <td>Hệ thống tự động xếp chỗ</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;extend&gt;&gt; UC-EX04 (Chặn chưa KYC)</td>
+                    <td class="text-center text-teal-600 font-bold">⭐⭐⭐⭐ Tier 2</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-teal-600">UC-T04</td>
+                    <td>Chấm thi Rọc phách Ẩn danh (Essay & Code)</td>
+                    <td>Giảng viên chấm thi</td>
+                    <td>Trưởng bộ môn duyệt</td>
+                    <td class="font-mono text-[11px]">Kích hoạt ghép phách sau duyệt</td>
+                    <td class="text-center text-teal-600 font-bold">⭐⭐⭐⭐ Tier 2</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-amber-600">UC-Q01</td>
+                    <td>Khởi tạo & Điều khiển Đấu trường Quiz (Host)</td>
+                    <td>Giảng viên</td>
+                    <td>Redis In-memory, Web Audio API</td>
+                    <td class="font-mono text-[11px]">Đồng bộ điểm sang bảng điểm ca thi</td>
+                    <td class="text-center text-amber-600 font-bold">⭐⭐⭐ Tier 3</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-amber-600">UC-Q02</td>
+                    <td>Tham gia Đấu trường Quiz Tương tác (Player)</td>
+                    <td>Sinh viên</td>
+                    <td>Socket.IO Server</td>
+                    <td class="font-mono text-[11px]">Nhận câu hỏi, tính tốc độ & vinh danh</td>
+                    <td class="text-center text-amber-600 font-bold">⭐⭐⭐ Tier 3</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-amber-600">UC-A06</td>
+                    <td>Kiểm soát Toàn vẹn & Công bố Điểm chính thức</td>
+                    <td>Admin / Khảo thí</td>
+                    <td>Hệ thống bảo mật điểm</td>
+                    <td class="font-mono text-[11px]">Mở khoá tra cứu và phúc khảo</td>
+                    <td class="text-center text-amber-600 font-bold">⭐⭐⭐ Tier 3</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-slate-500">UC-S05</td>
+                    <td>Nộp đơn Phúc khảo bài thi / Điểm uy tín</td>
+                    <td>Sinh viên</td>
+                    <td>Hội đồng Khảo thí, Giám thị</td>
+                    <td class="font-mono text-[11px]">&lt;&lt;extend&gt;&gt; UC-S04 (Thời hạn 7 ngày)</td>
+                    <td class="text-center text-slate-500 font-bold">⭐⭐ Tier 4</td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-slate-500">UC-A01</td>
+                    <td>Quản trị Cơ cấu Tổ chức & Cấp tài khoản</td>
+                    <td>Admin / Khảo thí</td>
+                    <td>Cổng xác thực SSO</td>
+                    <td class="font-mono text-[11px]">Điều kiện tiên quyết cấp tài khoản</td>
+                    <td class="text-center text-slate-500 font-bold">⭐⭐ Tier 4</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 4 User Journey Role Cards (Natural language for non-technical users) -->
+          <div>
+            <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+              <i data-lucide="compass" class="w-4 h-4 text-brand-600"></i>
+              Tóm Tắt Hành Trình Của 4 Vai Trò (Đọc 30 Giây Là Hiểu Hệ Thống):
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <!-- Card Admin -->
+              <div class="p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-slate-900/40 space-y-2">
+                <div class="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">
+                  <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                  1. Admin / Khảo Thí
+                </div>
+                <h5 class="font-bold text-sm text-slate-900 dark:text-white">Tổ chức & Điều phối</h5>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Thiết lập sơ đồ phòng 3D, bấm 1 nút để hệ thống tự xáo trộn xếp chỗ (chặn SV chưa KYC) và cấp SBD. Sau thi, rà soát phổ điểm và duyệt công bố.
+                </p>
+              </div>
+
+              <!-- Card Giảng viên -->
+              <div class="p-4 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/40 dark:bg-slate-900/40 space-y-2">
+                <div class="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-bold text-xs uppercase tracking-wider">
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                  2. Giảng Viên
+                </div>
+                <h5 class="font-bold text-sm text-slate-900 dark:text-white">Chuyên môn & Coi thi</h5>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Bắt buộc KYC để nạp Staff Whitelist. Soạn đề thi, quan sát phòng 3D realtime, ký đóng ca bằng Face Auth và chấm bài tự luận ẩn danh rọc phách.
+                </p>
+              </div>
+
+              <!-- Card Sinh viên -->
+              <div class="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-slate-900/40 space-y-2">
+                <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                  <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                  3. Sinh Viên
+                </div>
+                <h5 class="font-bold text-sm text-slate-900 dark:text-white">Thí sinh thi cử</h5>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Quét 5 góc mặt 1 lần đầu kỳ. Đến giờ thi check-in 1:1 camera trong 1.5s, làm bài tự lưu liên tục có AI bảo vệ, thi xong có đáp án và phúc khảo 7 ngày.
+                </p>
+              </div>
+
+              <!-- Card AI Service -->
+              <div class="p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-slate-900/40 space-y-2">
+                <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs uppercase tracking-wider">
+                  <i data-lucide="bot" class="w-4 h-4"></i>
+                  4. Trợ Lý AI
+                </div>
+                <h5 class="font-bold text-sm text-slate-900 dark:text-white">Bảo vệ âm thầm</h5>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Trích xuất ArcFace 512-D, chống giả mạo MiniFASNet, bắt tráo người định kỳ 20s, tự động nhận diện Giám thị đến bàn để miễn phạt (0 điểm trừ).
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- VI. ĐẶC TẢ CHI TIẾT 6 USE CASE CỐT LÕI -->
+      <section id="section-usecases" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">VI</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Đặc Tả Chi Tiết 6 Use Case Cốt Lõi</h2>
+          </div>
+          <span class="text-xs text-slate-500">Mục 2.5 - 2.11</span>
+        </div>
+
+        <!-- Use Case Selector Tabs -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-200 dark:border-dark-border pb-3" id="uc-tabs">
+          <button onclick="switchUcTab('uc1')" id="tab-btn-uc1" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm transition-all">
+            UC-CORE01: Face KYC Enrollment ⭐⭐⭐⭐⭐
+          </button>
+          <button onclick="switchUcTab('uc2')" id="tab-btn-uc2" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            UC-S02: Check-in 1:1 ⭐⭐⭐⭐⭐
+          </button>
+          <button onclick="switchUcTab('uc3')" id="tab-btn-uc3" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            UC-S03 / UC-T01: Realtime Proctoring ⭐⭐⭐⭐⭐
+          </button>
+          <button onclick="switchUcTab('uc4')" id="tab-btn-uc4" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            UC-A04: Khởi tạo Ca & Xếp chỗ ⭐⭐⭐⭐
+          </button>
+          <button onclick="switchUcTab('uc5')" id="tab-btn-uc5" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            UC-T04 / UC-A06: Chấm & Rọc Phách ⭐⭐⭐⭐
+          </button>
+          <button onclick="switchUcTab('uc6')" id="tab-btn-uc6" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            UC-Q01 / UC-Q02: Đấu trường Quiz ⭐⭐⭐
+          </button>
+        </div>
+
+        <!-- TAB CONTENT CONTAINER -->
+        <div id="uc-content-area" class="space-y-4">
+          
+          <!-- UC-01 -->
+          <div id="uc1-panel" class="uc-panel p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-CORE01 (Kế thừa từ System User: Áp dụng cho cả Sinh viên & Giảng viên)</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Đăng Ký Căn Cước Khuôn Mặt Gốc (Face KYC Enrollment)</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">Mức độ: Cốt lõi số 1 (Tiên quyết)</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div class="space-y-1.5 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tác nhân chính:</span> Sinh viên, Giảng viên.<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tác nhân hỗ trợ:</span> AI Service (FastAPI 8000), Admin duyệt ngoại lệ.<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tần suất:</span> 1 lần duy nhất khi nhập học/nhận việc.
+              </div>
+              <div class="space-y-1.5 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tiền điều kiện:</span> Có tài khoản; face_status ∈ {NOT_ENROLLED, REJECTED}; Webcam ≥ 720p; Ánh sáng ≥ 300 lux.<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Hậu điều kiện:</span> face_status = APPROVED; Lưu vector ArcFace 512-D vào face_embedding; Mở quyền xếp chỗ & coi thi.
+              </div>
+            </div>
+
+            <!-- Steps -->
+            <div>
+              <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 mb-2">Luồng Sự Kiện Chính (7 Bước):</h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
+                  <p><strong>Người dùng:</strong> Truy cập <code>/face-kyc</code>, đọc hướng dẫn tiêu chuẩn: khoảng cách 50–70cm, không đeo kính râm, không khẩu trang, ngồi thẳng.</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
+                  <p><strong>Hệ thống:</strong> Khởi tạo webcam, hiển thị vòng cung hướng dẫn lần lượt 5 tư thế đầu: <em>Thẳng → Trái → Phải → Ngửa → Cúi</em>.</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
+                  <p><strong>Người dùng:</strong> Xoay đầu theo góc chỉ định; Hệ thống tự động phát hiện đúng góc (Yaw/Pitch) và tiến hành chụp frame ảnh.</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">4</span>
+                  <p><strong>AI Service:</strong> Kiểm tra Liveness (MiniFASNet): Score ≥ 0.90; Laplacian Variance (độ nét) ≥ 100; Mean Intensity (độ sáng) ∈ [80, 200].</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">5</span>
+                  <p><strong>AI Service:</strong> Trích xuất 5 vector ArcFace 512-D và tính hợp nhất có trọng số: <code class="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded">V_GT = Normalize(0.4×V_straight + 0.15×(V_left + V_right + V_up + V_down))</code>.</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">6</span>
+                  <p><strong>Hệ thống:</strong> Cập nhật trạng thái <code>face_status = APPROVED</code>; Lưu vector embedding vào CSDL MySQL; Kích hoạt quyền dự thi/coi thi.</p>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">7</span>
+                  <p><strong>Người dùng:</strong> Nhận thông báo KYC hoàn thành; Sinh viên mở khóa lịch thi cá nhân; Giảng viên được nạp vào Staff Whitelist.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exception Flows -->
+            <div class="p-4 rounded-lg bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 text-xs space-y-1.5">
+              <h5 class="font-bold text-rose-800 dark:text-rose-300">Luồng sự kiện phát sinh (Kịch bản ngoại lệ):</h5>
+              <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300">
+                <li><strong>F1 - Liveness Thất bại:</strong> MiniFASNet phát hiện ảnh in, video quay lại, hoặc mặt nạ 3D → Từ chối dứt khoát; ghi log suspicious; thử lại tối đa 3 lần/24h.</li>
+                <li><strong>F2 - Ảnh mờ / thiếu sáng:</strong> Laplacian Variance &lt; 100 hoặc thiếu sáng → Yêu cầu chụp lại góc đó kèm gợi ý khoảng cách và ánh sáng.</li>
+                <li><strong>F3 - Thiếu góc chụp:</strong> Người dùng tắt trình duyệt khi chưa đủ 5 góc → Lưu trạng thái <code>ENROLLING</code>, khi đăng nhập lại tiếp tục thu góc còn thiếu.</li>
+                <li><strong>F4 - Thẩm định không đạt:</strong> Admin kiểm tra ảnh phát hiện đeo kính râm / góc khuất → Đặt <code>face_status = REJECTED</code> và yêu cầu thực hiện lại.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- UC-02 -->
+          <div id="uc2-panel" class="uc-panel hidden p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-S02: Check-in Phòng Thi Sinh Trắc Học 1:1</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Check-in Phòng Thi Sinh Trắc Học 1:1</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">Mức độ: Cốt lõi số 2 (Cổng vào ca thi)</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div class="space-y-1.5 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tác nhân chính:</span> Sinh viên dự thi.<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tác nhân hỗ trợ:</span> AI Service (FastAPI), Giám thị coi thi.<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Mục tiêu:</span> Loại bỏ 100% tình trạng thi hộ ngay tại cửa vào phòng thi.
+              </div>
+              <div class="space-y-1.5 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Tiền điều kiện:</span> Ca thi ACTIVE; Thí sinh có SBD trong ca; face_status = APPROVED; Trong khung giờ [T_start, T_start + 15p].<br/>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Hậu điều kiện:</span> trang_thai = checkin; Bàn 3D đổi màu XANH; Mở đề thi; Kích hoạt vòng lặp Continuous Biometric 20s.
+              </div>
+            </div>
+
+            <div class="space-y-2 text-xs">
+              <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">Các bước nghiệp vụ chính:</h4>
+              <p>1. Sinh viên ngồi vào bàn máy LAB_PC hoặc mở laptop BYOD, nhập SBD và bật camera.</p>
+              <p>2. Client gửi frame chụp lên API <code>POST /v1/checkin/verify {image_base64, sv_ca_thi_id}</code>.</p>
+              <p>3. AI Service chạy MiniFASNet kiểm tra người thật + ArcFace trích xuất vector và tính Cosine Similarity với Vector Gốc KYC.</p>
+              <p>4. Nếu <code>similarity &gt;= 0.75</code> (hoặc ngưỡng hiệu chỉnh 0.68) và Liveness đạt chuẩn → Trả về kết quả xác thực hợp lệ.</p>
+              <p>5. CSDL MySQL cập nhật <code>trang_thai = checkin</code>, lưu <code>checkin_time</code> và điểm trùng khớp.</p>
+              <p>6. Socket.IO phát sự kiện <code>proctor:student_update</code> → Bàn thi tương ứng trên Dashboard Giám thị sáng xanh lá tức thì.</p>
+              <p>7. Giao diện làm bài mở ra cho sinh viên, đồng hồ tính giờ ca thi bắt đầu đếm ngược.</p>
+            </div>
+
+            <div class="p-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-xs space-y-1 text-slate-700 dark:text-slate-300">
+              <span class="font-bold text-amber-800 dark:text-amber-300">Xử lý ngoại lệ đặc thù:</span> Thất bại 3 lần liên tiếp do camera kém chất lượng → Hệ thống bật cờ <code>CHECKIN_FAILED</code> màu đỏ gửi đến Giám thị. Giám thị kiểm tra CCCD/Thẻ SV vật lý và thực hiện <strong>Force Check-in</strong> đặc cách kèm lưu vết Audit Log.
+            </div>
+          </div>
+
+          <!-- UC-03 -->
+          <div id="uc3-panel" class="uc-panel hidden p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-S03 / UC-T01: Tham Gia Thi Trực Tuyến & Giám Sát AI Realtime</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Giám Sát AI Thời Gian Thực (Realtime Proctoring & Staff Exemption)</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">Mức độ: Cốt lõi số 3 (Lõi chống gian lận)</span>
+            </div>
+
+            <div class="text-xs leading-relaxed text-slate-600 dark:text-slate-300 space-y-2">
+              <p>
+                Hệ thống vận hành cơ chế giám sát đa tầng song song: 
+                <strong>Nhánh 1 (Client-side Webcam):</strong> Chạy MediaPipe FaceLandmarker với tần số 30 FPS trong Web Worker (không làm đơ hay lag giao diện làm bài của thí sinh), liên tục đo lường góc quay đầu (Yaw, Pitch), hướng mắt liếc (Gaze), phát hiện vắng mặt hoặc chuyển tab.
+              </p>
+              <p>
+                <strong>Nhánh 2 (Server-side Continuous Biometric & CCTV):</strong> Định kỳ mỗi 20 giây AI chụp ngầm 1 frame webcam gửi lên FastAPI đối chiếu vector gốc để ngăn chặn tráo người giữa giờ. Đồng thời camera CCTV phòng lab chạy YOLOv8n-pose (5 FPS) theo dõi tư thế 17 keypoints của thí sinh trong phạm vi bàn thi (ROI Polygon).
+              </p>
+            </div>
+
+            <!-- Staff Exemption Highlight -->
+            <div class="p-4 rounded-xl border border-teal-300 dark:border-teal-700 bg-teal-50/70 dark:bg-teal-950/40 space-y-2">
+              <div class="flex items-center gap-2 text-teal-800 dark:text-teal-300 font-bold text-xs uppercase tracking-wide">
+                <i data-lucide="shield-check" class="w-4 h-4 text-brand-600"></i>
+                Đặc Điểm Đột Phá: Cơ Chế Miễn Trừ Giám Thị (STAFF_EXEMPTION)
+              </div>
+              <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                Khi cán bộ coi thi di chuyển xuống từng bàn để kiểm tra thẻ SV hoặc hỗ trợ kỹ thuật, camera sẽ phát hiện 2 khuôn mặt. Thay vì kích hoạt cảnh báo gian lận "MULTI_FACE_UNKNOWN" và trừ điểm oan, hệ thống tự động so khớp khuôn mặt thứ hai với <strong>Staff Face Whitelist</strong> (nạp sẵn vector Giám thị trước giờ thi 15 phút). Nếu khớp, hệ thống áp dụng mã <code>STAFF_EXEMPTION</code> (0 điểm trừ), hiển thị biểu tượng thông báo xanh "Cán bộ coi thi đang kiểm tra".
+              </p>
+            </div>
+          </div>
+
+          <!-- UC-04 -->
+          <div id="uc4-panel" class="uc-panel hidden p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-A04: Khởi Tạo Ca Thi, Thiết Lập 3D & Xếp Chỗ Thí Sinh</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Khởi Tạo Ca Thi, Thiết Lập 3D & Xếp Chỗ Sinh Viên</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300">Mức độ: Rất quan trọng</span>
+            </div>
+
+            <div class="text-xs text-slate-600 dark:text-slate-300 space-y-2 leading-relaxed">
+              <p><strong>Bước 1:</strong> Admin tạo phòng thi 3D: cấu hình số hàng, số cột, lối đi giữa, vị trí bục giảng và dải mạng cho phép (Allowed IP Subnet VLAN).</p>
+              <p><strong>Bước 2:</strong> Gắn camera CCTV qua luồng RTSP stream; trực tiếp kéo thả vẽ vùng giám sát ROI Polygon (4 đỉnh tọa độ) trên canvas để khớp từng vị trí bàn thi với camera.</p>
+              <p><strong>Bước 3:</strong> Tạo ca thi (Môn học, hình thức thi, ngày thi, giờ bắt đầu, thời lượng). Hiển thị lịch biểu trực quan dạng Gantt Chart để chống trùng phòng thi và trùng giám thị.</p>
+              <p><strong>Bước 4:</strong> Import danh sách sinh viên dự thi. Hệ thống tự động thẩm tra điều kiện: chỉ sinh viên có <code>face_status = APPROVED</code> mới được xếp chỗ; sinh viên chưa KYC sẽ bị loại ra danh sách chờ.</p>
+              <p><strong>Bước 5:</strong> Thuật toán Fisher-Yates xáo trộn ngẫu nhiên danh sách thí sinh, gán Số Báo Danh (SBD) theo format chuẩn và sinh mã bảo mật bàn thi <code>seat_pin_code</code> (6 số duy nhất).</p>
+              <p><strong>Bước 6:</strong> Phân công Cán bộ Coi thi 1, Coi thi 2 và Thanh tra (áp dụng quy tắc Zero-Trust: Giảng viên ra đề không được coi thi môn của mình).</p>
+            </div>
+          </div>
+
+          <!-- UC-05 -->
+          <div id="uc5-panel" class="uc-panel hidden p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-T04 / UC-A06: Chấm Thi Rọc Phách Ẩn Danh & Công Bố Điểm</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Chấm Thi, Rọc Phách Ẩn Danh & Công Bố Điểm</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300">Mức độ: Rất quan trọng</span>
+            </div>
+
+            <div class="text-xs text-slate-600 dark:text-slate-300 space-y-2 leading-relaxed">
+              <p><strong>Tự động chấm trắc nghiệm (Auto-grade MCQ):</strong> Ngay khi sinh viên nộp bài hoặc hết giờ ca thi, hệ thống đối chiếu mảng đáp án với đề thi trong MongoDB và lưu ngay điểm trắc nghiệm vào CSDL.</p>
+              <p><strong>Chế độ rọc phách điện tử (RULE-SEC-02):</strong> Khi Giảng viên vào chấm bài Tự luận (Essay) hoặc Code, giao diện ẩn hoàn toàn Họ tên, MSSV, Lớp học; thay thế bằng mã băm phách ẩn danh dạng <code>#7A3F-9B12</code>. Giảng viên chấm điểm độc lập dựa trên barem mà không thể biết bài làm của ai.</p>
+              <p><strong>Ghép phách & Rà soát bảng điểm:</strong> Sau khi Trưởng bộ môn phê duyệt hoàn tất khâu chấm, hệ thống mới tự động ghép phách hoàn trả danh tính thực. Hệ thống cung cấp bảng thống kê phân tích phổ điểm (Mean, Median, tỷ lệ đúng/sai từng câu).</p>
+              <p><strong>Công bố chính thức:</strong> Admin duyệt công bố điểm → Sinh viên nhận thông báo xem điểm thi chi tiết, đối chiếu bài làm với đáp án chuẩn kèm giải thích chi tiết và có thời hạn 7 ngày để nộp đơn phúc khảo trực tuyến.</p>
+            </div>
+          </div>
+
+          <!-- UC-06 -->
+          <div id="uc6-panel" class="uc-panel hidden p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <span class="text-xs font-bold text-brand-600 dark:text-teal-400 uppercase tracking-wider">Use Case UC-Q01 / UC-Q02: Đấu Trường Quiz Gamification (Live Quiz Arena)</span>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Đấu Trường Quiz Gamification (Live Quiz Arena)</h3>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">Mức độ: Tính năng tạo khác biệt</span>
+            </div>
+
+            <div class="text-xs text-slate-600 dark:text-slate-300 space-y-2 leading-relaxed">
+              <p><strong>Khởi tạo trận đấu:</strong> Giảng viên tạo phòng Quiz nhanh từ bộ câu hỏi, cấu hình quy luật thi đấu (Speed Bonus: trả lời nhanh nhận nhiều điểm hơn; Streak Bonus: thưởng chuỗi đúng liên tiếp; Survival Mode: 3 tim, trả lời sai mất 1 tim).</p>
+              <p><strong>Tham gia phòng:</strong> Hệ thống sinh PIN Code 6 số ngẫu nhiên (Ví dụ: <code>824915</code>). Sinh viên chỉ cần truy cập <code>/quiz-arena/player</code>, nhập PIN và nickname để gia nhập phòng qua Socket.IO room <code>arena_{pinCode}</code>.</p>
+              <p><strong>Trải nghiệm tương tác sống động:</strong> Giảng viên đóng vai trò Host bấm "Phát câu hỏi". Giao diện thí sinh hiển thị 4 khối màu sắc trực quan, đồng hồ đếm ngược đồng bộ mili-giây, Web Audio API phát hiệu ứng âm thanh nhịp tim dồn dập.</p>
+              <p><strong>Vinh danh thời gian thực:</strong> Kết thúc mỗi câu hỏi hiển thị Bar Chart tỷ lệ chọn của cả lớp và Bảng xếp hạng Top 10. Kết thúc bộ đề, bục vinh danh Podium Top 3 (Vàng - Bạc - Đồng) vinh danh các thí sinh xuất sắc nhất.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VII. BIỂU ĐỒ TUẦN TỰ (SEQUENCE DIAGRAMS) -->
+      <section id="section-sequence" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">VII</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Biểu Đồ Tuần Tự (Sequence Diagrams)</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Mermaid Sequence</span>
+        </div>
+
+        <!-- Sequence 1: KYC -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-commit" class="w-4 h-4 text-brand-600"></i>
+              Hình 2.2. Biểu đồ tuần tự: Quy trình Đăng ký KYC Khuôn mặt Gốc (UC-01)
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">Loop 5 angles + Weighted Fusion</span>
+          </div>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor U as Người dùng SV GV
+    participant C as Web Client Trình duyệt
+    participant AI as FastAPI AI Service
+    participant DB as MySQL Database
+
+    U->>C: Truy cập /face-kyc (Bật Webcam)
+    C-->>U: Hiển thị hướng dẫn 5 tư thế đầu
+    loop Mỗi góc: THẲNG, TRÁI, PHẢI, NGỬA, CÚI
+        U->>C: Điều chỉnh tư thế đầu theo góc
+        C->>AI: WebSocket gửi frame ảnh
+        AI->>AI: YuNet detect khuôn mặt và 5 landmarks
+        AI->>AI: MiniFASNet kiểm tra Liveness
+        alt Góc và Liveness đạt chuẩn
+            AI-->>C: Trạng thái OK - Góc hợp lệ
+            C-->>U: Hiển thị tick xanh góc hoàn thành
+        else Không đạt chuẩn
+            AI-->>C: Trạng thái FAIL - Yêu cầu chụp lại
+            C-->>U: Cảnh báo và hướng dẫn căn chỉnh
+        end
+    end
+    C->>AI: POST /v1/face/enroll (5 frames đạt chuẩn)
+    AI->>AI: ArcFace trích xuất 512-D và Hợp nhất V_GT
+    AI->>DB: UPDATE face_status = APPROVED, face_embedding = V_GT
+    AI-->>C: Trạng thái APPROVED - Lưu thành công
+    C-->>U: KYC hoàn tất - Mở khóa lịch thi và coi thi
+            </div>
+          </div>
+        </div>
+
+        <!-- Sequence 2: Check-in 1:1 -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-commit" class="w-4 h-4 text-brand-600"></i>
+              Hình 2.3. Biểu đồ tuần tự: Check-in Phòng thi Sinh trắc học 1:1 (UC-02)
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">Cosine Similarity & Liveness Verification</span>
+          </div>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor SV as Sinh viên
+    participant C as Trình duyệt Web
+    participant AI as FastAPI AI Service
+    participant DB as MySQL Database
+    participant WS as Socket.IO Hub
+    actor GT as Giám thị Dashboard 3D
+
+    SV->>C: Ngồi vào bàn thi, nhập SBD và mở camera
+    C->>AI: POST /v1/checkin/verify
+    AI->>AI: YuNet detect và MiniFASNet Liveness
+    AI->>AI: ArcFace trích xuất vector và Cosine Similarity
+    alt Similarity đạt chuẩn và Liveness hợp lệ
+        AI->>DB: UPDATE trang_thai = checkin, lưu điểm khớp
+        AI->>WS: Publish sự kiện proctor:student_update
+        WS-->>GT: Bàn thi 3D chuyển sang XANH LÁ
+        AI-->>C: Kết quả OK - Độ tương đồng cao
+        C-->>SV: Mở giao diện đề thi và bắt đầu đếm ngược
+    else Không trùng khớp hoặc Liveness thất bại
+        AI-->>C: Kết quả FAIL - Cảnh báo không khớp
+        C-->>SV: Màn hình đỏ cảnh báo không trùng khớp
+        opt Thử 3 lần vẫn thất bại
+            AI->>WS: Publish sự kiện CHECKIN_FAILED_ALERT
+            WS-->>GT: Cảnh báo cờ đỏ bàn thi - Kiểm tra CCCD
+            GT->>DB: Thực hiện Force Check-in đặc cách có Audit Log
+        end
+    end
+            </div>
+          </div>
+        </div>
+
+        <!-- Sequence 3: Proctoring -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-commit" class="w-4 h-4 text-brand-600"></i>
+              Hình 2.4. Biểu đồ tuần tự: Phát hiện & Xử lý Vi phạm Realtime (UC-03)
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">MediaPipe 30FPS + MongoDB Audit Log</span>
+          </div>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor SV as Sinh viên
+    participant W as Web Worker MediaPipe
+    participant AI as FastAPI AI Engine
+    participant MDB as MongoDB Audit Log
+    participant DB as MySQL Database
+    participant WS as Socket.IO Hub
+    actor GT as Giám thị
+
+    loop Mỗi 30ms Webcam chạy ngầm không lag UI
+        SV->>W: Frame webcam liên tục
+        W->>W: MediaPipe đo Yaw, Pitch, Gaze, Tab switch
+        opt Phát hiện vi phạm như Yaw lệch, rời webcam, xem điện thoại
+            W->>AI: POST /v1/proctor/report-violation
+            AI->>MDB: Ghi log bất biến ai_proctoring_logs
+            AI->>DB: UPDATE trừ điểm uy tín trong MySQL
+            AI->>WS: Broadcast Redis violation_alert
+            WS-->>GT: Bàn 3D nhấp nháy ĐỎ và Avatar xoay góc
+            WS-->>SV: Popup cảnh báo đỏ kèm điểm uy tín còn lại
+        end
+    end
+    opt Phát hiện tráo người liên tục quá 15s
+        AI->>WS: Broadcast IMPERSONATION_DETECTED
+        WS-->>GT: Báo động khẩn cấp gian lận nghiêm trọng
+        WS-->>SV: Khóa toàn bộ giao diện bài thi ngay lập tức
+    end
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIII. BIỂU ĐỒ HOẠT ĐỘNG (ACTIVITY DIAGRAMS) -->
+      <section id="section-activity" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">VIII</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Biểu Đồ Hoạt Động (Activity Diagrams)</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Flowcharts & Swimlanes</span>
+        </div>
+
+        <!-- Activity 1: KYC -> Check-in -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-brand-600"></i>
+            Hình 2.5. Biểu đồ hoạt động: Toàn bộ Quy trình từ Đăng ký KYC đến Check-in Phòng thi
+          </h3>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+flowchart TD
+    START([Bắt đầu]) --> LOGIN[Đăng nhập hệ thống]
+    LOGIN --> CHECK_KYC{face_status == APPROVED?}
+    
+    CHECK_KYC -- Chưa đạt --> KYC_PAGE[Truy cập /face-kyc Studio]
+    KYC_PAGE --> CAPTURE[Thu thập 5 tư thế góc đầu]
+    CAPTURE --> CHECK_QUAL{Liveness + Độ nét + Ánh sáng đạt?}
+    CHECK_QUAL -- Không --> RETRY_KYC[Yêu cầu chụp lại góc sai &lt;= 3 lần]
+    RETRY_KYC --> CAPTURE
+    CHECK_QUAL -- Đạt chuẩn --> FUSION[ArcFace hợp nhất 512-D & Lưu DB]
+    FUSION --> APPROVED_STATE[face_status = APPROVED]
+    APPROVED_STATE --> SCHEDULE[Xem lịch thi cá nhân, SBD, Vị trí bàn]
+
+    CHECK_KYC -- Đã có KYC --> SCHEDULE
+    SCHEDULE --> WAIT_TIME[Chờ đến giờ vào phòng thi]
+    WAIT_TIME --> CHECK_WINDOW{Trong khung giờ cho phép vào?}
+    CHECK_WINDOW -- Quá 15 phút --> BLOCKED[Hệ thống khóa: Bị chặn quá giờ]
+    BLOCKED --> END([Kết thúc])
+
+    CHECK_WINDOW -- Hợp lệ --> CHECKIN_CAM[Bật camera Check-in 1:1]
+    CHECKIN_CAM --> CHECK_SIM{Cosine >= 0.75 & Liveness Pass?}
+    CHECK_SIM -- Không khớp --> RETRY_CHECKIN{Số lần thử &lt; 3?}
+    RETRY_CHECKIN -- Còn lượt --> CHECKIN_CAM
+    RETRY_CHECKIN -- Hết 3 lần --> FORCE_CHECKIN[Báo động bàn đỏ & Giám thị Force Check-in CCCD]
+    
+    CHECK_SIM -- Khớp 100% --> UNLOCK_EXAM[Mở giao diện làm bài thi & Kích hoạt AI 20s]
+    FORCE_CHECKIN --> UNLOCK_EXAM
+    UNLOCK_EXAM --> END
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity 2: Proctoring Swimlane -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-brand-600"></i>
+            Hình 2.6. Biểu đồ hoạt động: Giám sát Vi phạm & Xử lý (Phân làn 3 bên)
+          </h3>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+flowchart TD
+    subgraph AI_LANE["HỆ THỐNG AI (Client + Server)"]
+        AI_CAM[Webcam 30FPS + CCTV 5FPS] --> AI_PROC[Phân tích Yaw/Pitch, Tab, Đếm mặt]
+        AI_PROC --> IS_VIO{Phát hiện vi phạm?}
+        IS_VIO -- Không --> AI_CAM
+        IS_VIO -- Có --> CHECK_MULTI{Có >= 2 khuôn mặt?}
+        CHECK_MULTI -- Có --> IS_STAFF{Khớp Staff Whitelist?}
+        IS_STAFF -- Khớp GV --> EXEMPT[Mã STAFF_EXEMPTION: 0 điểm trừ]
+        IS_STAFF -- Lạ --> DEDUCT_MULTI[Mã MULTI_FACE: Trừ 15 điểm]
+        CHECK_MULTI -- Không --> DEDUCT_GEN[Trừ điểm uy tín theo loại vi phạm]
+        DEDUCT_MULTI --> LOG_DB[Ghi MongoDB Audit Log & Update MySQL]
+        DEDUCT_GEN --> LOG_DB
+        LOG_DB --> CHECK_SCORE{Điểm uy tín < 50?}
+        CHECK_SCORE -- Điểm = 0 --> SUSPEND[Mã SUSPENDED: Khóa bài thi ngay]
+        CHECK_SCORE -- Dưới 50 --> WARN_POPUP[Phát cảnh báo Socket.IO]
+    end
+
+    subgraph PROCTOR_LANE["GIÁM THỊ COI THI"]
+        WARN_POPUP --> DASH_ALERT[Bàn 3D nhấp nháy ĐỎ + Avatar xoay]
+        EXEMPT --> DASH_INFO[Hiện nhãn: Cán bộ đang kiểm tra bàn]
+        DASH_ALERT --> PROCTOR_ACT{Giám thị xử lý?}
+        PROCTOR_ACT -- Bác bỏ nhầm --> DISMISS[Bấm Dismiss: Đánh dấu cờ giải tỏa]
+        PROCTOR_ACT -- Vi phạm thật --> TAKE_ACTION[Gửi cảnh báo / Lập biên bản đình chỉ]
+    end
+
+    subgraph STUDENT_LANE["SINH VIÊN LÀM BÀI"]
+        WARN_POPUP --> STU_POPUP[Popup cảnh báo đỏ kèm điểm uy tín còn lại]
+        SUSPEND --> STU_LOCK[Toàn bộ màn hình bị khóa, chờ xử lý]
+        TAKE_ACTION --> STU_LOCK
+    end
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity 3: Grading & Publishing -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-brand-600"></i>
+            Hình 2.7. Biểu đồ hoạt động: Quy trình Chấm thi, Rọc phách & Công bố Điểm
+          </h3>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+flowchart TD
+    subgraph SYSTEM_LANE["HỆ THỐNG"]
+        FINISH[Ca thi kết thúc: Nộp bài / Hết giờ] --> AUTO_GRADE[Auto-Grade MCQ: Chấm điểm trắc nghiệm tức thì]
+        AUTO_GRADE --> CHECK_ESSAY{Đề thi có Tự luận / Code?}
+        CHECK_ESSAY -- Không --> REVIEW_READY[Bảng điểm sẵn sàng rà soát]
+        CHECK_ESSAY -- Có --> ANONYMOUS_HASH[Sinh mã phách điện tử #7A3F... ẩn danh thí sinh]
+    end
+
+    subgraph TEACHER_LANE["GIẢNG VIÊN CHẤM THI"]
+        ANONYMOUS_HASH --> GRADE_ESSAY[Vào chấm Essay/Code theo barem; chỉ thấy Mã Phách]
+        GRADE_ESSAY --> SUBMIT_GRADE[Gửi điểm chấm ẩn danh]
+        SUBMIT_GRADE --> APPROVE_DEAN[Trưởng bộ môn phê duyệt hoàn tất chấm]
+    end
+
+    APPROVE_DEAN --> MERGE_HASH[Hệ thống tự động ghép phách hoàn trả danh tính]
+    MERGE_HASH --> REVIEW_READY
+
+    subgraph ADMIN_LANE["ADMIN KHẢO THÍ"]
+        REVIEW_READY --> REVIEW_STATS[Rà soát bảng điểm: Thống kê phổ điểm, tỷ lệ đúng/sai]
+        REVIEW_STATS --> PUBLISH[Admin Phê duyệt & Công bố Điểm chính thức]
+    end
+
+    subgraph STUDENT_LANE2["SINH VIÊN"]
+        PUBLISH --> VIEW_RESULT[Xem điểm thi + Đối chiếu đáp án & Lời giải]
+        VIEW_RESULT --> APPEAL{Có thắc mắc điểm?}
+        APPEAL -- Trong 7 ngày --> SEND_APPEAL[Gửi đơn phúc khảo trực tuyến kèm lý do]
+        APPEAL -- Không --> FINISH_ALL([Hoàn thành kỳ thi])
+    end
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- IX. KIẾN TRÚC KỸ THUẬT & MICROSERVICES -->
+      <section id="section-architecture" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">IX</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Kiến Trúc Kỹ Thuật & Sơ Đồ Microservices</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Bảng 2.12 & Hình 2.8</span>
+        </div>
+
+        <!-- Tech Stack Badges -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-4">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white">Công Nghệ Toàn Hệ Thống Phân Tầng:</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs">
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Frontend UI</span>
+              <strong class="text-slate-800 dark:text-white">React 19 + Vite 6 + Tailwind</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Client AI Worker</span>
+              <strong class="text-slate-800 dark:text-white">MediaPipe FaceLandmarker</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">API Gateway</span>
+              <strong class="text-slate-800 dark:text-white">Node.js Express 5 (:3011)</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Realtime Protocol</span>
+              <strong class="text-slate-800 dark:text-white">Socket.IO + Redis Pub/Sub</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Face AI Service</span>
+              <strong class="text-slate-800 dark:text-white">FastAPI + Uvicorn (:8000)</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Face Models</span>
+              <strong class="text-slate-800 dark:text-white">YuNet ONNX + ArcFace 512D</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">CCTV & Body Pose</span>
+              <strong class="text-slate-800 dark:text-white">YOLOv8n-pose + Shapely ROI</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Relational Database</span>
+              <strong class="text-slate-800 dark:text-white">MySQL 8.0 (:3306)</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Document DB</span>
+              <strong class="text-slate-800 dark:text-white">MongoDB 7.0 (:27017)</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">State Management</span>
+              <strong class="text-slate-800 dark:text-white">Zustand Stores</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Audio Engine</span>
+              <strong class="text-slate-800 dark:text-white">Web Audio API Synth</strong>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+              <span class="text-slate-400 block text-[10px]">Security Agent</span>
+              <strong class="text-slate-800 dark:text-white">Safe Exam Browser (SEB)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Microservices Flowchart -->
+        <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-brand-600"></i>
+            Hình 2.8. Sơ đồ Kiến trúc Microservices & Luồng Giao Tiếp
+          </h3>
+          <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+            <div class="mermaid">
+flowchart TD
+    subgraph CLIENTS["Lớp Trình Duyệt và Thiết Bị Client"]
+        PC_LAB["Máy tính Lab PC (Kiosk Browser)"]
+        BYOD_DEV["Laptop BYOD (Safe Exam Browser)"]
+        MOBILE_QUIZ["Điện thoại hoặc PC (Đấu trường Quiz)"]
+        DASH_PROCTOR["Giám Thị (Dashboard 3D)"]
+        ADMIN_PANEL["Admin (Khảo thí và Cấu hình)"]
+    end
+
+    subgraph GATEWAY["API Gateway và Realtime Hub Cổng 3011"]
+        EXPRESS["Node.js Express 5 Gateway<br/>JWT Auth, RBAC, Rest APIs"]
+        SIO["Socket.IO Realtime Server<br/>Phòng thi và Đấu trường Arena"]
+    end
+
+    subgraph AI_CLUSTER["AI Microservice Cổng 8000"]
+        FASTAPI["FastAPI Python Engine"]
+        YUNET["YuNet ONNX (Face và Landmark 25ms)"]
+        ARCFACE["ArcFace ONNX (512-D Embedding 60ms)"]
+        LIVENESS["MiniFASNet (Anti-Spoofing Check)"]
+        YOLO["YOLOv8n-pose (17 Keypoints Bàn thi)"]
+        SHAPELY["Shapely (ROI Polygon CCTV Mapping)"]
+    end
+
+    subgraph LEGACY["Dịch Vụ Phụ Cổng 5000"]
+        FLASK["Python Flask (Registry và Governance)"]
+    end
+
+    subgraph STORAGE["Lớp Lưu Trữ Dữ Liệu Polyglot"]
+        MYSQL[("MySQL 8.0 Cổng 3306<br/>examguard_db<br/>Users, Ca thi, SBD, Điểm")]
+        MONGO[("MongoDB 7.0 Cổng 27017<br/>examguard_ai_db<br/>Đề thi JSON, AI Logs, Snapshots")]
+        REDIS[("Redis Cache<br/>Pub-Sub Broker và Staff Whitelist")]
+        VAULT["File Vault Storage<br/>Ảnh KYC HD và Bằng chứng vi phạm"]
+    end
+
+    subgraph CCTV_NET["Hạ Tầng Giám Sát CCTV"]
+        CCTV["Hệ thống Camera CCTV Phòng Lab (RTSP Streams)"]
+    end
+
+    PC_LAB --> EXPRESS
+    BYOD_DEV --> EXPRESS
+    MOBILE_QUIZ --> EXPRESS
+    DASH_PROCTOR --> EXPRESS
+    ADMIN_PANEL --> EXPRESS
+
+    EXPRESS <--> SIO
+    SIO <--> REDIS
+    EXPRESS --> MYSQL
+    EXPRESS --> MONGO
+    EXPRESS --> FASTAPI
+    EXPRESS --> FLASK
+    FLASK --> MYSQL
+
+    CCTV --> FASTAPI
+    FASTAPI --> YUNET
+    YUNET --> ARCFACE
+    FASTAPI --> LIVENESS
+    FASTAPI --> YOLO
+    YOLO --> SHAPELY
+    FASTAPI --> REDIS
+    FASTAPI --> MONGO
+    FASTAPI --> VAULT
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- X. VÒNG ĐỜI TRẠNG THÁI HỆ THỐNG -->
+      <section id="section-state" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">X</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Vòng Đời Trạng Thái (State Machine)</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Hình 2.9 & 2.10</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- State 1: KYC -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-branch" class="w-4 h-4 text-brand-600"></i>
+              10.1 Vòng Đời Trạng Thái Face KYC
+            </h3>
+            <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+              <div class="mermaid">
+stateDiagram-v2
+    [*] --> NOT_ENROLLED: Tạo tài khoản
+    NOT_ENROLLED --> ENROLLING: Bật webcam chụp 5 góc
+    ENROLLING --> PENDING_APPROVAL: Gửi đủ 5 góc và Liveness Pass
+    ENROLLING --> REJECTED: Giả mạo hoặc Ảnh mờ hoặc Quá 3 lần
+    PENDING_APPROVAL --> APPROVED: AI và Admin thẩm định đạt chuẩn
+    PENDING_APPROVAL --> REJECTED: Thẩm định không đạt chuẩn
+    REJECTED --> ENROLLING: Chụp lại theo hướng dẫn
+    APPROVED --> [*]: Đủ điều kiện dự thi và coi thi
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-500 space-y-1">
+              <p>• <strong>NOT_ENROLLED:</strong> Mặc định khi tạo tài khoản; Không được xếp ca thi hay phân công coi thi.</p>
+              <p>• <strong>APPROVED:</strong> Vector 512-D hợp lệ; Mở quyền xếp chỗ, cấp SBD và nạp vào Staff Whitelist.</p>
+              <p>• <strong>REJECTED:</strong> Bị chặn thi; Hệ thống thông báo lý do chụp lại.</p>
+            </div>
+          </div>
+
+          <!-- State 2: Student Exam -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-branch" class="w-4 h-4 text-brand-600"></i>
+              10.2 Vòng Đời Sinh Viên Trong Ca Thi
+            </h3>
+            <div class="overflow-x-auto py-2 bg-slate-50/50 dark:bg-slate-900/40 rounded-lg p-2 border border-slate-200/60 dark:border-slate-800">
+              <div class="mermaid">
+stateDiagram-v2
+    [*] --> BLOCKED_NO_KYC: Chưa có KYC
+    BLOCKED_NO_KYC --> not_checkin: KYC Approved và Gán ca thi
+    not_checkin --> checkin: Xác thực khuôn mặt thành công
+    checkin --> suspicious: Điểm uy tín dưới 50
+    suspicious --> checkin: Giám thị Bác bỏ cảnh báo Dismiss
+    suspicious --> suspended: Điểm uy tín bằng 0 hoặc Giám thị đình chỉ
+    checkin --> checkout: Nộp bài thành công hoặc Hết giờ
+    suspicious --> checkout: Nộp bài trước khi bị đình chỉ
+    suspended --> [*]: Bị lập biên bản kỷ luật
+    checkout --> [*]: Đang chờ chấm và công bố
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-500 space-y-1">
+              <p>• <strong>not_checkin:</strong> Đã có SBD và chỗ ngồi, điểm uy tín ban đầu là 100.</p>
+              <p>• <strong>suspicious:</strong> Điểm uy tín rớt dưới 50; Bàn đổi màu ĐỎ trên Dashboard Giám thị.</p>
+              <p>• <strong>suspended:</strong> Điểm uy tín về 0 hoặc bị đình chỉ; Khóa đề thi ngay lập tức.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- XI. MA TRẬN ĐIỂM TRỪ VI PHẠM & ĐÁNH GIÁ TỔNG HỢP -->
+      <section id="section-violations" class="space-y-6">
+        <div class="border-b border-slate-200 dark:border-dark-border pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 text-brand-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">XI</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Ma Trận Điểm Trừ Vi Phạm & Đánh Giá Tổng Hợp</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Bảng 2.8</span>
+        </div>
+
+        <!-- Violation Search & Filter Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm">
+          <div class="flex items-center gap-2">
+            <i data-lucide="filter" class="w-4 h-4 text-slate-400"></i>
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Lọc Mức Độ:</span>
+            <div class="flex gap-1.5" id="severity-filter-btns">
+              <button onclick="filterViolations('ALL')" class="severity-btn active px-2.5 py-1 rounded text-xs font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900">Tất cả (13)</button>
+              <button onclick="filterViolations('CRITICAL')" class="severity-btn px-2.5 py-1 rounded text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">CRITICAL</button>
+              <button onclick="filterViolations('HIGH')" class="severity-btn px-2.5 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">HIGH</button>
+              <button onclick="filterViolations('MEDIUM')" class="severity-btn px-2.5 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">MEDIUM</button>
+              <button onclick="filterViolations('LOW')" class="severity-btn px-2.5 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">LOW</button>
+              <button onclick="filterViolations('INFO')" class="severity-btn px-2.5 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">INFO (Exempt)</button>
+            </div>
+          </div>
+          <span class="text-xs text-slate-400">Điểm uy tín khởi đầu: <strong>100 điểm</strong></span>
+        </div>
+
+        <!-- Violation Table -->
+        <div class="rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs" id="violations-table">
+              <thead class="bg-slate-100/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-dark-border">
+                <tr>
+                  <th class="py-3 px-4">Loại Vi Phạm / Sự Kiện</th>
+                  <th class="py-3 px-4 text-center w-28">Điểm Trừ</th>
+                  <th class="py-3 px-4 text-center w-32">Mức Độ Rủi Ro</th>
+                  <th class="py-3 px-4">Điều Kiện Kỹ Thuật Kích Hoạt</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-dark-border text-slate-700 dark:text-slate-300">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 bg-rose-50/30 dark:bg-rose-950/20" data-severity="CRITICAL">
+                  <td class="py-3 px-4 font-bold text-rose-700 dark:text-rose-400">
+                    Tráo người thi hộ (IMPERSONATION_DETECTED)
+                  </td>
+                  <td class="py-3 px-4 text-center font-extrabold text-rose-600 text-sm">−50</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">CRITICAL</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Cosine &lt; 0.70 với Vector Gốc liên tục &gt; 15 giây</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="CRITICAL">
+                  <td class="py-3 px-4 font-semibold">Mở Developer Tools (DEVTOOLS_OPEN)</td>
+                  <td class="py-3 px-4 text-center font-bold text-rose-600">−30</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">CRITICAL</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Bấm F12, Ctrl+Shift+I, can thiệp DOM</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="CRITICAL">
+                  <td class="py-3 px-4 font-semibold">Phát hiện máy ảo (VM_DETECTED)</td>
+                  <td class="py-3 px-4 text-center font-bold text-rose-600">−20</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">CRITICAL</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">SEB / OS Agent phát hiện Hyper-V, VMware, VirtualBox</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="HIGH">
+                  <td class="py-3 px-4 font-semibold">Cúi đầu xem điện thoại (PHONE_LOOK_DOWN)</td>
+                  <td class="py-3 px-4 text-center font-bold text-orange-600">−20</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300">HIGH</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Góc Pitch ≤ −22° gập mặt nhìn xuống đùi/màn hình phụ</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="HIGH">
+                  <td class="py-3 px-4 font-semibold">2 người lạ xuất hiện (MULTI_FACE_UNKNOWN)</td>
+                  <td class="py-3 px-4 text-center font-bold text-orange-600">−15</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300">HIGH</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Camera thấy ≥ 2 mặt nhưng không khớp Staff Whitelist</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="HIGH">
+                  <td class="py-3 px-4 font-semibold">Màn hình thứ 2 (SECONDARY_MONITOR)</td>
+                  <td class="py-3 px-4 text-center font-bold text-orange-600">−15</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300">HIGH</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Phát hiện mở rộng Desktop ra màn hình ngoài (HDMI/Type-C)</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="MEDIUM">
+                  <td class="py-3 px-4 font-semibold">Chuyển Tab / Ẩn ứng dụng (TAB_SWITCH)</td>
+                  <td class="py-3 px-4 text-center font-bold text-amber-600">−10</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">MEDIUM</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Sự kiện <code>visibilitychange</code> của trình duyệt</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="MEDIUM">
+                  <td class="py-3 px-4 font-semibold">Rời vị trí / Che webcam (NO_FACE)</td>
+                  <td class="py-3 px-4 text-center font-bold text-amber-600">−10</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">MEDIUM</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Mất dấu khuôn mặt trước webcam quá 10 giây</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="MEDIUM">
+                  <td class="py-3 px-4 font-semibold">Liếc bài bên cạnh (SUSPICIOUS_SIDE)</td>
+                  <td class="py-3 px-4 text-center font-bold text-amber-600">−10</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">MEDIUM</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Góc xoay đầu Yaw ≥ 30° liên tục</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="MEDIUM">
+                  <td class="py-3 px-4 font-semibold">Xoay vai sang bên (SHOULDER_TURN)</td>
+                  <td class="py-3 px-4 text-center font-bold text-amber-600">−8</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">MEDIUM</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">YOLOv8 Pose CCTV phát hiện vai xoay lệch khỏi bàn</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="LOW">
+                  <td class="py-3 px-4 font-semibold">Quay đầu nhẹ sang bên (HEAD_TURN)</td>
+                  <td class="py-3 px-4 text-center font-bold text-blue-600">−5</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">LOW</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">15° ≤ Yaw &lt; 30°</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-severity="LOW">
+                  <td class="py-3 px-4 font-semibold">Liếc mắt rời màn hình (GAZE_OFF)</td>
+                  <td class="py-3 px-4 text-center font-bold text-blue-600">−3</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">LOW</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Mống mắt lệch khỏi màn hình &gt; 4 giây</td>
+                </tr>
+
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 bg-emerald-50/50 dark:bg-emerald-950/30" data-severity="INFO">
+                  <td class="py-3 px-4 font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                    Giám thị ghé bàn (STAFF_EXEMPTION)
+                  </td>
+                  <td class="py-3 px-4 text-center font-extrabold text-emerald-600 text-sm">0 (Miễn phạt)</td>
+                  <td class="py-3 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">INFO</span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-[11px]">Khuôn mặt thứ hai khớp Staff Face Whitelist (Redis Cache)</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Strengths & Risks Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+            <h3 class="font-bold text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> 7 Điểm Mạnh Nổi Bật Của Hệ Thống
+            </h3>
+            <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-2 list-disc list-inside leading-relaxed">
+              <li><strong>Bảo mật đa tầng:</strong> Sinh trắc học ArcFace 512D + Safe Exam Browser + IP VLAN.</li>
+              <li><strong>Cơ chế Staff Exemption:</strong> Giám thị kiểm tra bàn không kích hoạt phạt oan.</li>
+              <li><strong>UX Đa vai trò:</strong> Thiết kế riêng biệt cho Admin, Giảng viên, Giám thị và Sinh viên.</li>
+              <li><strong>Kiến trúc mở rộng:</strong> Microservices phân tầng, cô lập Room Socket.IO riêng từng ca.</li>
+              <li><strong>Zero-Trust thực chất:</strong> 5 quy tắc khóa quyền ở cấp kiến trúc không thể bypass.</li>
+              <li><strong>Tính trung thực học thuật:</strong> Chấm tự luận rọc phách ẩn danh, audit log bất biến.</li>
+              <li><strong>Gamification Quiz Arena:</strong> Đấu trường trắc nghiệm trực tiếp phong cách Kahoot.</li>
+            </ul>
+          </div>
+
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm space-y-3">
+            <h3 class="font-bold text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <i data-lucide="alert-octagon" class="w-4 h-4"></i> Rủi Ro Vận Hành & Giải Pháp Đề Xuất
+            </h3>
+            <div class="text-xs space-y-2 leading-relaxed">
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <strong class="text-rose-600 dark:text-rose-400">Rủi ro 1: Ánh sáng yếu / Kính cận làm giảm Cosine:</strong>
+                <p class="text-slate-600 dark:text-slate-400">→ Hiệu chỉnh linh hoạt ngưỡng <code>SIMILARITY_THRESHOLD</code> từ 0.65 - 0.68 và thêm pre-check lux ánh sáng trước khi thi.</p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <strong class="text-rose-600 dark:text-rose-400">Rủi ro 2: Nghẽn RTSP Camera khi phòng lab quá tải:</strong>
+                <p class="text-slate-600 dark:text-slate-400">→ Tự động hạ FPS CCTV xuống 3 FPS và tăng tần suất Webcam Client-side bù trừ.</p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                <strong class="text-amber-600 dark:text-amber-400">Rủi ro 3: Thí sinh chưa KYC trước ngày thi:</strong>
+                <p class="text-slate-600 dark:text-slate-400">→ Gửi email tự động nhắc nhở; Khóa hạn chót KYC trước 72 giờ.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- XII. KẾT LUẬN -->
+      <section class="rounded-2xl p-6 sm:p-8 bg-slate-100 dark:bg-dark-card border border-slate-200 dark:border-dark-border space-y-4">
+        <h2 class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="award" class="w-5 h-5 text-brand-600"></i>
+          XII. Kết Luận Báo Cáo
+        </h2>
+        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+          <strong>ExamGuard AI v3.3</strong> đặt nền móng tiên phong trong việc ứng dụng công nghệ sinh trắc học sâu (Deep Biometrics) vào khảo thí đại học tại Việt Nam. Bằng cách định nghĩa lại căn cước thí sinh thành <em>vector ArcFace 512 chiều chuẩn hóa</em> kết hợp giám sát đa tầng và kiến trúc bảo mật Zero-Trust, hệ thống mang đến giải pháp toàn diện: vừa ngăn chặn gian lận tuyệt đối, vừa tối ưu hóa trải nghiệm người dùng cho cả cán bộ giảng viên và sinh viên.
+        </p>
+        <div class="pt-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+          <span>Người thực hiện: <strong>Lục Văn Sơn (MSSV: 2310900087)</strong> — Lớp: K23CNT3</span>
+          <span>Đồ án Tốt nghiệp CNTT — Năm học 2026</span>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- FULLSCREEN UML LIGHTBOX MODAL -->
+  <div id="uml-fullscreen-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex flex-col p-3 sm:p-6 transition-all duration-200">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </div>
+        <div>
+          <h3 id="modal-diagram-title" class="font-bold text-sm sm:text-base text-slate-100">Chi Tiết Biểu Đồ UML</h3>
+          <p class="text-[11px] text-slate-400">Chế độ xem toàn màn hình độ phân giải cao (Vector Crisp Rendering)</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button id="modal-zoom-out" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold uml-toolbar-btn" title="Thu nhỏ (Phím -)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <span id="modal-zoom-level" class="text-xs font-mono px-2.5 py-1.5 bg-slate-800/90 rounded-lg text-teal-400 font-bold min-w-[56px] text-center border border-slate-700 select-none">100%</span>
+        <button id="modal-zoom-in" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold uml-toolbar-btn" title="Phóng to (Phím +)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button id="modal-zoom-reset" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1.5 border border-slate-700 uml-toolbar-btn" title="Đặt lại (Phím 0)">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          <span class="hidden sm:inline">Đặt lại</span>
+        </button>
+        <div class="w-[1px] h-6 bg-slate-800 mx-1"></div>
+        <button id="modal-close-btn" class="px-3 py-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-rose-900/30 uml-toolbar-btn" title="Đóng (Phím Esc)">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <span>Đóng (ESC)</span>
+        </button>
+      </div>
+    </div>
+    <!-- Modal Canvas Area -->
+    <div id="modal-canvas-wrapper" class="flex-1 relative overflow-hidden bg-slate-900/70 rounded-xl border border-slate-800 flex items-center justify-center cursor-grab select-none">
+      <div id="modal-canvas-viewport" class="mermaid-viewport"></div>
+    </div>
+    <!-- Modal Footer Hint -->
+    <div class="mt-2 text-center text-[11px] text-slate-400 font-mono shrink-0 flex items-center justify-center gap-4">
+      <span>🖱️ Cuộn chuột: Phóng to / Thu nhỏ</span>
+      <span class="hidden sm:inline">•</span>
+      <span>✋ Nhấp và kéo: Di chuyển sơ đồ</span>
+      <span class="hidden sm:inline">•</span>
+      <span class="hidden sm:inline">⌨️ Phím tắt: [ESC] Đóng, [+] Phóng to, [-] Thu nhỏ, [0] Đặt lại</span>
+    </div>
+  </div>
+
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Cache raw diagram code once
+    document.querySelectorAll('.mermaid').forEach((el) => {
+      el.setAttribute('data-raw-code', el.textContent.trim());
+    });
+
+    // Initialize Mermaid with proper theme
+    async function initMermaid(isDark) {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'default',
+        securityLevel: 'loose',
+        flowchart: { curve: 'basis', htmlLabels: true },
+        sequence: { showSequenceNumbers: true, actorMargin: 40 }
+      });
+
+      // Restore raw code before running
+      document.querySelectorAll('.mermaid').forEach((el) => {
+        const raw = el.getAttribute('data-raw-code');
+        if (raw) {
+          el.removeAttribute('data-processed');
+          el.textContent = raw;
+        }
+      });
+
+            try {
+        await mermaid.run();
+        initUmlZoomPan();
+      } catch (err) {
+        console.warn('Mermaid rendering notice:', err);
+      }
+    }
+
+    // Dark Mode Toggle
+    async function toggleDarkMode() {
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('theme-icon');
+      const isDark = html.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      
+      if (themeIcon) {
+        themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
+      }
+      await initMermaid(isDark);
+    }
+
+    // Set initial theme
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+      
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      
+      // Update icon
+      setTimeout(() => {
+        const themeIcon = document.getElementById('theme-icon');
+        if (themeIcon) {
+          themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+          lucide.createIcons();
+        }
+        initMermaid(isDark);
+      }, 50);
+    })();
+
+    // Copy PlantUML Code
+    function copyPlantUmlCode() {
+      const codeBlock = document.getElementById('plantuml-code-block');
+      if (!codeBlock) return;
+      navigator.clipboard.writeText(codeBlock.innerText).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        if (btnText) {
+          btnText.innerText = 'Đã sao chép!';
+          setTimeout(() => { btnText.innerText = 'Sao chép Mã'; }, 2000);
+        }
+      });
+    }
+
+    // UC Tabs Switcher
+    function switchUcTab(ucKey) {
+      // Hide all panels
+      document.querySelectorAll('.uc-panel').forEach(p => p.classList.add('hidden'));
+      // Show target panel
+      const targetPanel = document.getElementById(`${ucKey}-panel`);
+      if (targetPanel) targetPanel.classList.remove('hidden');
+
+      // Update button styles
+      document.querySelectorAll('#uc-tabs button').forEach(b => {
+        b.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all';
+      });
+      const activeBtn = document.getElementById(`tab-btn-${ucKey}`);
+      if (activeBtn) {
+        activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm transition-all';
+      }
+    }
+
+    // Violation Filter
+    function filterViolations(severity) {
+      const rows = document.querySelectorAll('#violations-table tbody tr');
+      rows.forEach(row => {
+        const rowSev = row.getAttribute('data-severity');
+        if (severity === 'ALL' || rowSev === severity) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Update buttons
+      document.querySelectorAll('#severity-filter-btns button').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-brand-500');
+      });
+      event.target.classList.add('ring-2', 'ring-brand-500');
+    }
+
+    // Global Search Filter
+    const searchInput = document.getElementById('global-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+          document.querySelectorAll('section').forEach(s => s.style.display = '');
+          return;
+        }
+
+        document.querySelectorAll('section').forEach(sec => {
+          const text = sec.innerText.toLowerCase();
+          if (text.includes(query)) {
+            sec.style.display = '';
+          } else {
+            sec.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // ==========================================
+    // INTERACTIVE UML DIAGRAM ZOOM & PAN ENGINE
+    // ==========================================
+    function getDiagramTitle(mermaidEl) {
+      let el = mermaidEl;
+      while (el && el !== document.body) {
+        let prev = el.previousElementSibling;
+        while (prev) {
+          const h = prev.matches('h2, h3, h4') ? prev : prev.querySelector('h2, h3, h4');
+          if (h) {
+            const clone = h.cloneNode(true);
+            clone.querySelectorAll('i, svg, span').forEach(n => n.remove());
+            const text = clone.innerText.trim();
+            if (text) return text;
+          }
+          prev = prev.previousElementSibling;
+        }
+        el = el.parentElement;
+      }
+      return 'Sơ Đồ UML Hệ Thống ExamGuard AI';
+    }
+
+    function initUmlZoomPan() {
+      document.querySelectorAll('.mermaid').forEach((mermaidEl) => {
+        // Skip if already wrapped
+        if (mermaidEl.closest('.mermaid-zoom-container')) return;
+
+        const parent = mermaidEl.parentElement;
+        if (!parent) return;
+
+        // Create main container wrapper
+        const container = document.createElement('div');
+        container.className = 'mermaid-zoom-container relative group overflow-hidden rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 my-2';
+
+        // Floating Control Toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'absolute top-3 right-3 z-20 flex items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-md opacity-90 group-hover:opacity-100 transition-opacity';
+        toolbar.innerHTML = `
+          <button class="btn-zoom-out p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 uml-toolbar-btn" title="Thu nhỏ (-)">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <span class="zoom-badge text-[11px] font-mono font-bold text-teal-600 dark:text-teal-400 px-2 py-0.5 rounded bg-slate-100/70 dark:bg-slate-900/70 select-none min-w-[46px] text-center cursor-pointer" title="Nhấp đúp để đặt lại 100%">100%</span>
+          <button class="btn-zoom-in p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 uml-toolbar-btn" title="Phóng to (+)">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="btn-zoom-reset p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 uml-toolbar-btn" title="Đặt lại (100%)">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          </button>
+          <div class="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+          <button class="btn-fullscreen p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/80 text-brand-600 dark:text-teal-400 font-bold flex items-center gap-1 text-[11px] uml-toolbar-btn" title="Xem Toàn Màn Hình Đầy Đủ">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            <span class="hidden sm:inline">Toàn cảnh</span>
+          </button>
+        `;
+
+        // Viewport wrapper for pan/zoom
+        const viewport = document.createElement('div');
+        viewport.className = 'mermaid-viewport p-4 flex items-center justify-center';
+        
+        // Bottom helper caption
+        const footerHint = document.createElement('div');
+        footerHint.className = 'text-[11px] text-slate-400 dark:text-slate-500 font-mono text-center py-1.5 bg-slate-100/60 dark:bg-slate-900/60 border-t border-slate-200/50 dark:border-slate-800/60 flex items-center justify-center gap-3 select-none';
+        footerHint.innerHTML = `
+          <span>🖱️ Cuộn chuột: Phóng to/Thu nhỏ</span>
+          <span class="opacity-40">•</span>
+          <span>✋ Kéo chuột: Di chuyển</span>
+          <span class="opacity-40">•</span>
+          <span>⛶ Toàn cảnh: Xem chi tiết</span>
+        `;
+
+        // Wrap elements
+        parent.insertBefore(container, mermaidEl);
+        container.appendChild(toolbar);
+        container.appendChild(viewport);
+        viewport.appendChild(mermaidEl);
+        container.appendChild(footerHint);
+
+        // State for this diagram
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        function updateTransform() {
+          viewport.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+          const badge = toolbar.querySelector('.zoom-badge');
+          if (badge) badge.innerText = Math.round(scale * 100) + '%';
+        }
+
+        // Zoom In button
+        toolbar.querySelector('.btn-zoom-in').addEventListener('click', (e) => {
+          e.stopPropagation();
+          scale = Math.min(scale * 1.25, 4.0);
+          updateTransform();
+        });
+
+        // Zoom Out button
+        toolbar.querySelector('.btn-zoom-out').addEventListener('click', (e) => {
+          e.stopPropagation();
+          scale = Math.max(scale / 1.25, 0.35);
+          updateTransform();
+        });
+
+        // Reset button
+        function resetZoom() {
+          scale = 1;
+          translateX = 0;
+          translateY = 0;
+          updateTransform();
+        }
+        toolbar.querySelector('.btn-zoom-reset').addEventListener('click', (e) => {
+          e.stopPropagation();
+          resetZoom();
+        });
+
+        // Badge double click resets
+        toolbar.querySelector('.zoom-badge').addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          resetZoom();
+        });
+
+        // Fullscreen button
+        toolbar.querySelector('.btn-fullscreen').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDiagramModal(mermaidEl);
+        });
+
+        // Drag to Pan
+        container.addEventListener('mousedown', (e) => {
+          if (e.target.closest('button') || e.target.closest('.zoom-badge')) return;
+          isDragging = true;
+          startX = e.clientX - translateX;
+          startY = e.clientY - translateY;
+          container.classList.add('cursor-grabbing');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          translateX = e.clientX - startX;
+          translateY = e.clientY - startY;
+          updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            container.classList.remove('cursor-grabbing');
+          }
+        });
+
+        // Mouse wheel to zoom anchored to cursor
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+          const newScale = Math.min(Math.max(scale * zoomFactor, 0.35), 4.0);
+          
+          const rect = container.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+          translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+          scale = newScale;
+          updateTransform();
+        }, { passive: false });
+
+        // Double click inside container to toggle zoom
+        container.addEventListener('dblclick', (e) => {
+          if (e.target.closest('button') || e.target.closest('.zoom-badge')) return;
+          if (Math.abs(scale - 1) < 0.15) {
+            // Zoom in
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const newScale = 1.75;
+            translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+            translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+            scale = newScale;
+            updateTransform();
+          } else {
+            resetZoom();
+          }
+        });
+      });
+    }
+
+    // Modal Fullscreen Lightbox Controller
+    let modalScale = 1;
+    let modalTranslateX = 0;
+    let modalTranslateY = 0;
+    let modalIsDragging = false;
+    let modalStartX = 0;
+    let modalStartY = 0;
+
+    function openDiagramModal(sourceElement) {
+      const modal = document.getElementById('uml-fullscreen-modal');
+      const viewport = document.getElementById('modal-canvas-viewport');
+      const titleEl = document.getElementById('modal-diagram-title');
+      if (!modal || !viewport) return;
+
+      const title = getDiagramTitle(sourceElement);
+      if (titleEl) {
+        titleEl.innerText = title;
+      }
+
+      // Clone SVG into modal
+      viewport.innerHTML = sourceElement.innerHTML;
+      modalScale = 1;
+      modalTranslateX = 0;
+      modalTranslateY = 0;
+      updateModalTransform();
+
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeDiagramModal() {
+      const modal = document.getElementById('uml-fullscreen-modal');
+      if (modal) modal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function updateModalTransform() {
+      const viewport = document.getElementById('modal-canvas-viewport');
+      const badge = document.getElementById('modal-zoom-level');
+      if (viewport) {
+        viewport.style.transform = `translate(${modalTranslateX}px, ${modalTranslateY}px) scale(${modalScale})`;
+      }
+      if (badge) badge.innerText = Math.round(modalScale * 100) + '%';
+    }
+
+    // Modal controls setup
+    document.getElementById('modal-zoom-in')?.addEventListener('click', () => {
+      modalScale = Math.min(modalScale * 1.25, 5.0);
+      updateModalTransform();
+    });
+
+    document.getElementById('modal-zoom-out')?.addEventListener('click', () => {
+      modalScale = Math.max(modalScale / 1.25, 0.3);
+      updateModalTransform();
+    });
+
+    document.getElementById('modal-zoom-reset')?.addEventListener('click', () => {
+      modalScale = 1;
+      modalTranslateX = 0;
+      modalTranslateY = 0;
+      updateModalTransform();
+    });
+
+    document.getElementById('modal-close-btn')?.addEventListener('click', closeDiagramModal);
+
+    window.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('uml-fullscreen-modal');
+      const isModalOpen = modal && !modal.classList.contains('hidden');
+
+      if (e.key === 'Escape' && isModalOpen) {
+        closeDiagramModal();
+      } else if (isModalOpen && (e.key === '+' || e.key === '=')) {
+        modalScale = Math.min(modalScale * 1.25, 5.0);
+        updateModalTransform();
+      } else if (isModalOpen && (e.key === '-' || e.key === '_')) {
+        modalScale = Math.max(modalScale / 1.25, 0.3);
+        updateModalTransform();
+      } else if (isModalOpen && e.key === '0') {
+        modalScale = 1;
+        modalTranslateX = 0;
+        modalTranslateY = 0;
+        updateModalTransform();
+      }
+    });
+
+    // Modal Drag to pan
+    const modalCanvasWrapper = document.getElementById('modal-canvas-wrapper');
+    if (modalCanvasWrapper) {
+      modalCanvasWrapper.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        modalIsDragging = true;
+        modalStartX = e.clientX - modalTranslateX;
+        modalStartY = e.clientY - modalTranslateY;
+        modalCanvasWrapper.classList.add('cursor-grabbing');
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!modalIsDragging) return;
+        modalTranslateX = e.clientX - modalStartX;
+        modalTranslateY = e.clientY - modalStartY;
+        updateModalTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (modalIsDragging) {
+          modalIsDragging = false;
+          modalCanvasWrapper.classList.remove('cursor-grabbing');
+        }
+      });
+
+      modalCanvasWrapper.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.15 : 0.87;
+        const newScale = Math.min(Math.max(modalScale * factor, 0.3), 5.0);
+        
+        const rect = modalCanvasWrapper.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        modalTranslateX = mouseX - (mouseX - modalTranslateX) * (newScale / modalScale);
+        modalTranslateY = mouseY - (mouseY - modalTranslateY) * (newScale / modalScale);
+        modalScale = newScale;
+        updateModalTransform();
+      }, { passive: false });
+
+      // Double click to toggle modal zoom
+      modalCanvasWrapper.addEventListener('dblclick', (e) => {
+        if (e.target.closest('button')) return;
+        if (Math.abs(modalScale - 1) < 0.15) {
+          modalScale = 2.0;
+        } else {
+          modalScale = 1;
+          modalTranslateX = 0;
+          modalTranslateY = 0;
+        }
+        updateModalTransform();
+      });
+    }
+
+  </script>
+</body>
+</html>

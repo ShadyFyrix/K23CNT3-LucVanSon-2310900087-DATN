@@ -9,37 +9,32 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* Màu chủ đạo thương hiệu ExamGuard AI (Academic Enterprise) */
-  --color-brand-primary: #1E40AF;
-  --color-brand-primary-hover: #1D4ED8;
-  --color-brand-navy: #1E3A8A;
-  --color-brand-dark: #0F172A;
+  /* Dynamic Design Tokens ánh xạ theo Accent Theme */
+  --color-accent-electric: var(--color-electric);
+  --color-accent-royal: var(--color-royal);
+  --color-accent-azure: var(--color-azure);
+  --color-accent-ice: var(--color-frosted-ice);
+  --color-accent-primary: var(--color-electric);
+  --color-accent-primary-hover: var(--color-azure);
 
-  /* Màu sinh trắc học AI (Khung quét mặt & Pose 3D) */
-  --color-biometric: #0D9488;
-  --color-biometric-light: #CCFBF1;
+  /* Màu chuẩn khóa Basel Design */
+  --color-brand-sapphire: #03195B;
+  --color-brand-royal: #0B2CB1;
+  --color-brand-electric: #1951FC;
+  --color-brand-azure: #3781FC;
+  --color-brand-ice: #CBE9FD;
 
-  /* Màu nền dịu mắt cho phòng thi */
-  --color-exam-bg: #F8FAFC;
-  --color-exam-panel: #F1F5F9;
-  --color-proctor-bg: #0F172A;
-  --color-proctor-card: #1E293B;
+  /* Màu nền tối sâu thăm thẳm Deep Space */
+  --color-brand-dark: #070814;
+  --color-brand-surface: #0C0E22;
+  --color-brand-card: #11142F;
+  --color-brand-subcard: #171B3E;
 
   /* Màu trạng thái chuẩn */
-  --color-status-safe: #059669;
-  --color-status-warn: #D97706;
-  --color-status-danger: #DC2626;
-  --color-status-proctor: #6D28D9;
-
-  /* Aliases tương thích */
-  --color-eg-primary: #1E40AF;
-  --color-eg-accent: #2563EB;
-  --color-eg-surface: #0B0F19;
-  --color-eg-card: #131B2E;
-  --color-eg-border: #1E293B;
-  --color-eg-success: #059669;
-  --color-eg-warning: #D97706;
-  --color-eg-danger: #DC2626;
+  --color-status-safe: #10B981;
+  --color-status-warn: #F59E0B;
+  --color-status-danger: #EF4444;
+  --color-status-proctor: var(--color-electric);
 }
 
 @layer base {

@@ -1,0 +1,568 @@
+' ==============================================================================
+' BỘ 8 BIỂU ĐỒ TUẦN TỰ (SEQUENCE DIAGRAMS) CHUẨN BCE CHO VISUAL PARADIGM
+' Đề tài: Hệ Thống Thi Trực Tuyến Tích Hợp Xác Thực Khuôn Mặt (ExamGuard AI)
+' Sinh viên: Lục Văn Sơn - MSSV: 2310900087
+' Cách dùng trong Visual Paradigm:
+'   1. Mở Visual Paradigm -> Menu Tools -> PlantUML (hoặc mở PlantUML View)
+'   2. Copy từng khối @startuml ... @enduml dưới đây dán vào -> Bấm Render
+'   3. Sơ đồ sinh ra là NGUYÊN BẢN (Native) -> Chỉnh sửa kéo thả, sửa chữ tay 100%!
+' ==============================================================================
+
+' ==============================================================================
+' NGHIỆP VỤ 01: ĐĂNG KÝ CĂN CƯỚC KHUÔN MẶT GỐC (FACE KYC 5 GÓC)
+' ==============================================================================
+@startuml SD_01
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "HọcViên" as HV
+boundary "TrangDangKyKYC" as UI
+control "KYCController" as Ctr
+participant "«System»\nFaceAIService" as AI
+entity "CoSoDuLieu" as DB
+actor "AdminKhảoThí" as Admin
+HV -> UI: 1. moTrangDangKyKYC()
+activate UI
+UI --> HV: 2. hienThiCameraVaKhungTronHuongDan()
+deactivate UI
+loop 3. Thu thập lần lượt 5 góc (Thẳng, Trái, Phải, Ngửa, Cúi)
+HV -> UI: quayDauTheoHuongDan(gocDo)
+activate UI
+UI -> UI: batKhungHinhHopLe()
+activate UI
+deactivate UI
+UI --> HV: tickXanhGocDatChuan()
+deactivate UI
+end
+HV -> UI: 4. xacNhanGuiGoi5Anh()
+activate UI
+UI -> Ctr: 5. guiGoi5AnhKYC(danhSachAnh)
+activate Ctr
+Ctr -> AI: 6. kiemTraLivenessVaTrichXuatVector(danhSachAnh)
+activate AI
+AI -> AI: 7. kiemTraAntiSpoofing()
+activate AI
+deactivate AI
+AI --> Ctr: 8. traVeKetQuaKiemTra(ketQuaLiveness)
+deactivate AI
+alt Không phải người thật (ảnh chụp lại hoặc video giả)
+Ctr --> UI: 9. yeuCauChupLaiNguoiThat()
+UI --> HV: 10. thongBaoLoiVaYeuCauThuLai()
+else Là người thật hợp lệ (Liveness đạt chuẩn)
+Ctr -> AI: 11. yeuCauHopNhatVector512D()
+activate AI
+AI -> AI: hopNhatVectorChuanHoa()
+activate AI
+deactivate AI
+alt Extension Point (ThamDinhNgoaiLe): Điểm tin cậy ranh giới
+AI --> Ctr: 12. yeuCauThamDinhThuCong(PENDING_REVIEW)
+Ctr -> DB: 13. luuHoSoChoDuyet(maHoSo, PENDING_REVIEW)
+activate DB
+DB --> Ctr: 14. xacNhanDaLuu()
+deactivate DB
+Ctr -> Admin: 15. thongBaoHoSoCanDuyet(maHoSo)
+activate Admin
+Admin -> Admin: 16. doiChieuAnhCCCDGoc()
+Admin --> Ctr: 17. pheDuyetNgoaiLe(APPROVED)
+deactivate Admin
+else Tự động đạt chuẩn cao
+AI --> Ctr: 18. traVeVectorDatChuan(APPROVED, vector512D)
+end
+deactivate AI
+Ctr -> DB: 19. capNhatTrangThaiVaVector(APPROVED, vector512D)
+activate DB
+DB --> Ctr: 20. xacNhanCapNhatThanhCong()
+deactivate DB
+Ctr --> UI: 21. phanHoiDangKyThanhCong()
+UI --> HV: 22. moQuyenDangKyLichThiChinhThuc()
+end
+deactivate Ctr
+deactivate UI
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 02: XÁC THỰC CHECK-IN PHÒNG THI 1:1 MỞ ĐỀ THI
+' ==============================================================================
+@startuml SD_02
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "HọcViên" as HV
+boundary "GiaoDienPhongThi" as UI
+control "CheckinController" as Ctr
+entity "CoSoDuLieu" as DB
+participant "«System»\nFaceAIService" as AI
+boundary "SoDoPhongThi3D" as Sodo
+actor "GiámThịCoiThi" as Proctor
+HV -> UI: 1. bamNutVaoPhongThi(caThiId)
+activate UI
+UI -> UI: 2. chupKhungHinhWebcam()
+activate UI
+deactivate UI
+UI -> Ctr: 3. guiYeuCauCheckin(frameWebcam, hocVienId)
+activate Ctr
+Ctr -> DB: 4. truyVanVectorGocKYC(hocVienId)
+activate DB
+DB --> Ctr: 5. traVeVectorGoc(vector512D)
+deactivate DB
+Ctr -> AI: 6. soKhopKhuonMat1va1(frameWebcam, vector512D)
+activate AI
+AI -> AI: 7. kiemTraLivenessVaCosineSimilarity()
+activate AI
+deactivate AI
+AI --> Ctr: 8. traVeKetQuaSoKhop(isMatched, similarityScore)
+deactivate AI
+alt Trùng khớp chính chủ (Cosine đạt ngưỡng và Liveness pass)
+Ctr -> DB: 9. capNhatTrangThai(CHECKED_IN, thoiGianCheckin)
+activate DB
+DB --> Ctr: 10. xacNhanCapNhat()
+deactivate DB
+Ctr -> Sodo: 11. capNhatMauBanThi(viTriBan, MAU_XANH_LA)
+activate Sodo
+Sodo --> Ctr: 12. xacNhanHienThi()
+deactivate Sodo
+Ctr --> UI: 13. moKhoaDeThi(deThiData)
+UI --> HV: 14. vaoManHinhLamBaiVaBatDongHo()
+else Không khớp hoặc có sự cố (Extension Point: SuCoDiemDanh)
+Ctr --> UI: 15. thongBaoThuLai(soLanConLai)
+UI --> HV: 16. hienThiCanhBaoThuLai()
+opt Thử lại quá 3 lần hoặc camera máy trạm hỏng
+Ctr -> Proctor: 17. baoDongSuCoBanThi(viTriBan, hocVienId)
+activate Proctor
+Proctor -> HV: 18. doiChieuTheCCCDVaTheSinhVien()
+Proctor -> Ctr: 19. kichHoatMoBanDacCach(ForceCheckin)
+deactivate Proctor
+Ctr -> DB: 20. ghiNhatKyDacCach(ProctorForceCheckin)
+activate DB
+DB --> Ctr: 21. xacNhanLuuAuditLog()
+deactivate DB
+Ctr -> Sodo: 22. capNhatMauBanThi(viTriBan, MAU_XANH_LA)
+activate Sodo
+Sodo --> Ctr: 23. xacNhanHienThi()
+deactivate Sodo
+Ctr --> UI: 24. moKhoaDeThiDacCach()
+UI --> HV: 25. vaoManHinhLamBai()
+end
+end
+deactivate Ctr
+deactivate UI
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 03: LÀM BÀI THI TRỰC TUYẾN AN TOÀN & GIÁM SÁT AI NGẦM
+' ==============================================================================
+@startuml SD_03
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "HọcViên" as HV
+boundary "GiaoDienLamBai" as PC
+control "ExamController" as Ctr
+entity "CoSoDuLieu" as DB
+participant "«System»\nFaceAIGiamSat" as AI
+boundary "DashboardGiámThị" as Dash
+actor "GiámThịCoiThi" as Proctor
+loop Luồng 1: Auto-save liên tục khi chọn đáp án hoặc định kỳ 10s
+HV -> PC: 1. chonDapAn(cauHoiId, dapAnId)
+activate PC
+PC -> Ctr: 2. tuDongLuuBai(caThiId, cauHoiId, dapAnId)
+activate Ctr
+Ctr -> DB: 3. capNhatTienTrinhLamBai()
+activate DB
+DB --> Ctr: 4. xacNhanDaLuu()
+deactivate DB
+Ctr --> PC: 5. phanHoiLuuAnToan()
+deactivate Ctr
+PC --> HV: 6. hienThiIconDaLuu()
+deactivate PC
+end
+loop Luồng 2: AI quan sát ngầm chu kỳ 20 giây qua webcam
+PC -> AI: 7. guiFrameWebcamBanThi(frameData)
+activate AI
+AI -> AI: 8. phanTichSoNguoiVaHuongNhin()
+activate AI
+deactivate AI
+alt Phát hiện có người thứ 2 xuất hiện (Đa khuôn mặt)
+AI -> AI: 9. doiChieuKhuonMat2VoiStaffWhitelist()
+activate AI
+deactivate AI
+alt Extension Point (GiamThiKiemTra): Khớp Staff Whitelist
+AI -> Ctr: 10. kichHoatMienTruGiamThi(STAFF_EXEMPTION, 0đ)
+activate Ctr
+Ctr -> Dash: 11. ghiNhanGiamThiKiemTra(viTriBan)
+activate Dash
+Dash --> Ctr: 12. xacNhanHienThi()
+deactivate Dash
+Ctr --> AI: 13. duyTriTrangThaiBinhThuong()
+deactivate Ctr
+else Người lạ xuất hiện nhắc bài
+AI -> Ctr: 14. baoDongNguoiLa(MULTIPLE_FACES, -15đ)
+activate Ctr
+Ctr -> DB: 15. truDiemUyTinVaLuuAnhBangChung(-15đ)
+activate DB
+DB --> Ctr: 16. xacNhanGhiLog()
+deactivate DB
+Ctr -> Dash: 17. batCanhBaoDoNghiVanGianLan(viTriBan)
+activate Dash
+Dash --> Ctr: 18. xacNhan()
+deactivate Dash
+Ctr --> PC: 19. hienThiPopupCanhBaoNguoiLa()
+activate PC
+PC --> HV: 20. canhBaoGiamDiemUyTin()
+deactivate PC
+deactivate Ctr
+end
+end
+deactivate AI
+end
+alt Extension Point (GianLanNghiemTrong): Điểm uy tín về 0 hoặc tráo người
+Proctor -> Ctr: 21. raLenhDinhChiThi(hocVienId)
+activate Ctr
+Ctr -> DB: 22. capNhatTrangThai(SUSPENDED)
+activate DB
+DB --> Ctr: 23. xacNhan()
+deactivate DB
+Ctr -> PC: 24. khoaToanBoGiaoDienLamBai()
+activate PC
+PC --> HV: 25. hienThiThongBaoDinhChiThi()
+deactivate PC
+deactivate Ctr
+else Nộp bài hoàn tất ca thi
+HV -> PC: 26. bamNopBai(hoacHetGio)
+activate PC
+PC -> Ctr: 27. dongBangBaiLamVaNop(caThiId)
+activate Ctr
+Ctr -> DB: 28. luuBaiLamVaTuDongChamMCQ()
+activate DB
+DB --> Ctr: 29. traVeDiemTrinhTracNghiem()
+deactivate DB
+Ctr --> PC: 30. hienThiKetQuaMCQTucThi()
+PC --> HV: 31. manHinhNopBaiThanhCong()
+deactivate PC
+deactivate Ctr
+end
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 04: ĐẤU TRƯỜNG TƯƠNG TÁC QUIZ ARENA THỜI GIAN THỰC
+' ==============================================================================
+@startuml SD_04
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "GiảngViênHost" as Host
+boundary "HostCockpitUI" as HostUI
+control "QuizArenaController" as Ctr
+boundary "MànHìnhChiếuLớp" as Screen
+boundary "PlayerUI" as PlayUI
+actor "HọcViênPlayer" as Player
+entity "CoSoDuLieu" as DB
+Host -> HostUI: 1. taoPhongQuiz(deThiId, customRules)
+activate HostUI
+HostUI -> Ctr: 2. khoiTaoPhongThiDau(thoiGian, cheDo3Tim)
+activate Ctr
+Ctr -> Screen: 3. sinhMaPIN6SoVaMoSanhCho(pinCode)
+activate Screen
+Screen --> Ctr: 4. hienThiSanhCho()
+Ctr --> HostUI: 5. moHostCockpit(pinCode)
+deactivate HostUI
+Player -> PlayUI: 6. nhapMaPINVaTen(pinCode, nickName)
+activate PlayUI
+PlayUI -> Ctr: 7. dangKyThamGia(pinCode, nickName)
+Ctr -> Screen: 8. capNhatDanhSachHocVienLive()
+Screen --> Ctr: 9. xacNhanHienThi()
+Ctr --> PlayUI: 10. sanSangChienDau()
+deactivate PlayUI
+Host -> HostUI: 11. bamBatDauTranDau()
+activate HostUI
+HostUI -> Ctr: 12. phatLenhBatDau()
+deactivate HostUI
+loop Cho từng câu hỏi trong trận đấu
+Ctr -> Screen: 13. phatSongCauHoi(noiDung, 4DapAn, timer)
+Ctr -> PlayUI: 14. dongBoCauHoiVeThietBi(4NutMau)
+activate PlayUI
+Player -> PlayUI: 15. chonDapAnNhanh(mauSac)
+PlayUI -> Ctr: 16. guiDapAnKemThoiGian(ms)
+deactivate PlayUI
+HostUI -> Ctr: 17. yeuCauCapNhatLiveBarChart()
+activate HostUI
+Ctr --> HostUI: 18. traVeTyLeChonABCD()
+deactivate HostUI
+Ctr -> DB: 19. tinhDiemSpeedBonusVaStreakBonus()
+activate DB
+DB --> Ctr: 20. traVeBangDiemTamThoi()
+deactivate DB
+alt Extension Point (CheDoSinhTon): Thí sinh trả lời sai
+Ctr -> PlayUI: 21. tru1TimVaRungManHinh()
+activate PlayUI
+opt Hết 3 tim
+Ctr -> PlayUI: 22. khoaQuyenTraLoiChuyenSangXem()
+end
+deactivate PlayUI
+end
+Ctr -> Screen: 23. hienThiDapAnDungVaBangXepHangTop10()
+end
+Ctr -> Screen: 24. vinhDanhPodiumTop3(Vang, Bac, Dong)
+Screen --> Ctr: 25. phatHieuUngPhaoHoa()
+deactivate Screen
+Host -> HostUI: 26. bamDongBoDiemSangCaThi()
+activate HostUI
+HostUI -> Ctr: 27. dongBoDiemSangBangDiemChinhThuc()
+Ctr -> DB: 28. luuDiemTongKetQuiz()
+activate DB
+DB --> Ctr: 29. xacNhanLuu()
+deactivate DB
+Ctr --> HostUI: 30. baoDongBoThanhCong()
+HostUI --> Host: 31. dongCaThiDau()
+deactivate HostUI
+deactivate Ctr
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 05: LẬP LỊCH THI & PHÂN BỔ PHÒNG MÁY 3D
+' ==============================================================================
+@startuml SD_05
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "AdminKhảoThí" as Admin
+boundary "GiaoDienQuanTri" as UI
+control "ExamScheduleController" as Ctr
+control "SeatingAlgorithm" as Algo
+entity "CoSoDuLieu" as DB
+boundary "CongTTSinhVien" as Portal
+actor "HọcViên" as HV
+Admin -> UI: 1. taoCaThiMoi(monHoc, ngayThi, gioBatDau, phongMayId)
+activate UI
+UI -> Ctr: 2. lapLichCaThi(thongTinCaThi)
+activate Ctr
+Ctr -> DB: 3. kiemTraTrungLichGantt(ngayThi, phongMayId)
+activate DB
+DB --> Ctr: 4. xacNhanLichTrong()
+deactivate DB
+Admin -> UI: 5. importDanhSachSinhVienDuThi(danhSachExcel)
+UI -> Ctr: 6. xuLyDanhSachSinhVien(danhSachSV)
+Ctr -> Algo: 7. kichHoatPhanBoChoNgoiVaCapSBD(caThiId, danhSachSV)
+activate Algo
+Algo -> DB: 8. kiemTraTrangThaiKYCCuaTungSinhVien()
+activate DB
+DB --> Algo: 9. traVeDanhSachTrangThaiKYC()
+deactivate DB
+alt Extension Point (ChuaHoanThanhKYC): Thí sinh chưa duyệt khuôn mặt
+Algo -> DB: 10. chuyenVaoDanhSachTamHoan(PENDING_KYC)
+activate DB
+DB --> Algo: 11. xacNhanTamHoan()
+deactivate DB
+Algo -> Portal: 12. guiThongBaoCanhBaoCanKYC(sinhVienId)
+activate Portal
+Portal --> HV: 13. hienThiThongBaoYeuCauKYCGap()
+deactivate Portal
+else Sinh viên đã có KYC APPROVED
+Algo -> Algo: 14. xaoTronNgauNhienDanhSach()
+Algo -> Algo: 15. sinhSoBaoDanh(SBD_Format)
+Algo -> Algo: 16. ganToaDoBanThi(Hang, Cot)
+Algo -> Algo: 17. sinhMaSeatPIN6So(SeatPIN)
+Algo -> DB: 18. luuPhanBoChoNgoi(SBD, ToaDo, SeatPIN)
+activate DB
+DB --> Algo: 19. xacNhanLuu()
+deactivate DB
+end
+Algo --> Ctr: 20. baoCaoKetQuaXepCho(tongSoXepDuoc, soLuongTamHoan)
+deactivate Algo
+Admin -> UI: 21. phanCongGiamThiCoiThi(giamThiId)
+UI -> Ctr: 22. ganGiamThi(caThiId, giamThiId)
+Ctr -> DB: 23. kiemTraDieuKienKYCGiamThi(giamThiId)
+activate DB
+DB --> Ctr: 24. xacNhanGiamThiDaKYC()
+deactivate DB
+Ctr -> DB: 25. napVectorVaoStaffWhitelist(caThiId, giamThiVector)
+activate DB
+DB --> Ctr: 26. xacNhanNapWhitelist()
+deactivate DB
+Ctr --> UI: 27. hoanTatLapLichVaXepCho()
+deactivate Ctr
+UI --> Admin: 28. hienThiSoDoPhongThiDaXepCho()
+deactivate UI
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 06: SOẠN THẢO & QUẢN LÝ ĐỀ THI STUDIO
+' ==============================================================================
+@startuml SD_06
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "GiảngViên" as GV
+boundary "AssessmentStudioUI" as Studio
+control "ExamParserController" as Parser
+control "ExamBankController" as Ctr
+entity "KhoDeThiDB" as DB
+actor "AdminKhảoThí" as Admin
+GV -> Studio: 1. moStudioTaoDeMoi(monHoc, thoiLuong)
+activate Studio
+alt Extension Point (NhapDeTuFile): Giảng viên tải file Word hoặc Excel
+GV -> Studio: 2. taiLenTepTin(Word/Excel)
+Studio -> Parser: 3. bocTachTuDongNoiDung(fileBuffer)
+activate Parser
+Parser -> Parser: 4. nhanDienCauHoiDapAnVaDapAnDung()
+Parser --> Studio: 5. traVeDanhSachCauHoiChuanHoa()
+deactivate Parser
+else Tự soạn câu hỏi trực tiếp trên giao diện
+GV -> Studio: 6. themCauHoiThuCong(MCQ, Essay)
+end
+opt Extension Point (MonHocLapTrinh): Thêm câu hỏi Code
+GV -> Studio: 7. themCauHoiLapTrinh()
+GV -> Studio: 8. cauHinhTestCase(Input, ExpectedOutput, GioiHanRAM_CPU)
+end
+GV -> Studio: 9. batDaoDeVaXaoDapAn(isShuffle: true)
+GV -> Studio: 10. bamLuuDeThi()
+Studio -> Ctr: 11. guiCauTrucDeThi(deThiData)
+activate Ctr
+Ctr -> DB: 12. luuDeThiVaoKho(trangThai: PENDING_APPROVAL)
+activate DB
+DB --> Ctr: 13. xacNhanDaLuu(deThiId)
+deactivate DB
+Ctr -> Admin: 14. guiThongBaoPheDuyetDeThi(deThiId)
+activate Admin
+Admin -> Admin: 15. kiemTraNoiDungDeThiVaBarem()
+Admin --> Ctr: 16. pheDuyetDeThi(APPROVED)
+deactivate Admin
+Ctr -> DB: 17. capNhatTrangThaiDe(APPROVED)
+activate DB
+DB --> Ctr: 18. xacNhan()
+deactivate DB
+Ctr --> Studio: 19. thongBaoDeThiDaSanSang()
+deactivate Ctr
+Studio --> GV: 20. hienThiBadgeDeThiDaDuyet()
+deactivate Studio
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 07: QUẢN LÝ CƠ CẤU & DỰNG PHÒNG THI 3D
+' ==============================================================================
+@startuml SD_07
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "AdminKhảoThí" as Admin
+boundary "GiaoDienQuanTri3D" as UI
+control "RoomInfrastructureController" as Ctr
+participant "«System»\nCameraCCTV" as Camera
+entity "CoSoDuLieu" as DB
+Admin -> UI: 1. khaiBaoCoCauDaoTao(Khoa, KhoaHoc, Lop)
+activate UI
+UI -> Ctr: 2. luuCoCauDaoTao(treeData)
+activate Ctr
+Ctr -> DB: 3. ghiNhanCayCoCau()
+activate DB
+DB --> Ctr: 4. xacNhanDaGhi()
+deactivate DB
+Ctr --> UI: 5. baoThanhCong()
+deactivate Ctr
+Admin -> UI: 6. thietLapPhongMay(tenPhong, soHang, soCot)
+UI -> UI: 7. dungMoHinhLuoi3D(Rows, Cols)
+opt Extension Point (PhatHienBanHong): Bàn máy bị hỏng phần cứng
+Admin -> UI: 8. clickViTriBanHong(Row, Col)
+UI -> UI: 9. doiMauXamVaKhoaViTriBan()
+end
+Admin -> UI: 10. khaiBaoCamera(rtspUrl, viTriLapDat)
+UI -> Ctr: 11. kiemTraKetNoiCamera(rtspUrl)
+activate Ctr
+Ctr -> Camera: 12. pingVaLayStreamRealtime(rtspUrl)
+activate Camera
+Camera --> Ctr: 13. traVeTinHieuVideoOnDinh()
+deactivate Camera
+Ctr --> UI: 14. baoTinHieuVideoTot()
+deactivate Ctr
+Admin -> UI: 15. keoVeDaGiacROI(ROIPolygonCanvas)
+Admin -> UI: 16. bamLuuCauHinhPhongThi()
+UI -> Ctr: 17. luuToanBoCauHinhPhong(phongId, gridData, cameraROI)
+activate Ctr
+Ctr -> DB: 18. ghiNhanPhongThi3DVaCamera()
+activate DB
+DB --> Ctr: 19. xacNhanLuuHoanTat()
+deactivate DB
+Ctr --> UI: 20. thongBaoPhongThiSanSang()
+deactivate Ctr
+UI --> Admin: 21. hienThiPhongThiSanSangChoCaThi()
+deactivate UI
+@enduml
+
+
+' ==============================================================================
+' NGHIỆP VỤ 08: CHẤM THI RỌC PHÁCH, HẬU KIỂM VI PHẠM AI & PHÚC KHẢO
+' ==============================================================================
+@startuml SD_08
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+autonumber
+
+control "GradingController" as Ctr
+entity "CoSoDuLieu" as DB
+actor "GiảngViênChấmThi" as GV
+actor "AdminKhảoThí" as Admin
+boundary "CongTTSinhVien" as Portal
+actor "HọcViên" as HV
+actor "HộiĐồngPhúcKhảo" as Board
+Ctr -> DB: 1. caThiKetThuc_TuDongChamMCQ()
+activate Ctr
+activate DB
+DB --> Ctr: 2. xacNhanDaLuuDiemMCQ()
+deactivate DB
+Ctr -> Ctr: 3. thucHienRocPhachDienTu(AnonymousHashing)
+Ctr -> GV: 4. chuyenBaiTuLuanVaCodeTheoMaPhach(maPhach)
+activate GV
+GV -> GV: 5. chamDiemTheoBaremVaTestCases()
+GV --> Ctr: 6. nopBangDiemRocPhach(maPhach, diemSo, nhanXet)
+deactivate GV
+Ctr -> Ctr: 7. ghepPhachGiaiMaDanhTinh()
+Ctr -> Admin: 8. moBaoCaoToanVenVaBangChungAI()
+activate Admin
+Admin -> Admin: 9. doiSoatSnapshotViPhamCameraVaWebcam()
+alt Xác nhận có vi phạm quy chế
+Admin -> Ctr: 10. apMucPhatTruDiem(loaiViPham, diemTru)
+else Hiểu lầm hoặc Miễn trừ Giám thị
+Admin -> Ctr: 11. xacNhanMienTruVaGiuNguyenDiem()
+end
+Admin -> Ctr: 12. bamPheDuyetVaCongBoDiem()
+deactivate Admin
+Ctr -> DB: 13. capNhatTrangThaiDiem(PUBLISHED)
+activate DB
+DB --> Ctr: 14. xacNhanCongBo()
+deactivate DB
+Ctr -> Portal: 15. phatThongBaoDiemThi(caThiId)
+activate Portal
+Portal --> HV: 16. xemDiemKiemTraDapAnVaLoiGiai()
+opt Extension Point (KhieuNaiDiemThi): Phúc khảo trong 7 ngày
+HV -> Portal: 17. nopDonPhucKhaoOnline(lyDo, cauHoiKhieuNai)
+Portal -> Ctr: 18. chuyenDonPhucKhao(donPhucKhaoData)
+Ctr -> Board: 19. chuyenBaiGocVaDonNhoThamDinh()
+activate Board
+Board -> Board: 20. hoiDongChamLaiDocLapVaKiemTraLog()
+Board --> Ctr: 21. ketLuanDiemMoi(diemDieuChinh)
+deactivate Board
+Ctr -> DB: 22. capNhatDiemPhucKhaoChinhThuc()
+activate DB
+DB --> Ctr: 23. xacNhan()
+deactivate DB
+Ctr --> Portal: 24. guiKetQuaPhucKhao()
+Portal --> HV: 25. nhanThongBaoDiemMoiChinhThuc()
+end
+deactivate Portal
+deactivate Ctr
+@enduml
+
+

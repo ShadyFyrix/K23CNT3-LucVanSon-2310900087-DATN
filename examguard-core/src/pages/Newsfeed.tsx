@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import {
   Newspaper, Pin, Heart, MessageSquare, Send, Plus, Search, Filter,
   Share2, Shield, Building2, Users, User, Check, X, Paperclip,
   Megaphone, Award, FileText, Calendar, Sparkles, AlertCircle,
-  ChevronDown, ChevronUp, Eye
+  ChevronDown, ChevronUp, Eye, ExternalLink, GraduationCap, Clock
 } from 'lucide-react';
 import { apiClient } from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
 const CATEGORY_MAP: Record<string, { label: string; icon: any; color: string; badge: string }> = {
-  announcement: { label: 'Thông báo khảo thí & Lịch thi', icon: Megaphone, color: 'text-amber-500 bg-amber-50 border-amber-200', badge: 'bg-amber-500' },
-  event: { label: 'Sự kiện thi & Hướng dẫn', icon: Calendar, color: 'text-indigo-500 bg-indigo-50 border-indigo-200', badge: 'bg-indigo-500' },
-  policy: { label: 'Quy chế thi & Kỷ luật phòng thi', icon: FileText, color: 'text-emerald-500 bg-emerald-50 border-emerald-200', badge: 'bg-emerald-500' },
-  recognition: { label: 'Công bố điểm & Khen thưởng', icon: Award, color: 'text-rose-500 bg-rose-50 border-rose-200', badge: 'bg-rose-500' },
-  general: { label: 'Tin tức chung', icon: Newspaper, color: 'text-blue-500 bg-blue-50 border-blue-200', badge: 'bg-blue-500' }
+  announcement: { label: 'Thông báo khảo thí & Lịch thi', icon: Megaphone, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60', badge: 'bg-amber-500' },
+  event: { label: 'Sự kiện thi & Hướng dẫn', icon: Calendar, color: 'text-sky-500 bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800/60', badge: 'bg-sky-500' },
+  policy: { label: 'Quy chế thi & Kỷ luật phòng thi', icon: FileText, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60', badge: 'bg-emerald-500' },
+  recognition: { label: 'Công bố điểm & Khen thưởng', icon: Award, color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60', badge: 'bg-rose-500' },
+  general: { label: 'Tin tức chung', icon: Newspaper, color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/60', badge: 'bg-indigo-500' }
 };
 
 const DEPARTMENTS = [
@@ -26,8 +28,11 @@ const DEPARTMENTS = [
 ];
 
 export default function Newsfeed() {
+  const navigate = useNavigate();
   const { user, can, hasRole } = useAuth();
   const canCreatePost = hasRole('admin') || hasRole('superadmin') || hasRole('academic') || hasRole('teacher') || can('create_post');
+  const isManager = hasRole('admin') || hasRole('superadmin') || hasRole('academic') || hasRole('teacher');
+
   const [posts, setPosts] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -50,7 +55,10 @@ export default function Newsfeed() {
     targetDepartments: [] as string[],
     targetRoles: [] as string[],
     targetUsers: [] as string[],
-    attachmentUrl: ''
+    attachmentUrl: '',
+    actionLink: '',
+    actionText: '',
+    examSessionCode: ''
   });
 
   // Comment Inputs state for each post
@@ -60,12 +68,12 @@ export default function Newsfeed() {
     try {
       setLoading(true);
       const [resPosts, resRoles, resUsers] = await Promise.all([
-        apiClient.get(`/posts?category=${activeCategory}&search=${searchTerm}`),
+        apiClient.get(`/posts?category=${activeCategory}&search=${searchTerm}`).catch(() => ({ data: { success: true, data: [] } })),
         apiClient.get('/roles').catch(() => ({ data: { data: [] } })),
         apiClient.get('/users').catch(() => ({ data: { data: [] } }))
       ]);
 
-      if (resPosts.data.success) {
+      if (resPosts.data?.success && Array.isArray(resPosts.data.data)) {
         setPosts(resPosts.data.data);
       }
       if (resRoles.data?.data) {
@@ -74,9 +82,8 @@ export default function Newsfeed() {
       if (resUsers.data?.data) {
         setUsersList(resUsers.data.data);
       }
-    } catch (error) {
-      console.error('Error fetching newsfeed:', error);
-      toast.error("Lỗi khi tải bản tin doanh nghiệp");
+    } catch (_) {
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -89,7 +96,7 @@ export default function Newsfeed() {
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPost.title.trim() || !newPost.content.trim()) {
-      return toast.error("Vui lòng nhập đầy đủ tiêu đề và nội dung tin tức");
+      return toast.error("Vui lòng nhập đầy đủ tiêu đề và nội dung thông báo");
     }
 
     try {
@@ -101,7 +108,7 @@ export default function Newsfeed() {
 
       const res = await apiClient.post('/posts', payload);
       if (res.data.success) {
-        toast.success("Đăng bản tin doanh nghiệp thành công!");
+        toast.success("Đã đăng thông báo khảo thí & học vụ thành công!");
         setIsCreateModalOpen(false);
         setNewPost({
           title: '',
@@ -112,7 +119,10 @@ export default function Newsfeed() {
           targetDepartments: [],
           targetRoles: [],
           targetUsers: [],
-          attachmentUrl: ''
+          attachmentUrl: '',
+          actionLink: '',
+          actionText: '',
+          examSessionCode: ''
         });
         fetchData();
       }
@@ -145,6 +155,18 @@ export default function Newsfeed() {
     }
   };
 
+  const handleTogglePin = async (postId: string, currentStatus: boolean) => {
+    try {
+      const res = await apiClient.put(`/posts/${postId}`, { isPinned: !currentStatus });
+      if (res.data.success) {
+        toast.success(!currentStatus ? "Đã ghim bài viết lên đầu trang" : "Đã bỏ ghim bài viết");
+        fetchData();
+      }
+    } catch (err) {
+      toast.error("Không thể thay đổi trạng thái ghim");
+    }
+  };
+
   const handleAddComment = async (postId: string) => {
     const text = commentInputs[postId];
     if (!text || !text.trim()) return;
@@ -162,81 +184,169 @@ export default function Newsfeed() {
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (!window.confirm("Xác nhận xóa bản tin này?")) return;
+    if (!window.confirm("Xác nhận xóa thông báo này?")) return;
     try {
       const res = await apiClient.delete(`/posts/${postId}`);
       if (res.data.success) {
-        toast.success("Đã xóa bản tin");
+        toast.success("Đã xóa thông báo");
         if (expandedPostId === postId) setExpandedPostId(null);
         fetchData();
       }
     } catch (err) {
-      toast.error("Không thể xóa bản tin");
+      toast.error("Không thể xóa thông báo");
     }
   };
 
   const toggleExpandPost = (postId: string) => {
     if (expandedPostId === postId) {
-      setExpandedPostId(null); // Thu gọn lại
+      setExpandedPostId(null);
     } else {
-      setExpandedPostId(postId); // Mở rộng đúng 1 tin này, đóng tin cũ
+      setExpandedPostId(postId);
+    }
+  };
+
+  const applyTemplate = (type: 'schedule' | 'grade' | 'policy') => {
+    if (type === 'schedule') {
+      setNewPost({
+        title: '[KHẢO THÍ] Lịch Thi Học Kỳ 1 & Kế Hoạch Vận Hành Buồng Thi 3D Biometric AI',
+        content: `Hội đồng Khảo thí thông báo chính thức Thời khóa biểu thi Kết thúc Học phần KHKT Học kỳ 1. Tất cả thí sinh và cán bộ coi thi bắt buộc tuân thủ quy trình kiểm định sinh trắc học Face ID trước giờ mở phòng 15 phút.\n\n📌 Yêu cầu trọng tâm:\n1. Thí sinh mang thẻ sinh viên hoặc CCCD gắn chip để đối soát tại cửa buồng thi.\n2. Kiểm tra tài khoản ExamGuard AI trên Cổng sinh viên, kiểm tra trạng thái KYC đã hoàn tất hay chưa.\n3. Đúng giờ G, hệ thống sẽ mở cổng làm bài và kích hoạt giám thị AI đa góc.`,
+        category: 'announcement',
+        isPinned: true,
+        targetType: 'all',
+        targetDepartments: [],
+        targetRoles: [],
+        targetUsers: [],
+        attachmentUrl: '',
+        actionLink: '/exam-sessions',
+        actionText: 'Xem Lịch Thi & Sơ Đồ Phòng Máy [Gantt]',
+        examSessionCode: 'CA-20261025-P302-300'
+      });
+    } else if (type === 'grade') {
+      setNewPost({
+        title: '[CÔNG BỐ ĐIỂM] Bảng Điểm Thi & Đáp Án Học Phần Kỹ Thuật Lập Trình (KTLT)',
+        content: `Bộ môn Kỹ thuật Lập trình đã hoàn tất công tác chấm trắc nghiệm tự động và rọc phách điểm thi thực hành ca thi kết thúc học phần.\n\n📊 Thống kê sơ bộ ca thi:\n• Điểm trung bình: 7.85 / 10.00\n• Tỷ lệ đạt (>= 5.0): 94.2%\n• Điểm cao nhất: 10.00 (Thí sinh Nguyễn Công Tùng & Lục Văn Sơn)\n• Uy tín AI trung bình: 98/100 (Không phát hiện gian lận nghiêm trọng)\n\nSinh viên vui lòng bấm nút "Tra Cứu Bảng Điểm & Đáp Án Chi Tiết" bên dưới để đối chiếu bài làm, thang điểm chi tiết. Hạn chót gửi đơn phúc khảo trực tuyến: 17/11/2026.`,
+        category: 'recognition',
+        isPinned: true,
+        targetType: 'all',
+        targetDepartments: [],
+        targetRoles: [],
+        targetUsers: [],
+        attachmentUrl: '',
+        actionLink: '/exam/result?view=student',
+        actionText: 'Tra Cứu Bảng Điểm & Đáp Án Chi Tiết',
+        examSessionCode: 'CA-20261025-P302-300'
+      });
+    } else if (type === 'policy') {
+      setNewPost({
+        title: '[QUY CHẾ] Quy Định Phòng Thi Chuẩn Zero-Trust & Chế Tài Xử Lý Gian Lận AI',
+        content: `Ban Giám thị Khảo thí ban hành Quyết định số 482/QĐ-KT về việc áp dụng Giám thị Đa tầng AI (Edge CCTV + Face Verification 5 góc):\n\n🚫 Các hành vi vi phạm sẽ bị hệ thống tự động ghi biên bản điện tử và trừ điểm uy tín (Trust Score):\n1. Quay đầu góc nghiêng quá 35 độ kéo dài trên 5 giây.\n2. Xuất hiện khuôn mặt thứ hai hoặc vắng mặt khỏi vùng quét camera.\n3. Chuyển tab trình duyệt hoặc kết nối màn hình phụ / USB không hợp lệ.\n4. Sử dụng tai nghe bluetooth hoặc thiết bị ngoại vi trái phép.`,
+        category: 'policy',
+        isPinned: false,
+        targetType: 'all',
+        targetDepartments: [],
+        targetRoles: [],
+        targetUsers: [],
+        attachmentUrl: '',
+        actionLink: '/student',
+        actionText: 'Xem Quy Chế Phòng Thi SEB',
+        examSessionCode: ''
+      });
     }
   };
 
   const pinnedPosts = posts.filter(p => p.isPinned);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } }
+  };
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 font-sans">
-      {/* Header Banner */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 text-white p-8 rounded-3xl shadow-xl border border-blue-500/20 dark:border-slate-800 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-emerald-300 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2">
-            <Sparkles className="w-4 h-4 animate-pulse" /> Truyền thông & Thông báo Khảo thí
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-5xl mx-auto pb-16 font-sans select-none"
+    >
+      {/* ─── 1. BENTO HERO HEADER STAGE ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Truyền Thông & Quy Chế Khảo Thí
+            </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Bản Tin Khảo Thí & Quy Chế Thi</h1>
-          <p className="text-blue-100 dark:text-slate-300 text-sm mt-1 max-w-xl">
-            Cập nhật những thông báo khảo thí, lịch thi chính thức và nội quy phòng thi trực tuyến ExamGuard AI.
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Bản Tin & <span className="eg-text-gradient">Quy Chế Thi Cử</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Cập nhật thông báo khảo thí, thời khóa biểu thi chính thức và các quy định kỷ luật phòng thi công nghệ cao ExamGuard AI.
           </p>
         </div>
 
         {canCreatePost && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="relative z-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 shrink-0 hover:scale-105 cursor-pointer"
+            className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md shrink-0 text-white rounded-xl"
           >
-            <Plus className="w-5 h-5 stroke-[3]" /> Đăng Bản Tin Mới
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Đăng thông báo mới</span>
           </button>
         )}
-      </header>
+      </motion.div>
 
-      {/* PINNED ANNOUNCEMENT BANNER */}
+      {/* ─── 2. PINNED ANNOUNCEMENT BANNER ─── */}
       {pinnedPosts.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-black text-amber-600 uppercase tracking-widest px-1">
-            <Pin className="w-4 h-4 fill-amber-500 text-amber-600" /> Thông báo Ghim Nổi Bật ({pinnedPosts.length})
+        <motion.div variants={itemVariants} className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-black text-[var(--color-azure)] uppercase tracking-widest px-1">
+            <Pin className="w-4 h-4 fill-[var(--color-azure)] text-[var(--color-azure)]" /> Thông báo Ghim Nổi Bật ({pinnedPosts.length})
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pinnedPosts.map(post => (
-              <div key={post._id} className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-6 relative overflow-hidden backdrop-blur-sm shadow-md flex flex-col justify-between">
+              <div key={post._id} className="eg-cyber-card p-6 border-[var(--color-electric)]/40 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="bg-amber-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider flex items-center gap-1">
-                      <Pin className="w-3 h-3 fill-white" /> TIN NỔI BẬT
+                    <span className="eg-glass-pill text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider flex items-center gap-1 text-[var(--color-azure)]">
+                      <Pin className="w-3 h-3 fill-[var(--color-azure)]" /> TIN NỔI BẬT
                     </span>
-                    <span className="text-xs text-amber-700 font-bold">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold font-mono">
                       {new Date(post.createdAt).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug">{post.title}</h3>
-                  <p className="text-slate-700 text-sm line-clamp-2 leading-relaxed whitespace-pre-line font-medium">{post.content}</p>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white mb-2 leading-snug">{post.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-300 text-xs line-clamp-2 leading-relaxed whitespace-pre-line font-medium">{post.content}</p>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-amber-200/60 flex items-center justify-between">
+                {post.actionLink && (
+                  <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/10">
+                    <button
+                      onClick={() => navigate(post.actionLink)}
+                      className="w-full eg-btn-gradient py-2 px-3 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                    >
+                      <span>{post.actionText || 'Xem Ngay'}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-xs">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[var(--color-electric)] to-[var(--color-azure)] text-white font-bold flex items-center justify-center text-xs">
                       {post.author?.fullName?.charAt(0) || 'A'}
                     </div>
-                    <span className="text-xs font-extrabold text-slate-800">{post.author?.fullName}</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{post.author?.fullName || 'Hội đồng Khảo thí'}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -246,24 +356,24 @@ export default function Newsfeed() {
                         if (el) el.scrollIntoView({ behavior: 'smooth' });
                       }, 100);
                     }}
-                    className="text-xs font-black text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-amber-500/20 px-3 py-1.5 rounded-xl transition-all"
+                    className="text-xs font-bold text-[var(--color-azure)] hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    Đọc bản tin này <Eye className="w-3.5 h-3.5" />
+                    Đọc bản tin <Eye className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* FILTER TABS & SEARCH */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+      {/* ─── 3. FILTER TABS & SEARCH ─── */}
+      <motion.div variants={itemVariants} className="eg-cyber-card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
           <button
             onClick={() => setActiveCategory('all')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all ${
-              activeCategory === 'all' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              activeCategory === 'all' ? 'eg-glass-pill shadow-xs text-[var(--color-azure)]' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Tất cả bài viết ({posts.length})
@@ -274,8 +384,8 @@ export default function Newsfeed() {
               <button
                 key={key}
                 onClick={() => setActiveCategory(key)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-2 ${
-                  activeCategory === key ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeCategory === key ? 'eg-glass-pill shadow-xs text-[var(--color-azure)]' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -286,27 +396,37 @@ export default function Newsfeed() {
         </div>
 
         <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
           <input
             type="text"
-            placeholder="Tìm kiếm bản tin..."
+            placeholder="Tìm kiếm thông báo, điểm thi..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-10 pr-4 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-[var(--color-electric)] outline-none transition-all"
           />
         </div>
-      </div>
+      </motion.div>
 
-      {/* POSTS LIST (ACCORDION SINGLE EXPANDED) */}
+      {/* ─── 4. POSTS LIST (ACCORDION SINGLE EXPANDED) ─── */}
       {loading ? (
         <div className="flex justify-center p-12">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-10 h-10 border-4 border-[var(--color-electric)] border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 space-y-3">
-          <Newspaper className="w-12 h-12 text-slate-300 mx-auto" />
-          <h3 className="font-extrabold text-slate-800">Chưa có bản tin nào</h3>
-          <p className="text-xs text-slate-400">Hãy là người đầu tiên tạo tin tức hoạt động cho doanh nghiệp!</p>
+        <div className="eg-cyber-card p-12 text-center border-dashed border-slate-300 dark:border-white/20 space-y-3">
+          <Newspaper className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto" />
+          <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-base">Chưa có thông báo khảo thí nào</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            Hội đồng khảo thí và Giảng viên chưa đăng thông báo lịch thi hoặc công bố điểm. Bạn có thể bấm "Đăng thông báo mới" để tạo bài viết.
+          </p>
+          {canCreatePost && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="eg-btn-gradient px-4 py-2 rounded-xl text-xs font-black text-white inline-flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer mt-2"
+            >
+              <Plus className="w-4 h-4" /> Tạo thông báo đầu tiên
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -317,54 +437,67 @@ export default function Newsfeed() {
             const isLiked = (post.likes || []).some((u: any) => (u._id || u).toString() === userId?.toString());
             const commentsList = post.comments || [];
             const isExpanded = expandedPostId === post._id;
+            const isAuthor = userId && (post.author?._id || post.author)?.toString() === userId?.toString();
 
             return (
               <article
                 id={`post-${post._id}`}
                 key={post._id}
-                className={`bg-white rounded-3xl shadow-sm border transition-all duration-300 ${
-                  isExpanded ? 'border-indigo-400 shadow-xl ring-2 ring-indigo-500/10' : 'border-slate-200/80 hover:border-indigo-200'
+                className={`eg-cyber-card transition-all duration-300 ${
+                  isExpanded ? 'border-[var(--color-electric)] ring-2 ring-[var(--color-electric)]/20 shadow-xl' : 'hover:border-slate-300 dark:hover:border-white/20'
                 }`}
               >
                 {/* Author Header */}
                 <div className="p-5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black flex items-center justify-center text-base shadow-md shrink-0">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[var(--color-electric)] to-[var(--color-azure)] text-white font-black flex items-center justify-center text-base shadow-md shrink-0">
                       {post.author?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-black text-slate-900 text-sm leading-tight">{post.author?.fullName || 'Thành viên'}</h4>
+                        <h4 className="font-black text-slate-900 dark:text-white text-sm leading-tight">
+                          {post.author?.fullName || 'Hội đồng Khảo thí'}
+                        </h4>
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${cat.color} flex items-center gap-1`}>
                           <CategoryIcon className="w-3 h-3" />
                           {cat.label}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                        {post.author?.email} · {new Date(post.createdAt).toLocaleString('vi-VN')}
+                      <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium mt-0.5">
+                        {post.author?.email || 'khao-thi@examguard.edu.vn'} · {new Date(post.createdAt).toLocaleString('vi-VN')}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {/* Target Audience Badge */}
-                    <span className="hidden sm:flex text-[10px] font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 items-center gap-1">
-                      {post.targetType === 'all' && <><Users className="w-3 h-3 text-emerald-500" /> Tất cả nhân sự</>}
-                      {post.targetType === 'department' && <><Building2 className="w-3 h-3 text-indigo-500" /> Theo phòng ban ({post.targetDepartments?.length})</>}
-                      {post.targetType === 'roles' && <><Shield className="w-3 h-3 text-amber-500" /> Theo vai trò ({post.targetRoles?.length})</>}
-                      {post.targetType === 'users' && <><User className="w-3 h-3 text-purple-500" /> Chỉ định ({post.targetUsers?.length} người)</>}
+                    <span className="hidden sm:flex text-[10px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 items-center gap-1">
+                      {post.targetType === 'all' && <><Users className="w-3 h-3 text-emerald-500" /> Toàn trường</>}
+                      {post.targetType === 'department' && <><Building2 className="w-3 h-3 text-indigo-500" /> Khoa CNTT</>}
+                      {post.targetType === 'roles' && <><Shield className="w-3 h-3 text-amber-500" /> Theo vai trò</>}
+                      {post.targetType === 'users' && <><User className="w-3 h-3 text-purple-500" /> Chỉ định</>}
                     </span>
 
-                    {post.isPinned && (
-                      <span className="bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <Pin className="w-3 h-3 fill-white" /> Ghim
-                      </span>
+                    {/* Pin/Unpin Button for Manager */}
+                    {isManager && (
+                      <button
+                        onClick={() => handleTogglePin(post._id, Boolean(post.isPinned))}
+                        className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                          post.isPinned
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                            : 'text-slate-400 hover:text-amber-500 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                        }`}
+                        title={post.isPinned ? "Bỏ ghim" : "Ghim bài viết"}
+                      >
+                        <Pin className={`w-4 h-4 ${post.isPinned ? 'fill-amber-500' : ''}`} />
+                      </button>
                     )}
 
-                    {((user?._id || (user as any)?.id) === (post.author?._id || post.author) || can('admin')) && (
+                    {/* Delete button */}
+                    {(isAuthor || hasRole('admin') || hasRole('superadmin')) && (
                       <button
                         onClick={() => handleDeletePost(post._id)}
-                        className="text-slate-400 hover:text-rose-500 p-2 rounded-xl hover:bg-rose-50 transition-all"
+                        className="text-slate-400 hover:text-rose-500 p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer"
                         title="Xóa bài"
                       >
                         <X className="w-4 h-4" />
@@ -377,15 +510,14 @@ export default function Newsfeed() {
                 <div className="px-6 pb-4 space-y-3">
                   <h3
                     onClick={() => toggleExpandPost(post._id)}
-                    className="text-lg font-black text-slate-900 leading-snug cursor-pointer hover:text-indigo-600 transition-colors"
+                    className="text-lg font-black text-slate-900 dark:text-white leading-snug cursor-pointer hover:text-[var(--color-azure)] transition-colors"
                   >
                     {post.title}
                   </h3>
 
                   {isExpanded ? (
-                    /* EXPANDED CONTENT FULL */
                     <div className="space-y-4 animate-in fade-in duration-300">
-                      <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-medium bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                      <div className="text-slate-700 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-line font-medium bg-slate-50 dark:bg-white/[0.03] p-4 rounded-2xl border border-slate-200/60 dark:border-white/10">
                         {post.content}
                       </div>
 
@@ -398,34 +530,60 @@ export default function Newsfeed() {
                               href={url}
                               target="_blank"
                               rel="noreferrer"
-                              className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all shadow-sm"
+                              className="bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all shadow-sm"
                             >
-                              <Paperclip className="w-4 h-4 text-indigo-600" /> Tệp đính kèm #{idx + 1}
+                              <Paperclip className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Tệp đính kèm #{idx + 1}
                             </a>
                           ))}
                         </div>
                       )}
                     </div>
                   ) : (
-                    /* COLLAPSED COMPACT PREVIEW (2 LINES MAX) */
                     <div
                       onClick={() => toggleExpandPost(post._id)}
-                      className="text-slate-600 text-xs leading-relaxed font-medium line-clamp-2 cursor-pointer hover:text-slate-900"
+                      className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-2 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                     >
                       {post.content}
+                    </div>
+                  )}
+
+                  {/* DIRECT ACTION CTA BUTTON FOR EXAM SESSIONS / GRADE LOOKUP */}
+                  {post.actionLink && (
+                    <div className="mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-slate-100/90 to-slate-50/90 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[var(--color-azure)] shrink-0" />
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Hành động trực tiếp: {post.actionText || 'Tra cứu ngay'}
+                          </div>
+                          {post.examSessionCode && (
+                            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                              Mã ca thi: <span className="text-[var(--color-azure)] font-bold">{post.examSessionCode}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate(post.actionLink)}
+                        className="eg-btn-gradient px-4 py-2 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+                      >
+                        <span>{post.actionText || 'Truy Cập Ngay'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>
 
                 {/* BOTTOM FOOTER WITH SINGLE EXPAND/COLLAPSE ACTION */}
-                <div className="px-6 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
+                <div className="px-6 py-3 bg-slate-50/80 dark:bg-white/[0.02] border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleToggleLike(post._id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                         isLiked
-                          ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-sm'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                          : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10'
                       }`}
                     >
                       <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -434,9 +592,9 @@ export default function Newsfeed() {
 
                     <button
                       onClick={() => toggleExpandPost(post._id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-100 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black hover:bg-slate-100 dark:hover:bg-white/10 transition-all cursor-pointer"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
+                      <MessageSquare className="w-3.5 h-3.5 text-[var(--color-azure)]" />
                       <span>{commentsList.length} Bình luận</span>
                     </button>
                   </div>
@@ -444,44 +602,44 @@ export default function Newsfeed() {
                   {/* BUTTON XEM THÊM (READ MORE / COLLAPSE) */}
                   <button
                     onClick={() => toggleExpandPost(post._id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm ${
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
                       isExpanded
-                        ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                        ? 'bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-white/20'
+                        : 'eg-btn-gradient text-white shadow-md'
                     }`}
                   >
                     {isExpanded ? (
                       <>Thu gọn <ChevronUp className="w-4 h-4 stroke-[3]" /></>
                     ) : (
-                      <>Xem thêm <ChevronDown className="w-4 h-4 stroke-[3]" /></>
+                      <>Xem chi tiết <ChevronDown className="w-4 h-4 stroke-[3]" /></>
                     )}
                   </button>
                 </div>
 
                 {/* COMMENTS THREAD (ONLY RENDERED WHEN EXPANDED) */}
                 {isExpanded && (
-                  <div className="bg-slate-50/80 p-6 border-t border-slate-200 space-y-4 animate-in fade-in duration-300">
-                    <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-indigo-600" /> Các bình luận ({commentsList.length})
+                  <div className="bg-slate-50/80 dark:bg-white/[0.02] p-6 border-t border-slate-200 dark:border-white/10 space-y-4 animate-in fade-in duration-300">
+                    <h4 className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-[var(--color-azure)]" /> Ý kiến trao đổi & giải đáp ({commentsList.length})
                     </h4>
 
                     {/* Add Comment */}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--color-electric)] to-[var(--color-azure)] text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
                         {user?.fullName?.charAt(0) || 'U'}
                       </div>
                       <div className="flex-1 flex gap-2">
                         <input
                           type="text"
-                          placeholder="Viết bình luận của bạn..."
+                          placeholder="Viết thắc mắc hoặc phản hồi của bạn..."
                           value={commentInputs[post._id] || ''}
                           onChange={e => setCommentInputs({ ...commentInputs, [post._id]: e.target.value })}
                           onKeyDown={e => { if (e.key === 'Enter') handleAddComment(post._id); }}
-                          className="flex-1 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-xs"
+                          className="flex-1 bg-white dark:bg-[#141527] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-[var(--color-electric)] shadow-xs"
                         />
                         <button
                           onClick={() => handleAddComment(post._id)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-2xl transition-all shadow-md shrink-0"
+                          className="eg-btn-gradient text-white p-2.5 rounded-2xl transition-all shadow-md shrink-0 cursor-pointer"
                         >
                           <Send className="w-4 h-4" />
                         </button>
@@ -491,16 +649,16 @@ export default function Newsfeed() {
                     {/* Comments Thread */}
                     <div className="space-y-3">
                       {commentsList.map((c: any, idx: number) => (
-                        <div key={idx} className="flex gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">
+                        <div key={idx} className="flex gap-3 bg-white dark:bg-[#141527] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-white/10 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-xs shrink-0">
                             {c.user?.fullName?.charAt(0) || 'U'}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-slate-900">{c.user?.fullName || 'Thành viên'}</span>
+                              <span className="font-bold text-xs text-slate-900 dark:text-white">{c.user?.fullName || 'Thành viên'}</span>
                               <span className="text-[10px] text-slate-400 font-medium">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
                             </div>
-                            <p className="text-xs text-slate-700 mt-1 font-medium leading-relaxed">{c.content}</p>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-medium leading-relaxed">{c.content}</p>
                           </div>
                         </div>
                       ))}
@@ -516,42 +674,85 @@ export default function Newsfeed() {
         </div>
       )}
 
-      {/* CREATE POST MODAL */}
+      {/* ─── 5. CREATE POST MODAL (FOR LECTURER / ADMIN) ─── */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b pb-4">
-              <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-emerald-500" /> Tạo Bản Tin Doanh Nghiệp Mới
-              </h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0B0C1E] rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-[var(--color-azure)]" /> Đăng Thông Báo Khảo Thí & Học Vụ
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Đăng thông báo lịch thi, công bố bảng điểm, hoặc phổ biến quy chế thi cho toàn trường.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePost} className="space-y-5">
+            {/* QUICK TEMPLATE SELECTION FOR LECTURERS & ADMIN */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2">
+              <label className="text-xs font-black uppercase text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--color-azure)]" /> Chọn nhanh biểu mẫu thông báo:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('schedule')}
+                  className="p-2.5 rounded-xl text-left border border-amber-300 dark:border-amber-700/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span>📢 Lịch Thi Học Kỳ</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('grade')}
+                  className="p-2.5 rounded-xl text-left border border-rose-300 dark:border-rose-700/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Award className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>🎓 Công Bố Bảng Điểm</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('policy')}
+                  className="p-2.5 rounded-xl text-left border border-emerald-300 dark:border-emerald-700/50 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span>📄 Quy Chế Phòng Thi</span>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreatePost} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase mb-1.5">Tiêu đề bản tin</label>
+                <label className="block text-xs font-black text-slate-600 dark:text-slate-300 uppercase mb-1.5">
+                  Tiêu đề thông báo *
+                </label>
                 <input
                   required
                   type="text"
-                  placeholder="Ví dụ: Thông báo lịch nghỉ lễ Quốc Khánh..."
+                  placeholder="Ví dụ: [KHẢO THÍ] Lịch Thi KTHP Kỹ thuật lập trình Học kỳ 1..."
                   value={newPost.title}
                   onChange={e => setNewPost({ ...newPost, title: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[var(--color-electric)]"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black text-slate-600 uppercase mb-1.5">Chuyên mục</label>
+                  <label className="block text-xs font-black text-slate-600 dark:text-slate-300 uppercase mb-1.5">Chuyên mục</label>
                   <select
                     value={newPost.category}
                     onChange={e => setNewPost({ ...newPost, category: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold outline-none"
+                    className="w-full bg-slate-50 dark:bg-[#141527] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white outline-none"
                   >
                     {Object.entries(CATEGORY_MAP).map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
+                      <option key={k} value={k} className="dark:bg-[#141527]">{v.label}</option>
                     ))}
                   </select>
                 </div>
@@ -564,170 +765,95 @@ export default function Newsfeed() {
                       onChange={e => setNewPost({ ...newPost, isPinned: e.target.checked })}
                       className="w-5 h-5 rounded-lg text-amber-500 focus:ring-amber-500"
                     />
-                    <span className="text-xs font-black text-amber-700 flex items-center gap-1">
+                    <span className="text-xs font-black text-amber-700 dark:text-amber-400 flex items-center gap-1">
                       <Pin className="w-4 h-4 fill-amber-500" /> Ghim bài viết lên đầu trang
                     </span>
                   </label>
                 </div>
               </div>
 
-              {/* TARGET AUDIENCE SELECTION */}
-              <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                <label className="block text-xs font-black text-slate-700 uppercase flex items-center gap-2">
-                  <Users className="w-4 h-4 text-indigo-600" /> Đánh mục tiêu Đối tượng nhận tin (Audience Targeting)
+              {/* ACTION LINK / EXAM SESSION INTEGRATION */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-[var(--color-azure)]" /> Nút Điều Hướng Trực Tiếp (Action CTA)
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: 'all', label: 'Tất cả nhân sự', icon: Users },
-                    { id: 'department', label: 'Theo Phòng ban', icon: Building2 },
-                    { id: 'roles', label: 'Theo Vai trò', icon: Shield },
-                    { id: 'users', label: 'Cá nhân cụ thể', icon: User }
-                  ].map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setNewPost({ ...newPost, targetType: item.id })}
-                      className={`p-2.5 rounded-xl text-[11px] font-black transition-all border flex items-center justify-center gap-1.5 ${
-                        newPost.targetType === item.id
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}
-                    >
-                      <item.icon className="w-3.5 h-3.5" />
-                      {item.label}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1">Đường dẫn liên kết:</span>
+                    <input
+                      type="text"
+                      placeholder="/exam-sessions hoặc /exam/result"
+                      value={newPost.actionLink}
+                      onChange={e => setNewPost({ ...newPost, actionLink: e.target.value })}
+                      className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1">Tên nút bấm:</span>
+                    <input
+                      type="text"
+                      placeholder="Xem Lịch Thi / Tra Cứu Điểm"
+                      value={newPost.actionText}
+                      onChange={e => setNewPost({ ...newPost, actionText: e.target.value })}
+                      className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1">Mã ca thi (nếu có):</span>
+                    <input
+                      type="text"
+                      placeholder="CA-20261025-P302-300"
+                      value={newPost.examSessionCode}
+                      onChange={e => setNewPost({ ...newPost, examSessionCode: e.target.value })}
+                      className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
                 </div>
-
-                {/* Sub-selectors */}
-                {newPost.targetType === 'department' && (
-                  <div className="pt-2 space-y-1.5">
-                    <p className="text-[11px] font-bold text-slate-500">Chọn phòng ban nhận tin:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {DEPARTMENTS.map(dept => {
-                        const isSelected = newPost.targetDepartments.includes(dept.id);
-                        return (
-                          <button
-                            key={dept.id}
-                            type="button"
-                            onClick={() => {
-                              const updated = isSelected
-                                ? newPost.targetDepartments.filter(d => d !== dept.id)
-                                : [...newPost.targetDepartments, dept.id];
-                              setNewPost({ ...newPost, targetDepartments: updated });
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                              isSelected ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-white text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            {dept.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {newPost.targetType === 'roles' && (
-                  <div className="pt-2 space-y-1.5">
-                    <p className="text-[11px] font-bold text-slate-500">Chọn vai trò nhận tin:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {roles.map(role => {
-                        const isSelected = newPost.targetRoles.includes(role.name);
-                        return (
-                          <button
-                            key={role._id}
-                            type="button"
-                            onClick={() => {
-                              const updated = isSelected
-                                ? newPost.targetRoles.filter(r => r !== role.name)
-                                : [...newPost.targetRoles, role.name];
-                              setNewPost({ ...newPost, targetRoles: updated });
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                              isSelected ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-white text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            {role.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {newPost.targetType === 'users' && (
-                  <div className="pt-2 space-y-1.5">
-                    <p className="text-[11px] font-bold text-slate-500">Chọn nhân sự chỉ định:</p>
-                    <div className="max-h-36 overflow-y-auto grid grid-cols-2 gap-2 bg-white p-2 rounded-xl border border-slate-200">
-                      {usersList.map(u => {
-                        const isSelected = newPost.targetUsers.includes(u._id);
-                        return (
-                          <div
-                            key={u._id}
-                            onClick={() => {
-                              const updated = isSelected
-                                ? newPost.targetUsers.filter(id => id !== u._id)
-                                : [...newPost.targetUsers, u._id];
-                              setNewPost({ ...newPost, targetUsers: updated });
-                            }}
-                            className={`p-2 rounded-lg cursor-pointer text-xs font-bold flex items-center justify-between border ${
-                              isSelected ? 'bg-indigo-50 border-indigo-300 text-indigo-900' : 'border-slate-100 hover:bg-slate-50'
-                            }`}
-                          >
-                            <span className="truncate">{u.fullName}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase mb-1.5">Nội dung chi tiết</label>
+                <label className="block text-xs font-black text-slate-600 dark:text-slate-300 uppercase mb-1.5">Nội dung chi tiết *</label>
                 <textarea
                   required
                   rows={5}
-                  placeholder="Nhập nội dung chi tiết bài viết..."
+                  placeholder="Nhập nội dung thông báo, thời gian, phòng thi hoặc hướng dẫn làm bài..."
                   value={newPost.content}
                   onChange={e => setNewPost({ ...newPost, content: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-[var(--color-electric)]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase mb-1.5">Link đính kèm / Tài liệu (nếu có)</label>
+                <label className="block text-xs font-black text-slate-600 dark:text-slate-300 uppercase mb-1.5">Link tài liệu đính kèm (nếu có)</label>
                 <input
                   type="url"
                   placeholder="https://drive.google.com/file/d/..."
                   value={newPost.attachmentUrl}
                   onChange={e => setNewPost({ ...newPost, attachmentUrl: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 py-3.5 bg-slate-100 font-bold text-slate-600 rounded-2xl hover:bg-slate-200"
+                  className="flex-1 py-3 bg-slate-100 dark:bg-white/10 font-bold text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-200 dark:hover:bg-white/20 transition-all cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-[2] py-3.5 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 uppercase tracking-widest text-xs disabled:opacity-50"
+                  className="flex-[2] py-3 eg-btn-gradient text-white font-black rounded-2xl shadow-lg uppercase tracking-wider text-xs disabled:opacity-50 cursor-pointer"
                 >
-                  {submitting ? "Đang xuất bản..." : "Xuất Bản Bản Tin"}
+                  {submitting ? "Đang xuất bản..." : "Xuất Bản Thông Báo"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

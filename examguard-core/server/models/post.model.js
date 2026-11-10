@@ -27,6 +27,11 @@ const PostSchema = new mongoose.Schema({
   targetRoles: [{ type: String }], // 'teacher', 'receptionist', 'admin', etc.
   targetUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
+  // Liên kết điều hướng nhanh tới Ca thi / Điểm thi / Buồng thi 3D
+  actionLink: { type: String, default: '' },
+  actionText: { type: String, default: '' },
+  examSessionCode: { type: String, default: '' },
+
   attachments: [{ type: String }], // URLs / Paths
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [CommentSchema]

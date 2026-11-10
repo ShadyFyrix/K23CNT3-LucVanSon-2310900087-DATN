@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
+import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -14,7 +14,7 @@ import {
   Plus, Search, Calendar, Users, User, BookOpen,
   Clock, MapPin, ChevronRight, Trash2, Edit2, Loader2,
   CheckCircle2, Timer, Sparkles, Building2, DoorOpen, ListChecks, Info,
-  Phone
+  Phone, GraduationCap
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { apiClient } from '../api/apiClient';
@@ -295,69 +295,118 @@ export default function Classes() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Quản lý Lớp học</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">Hệ thống quản lý lộ trình và tự động hóa lịch giảng dạy chi tiết.</p>
-        </div>
-        <button onClick={handleOpenCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/20 text-xs uppercase tracking-wider transition-all cursor-pointer active:scale-95">
-          <Plus className="w-4 h-4 stroke-[3]" /> Mở lớp học mới
-        </button>
-      </header>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04 }
+    }
+  };
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } }
+  };
+
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-16 font-sans select-none"
+    >
+      {/* ─── 1. BENTO HERO HEADER STAGE ─── */}
+      <motion.div
+        variants={itemVariants}
+        className="eg-hero-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      >
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full eg-glass-pill shadow-xs">
+            <GraduationCap className="w-3.5 h-3.5 text-[var(--color-azure)]" />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-azure)]">
+              Lộ Trình Học & Ca Thi Tự Động
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Quản Lý <span className="eg-text-gradient">Lớp Học Phần</span>
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+            Hệ thống quản lý lộ trình đào tạo, sĩ số thực tế, tự động hóa thời khóa biểu và danh sách học viên dự thi.
+          </p>
+        </div>
+
+        <button
+          onClick={handleOpenCreate}
+          className="eg-btn-gradient px-5 py-2.5 flex items-center gap-2 text-xs font-bold cursor-pointer active:scale-95 shadow-md shrink-0"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>Mở lớp học mới</span>
+        </button>
+      </motion.div>
+
+      {/* ─── 2. CLASSES GRID ─── */}
       {loading ? (
-        /* TRẠNG THÁI ĐANG TẢI DỮ LIỆU */
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="animate-spin text-blue-500 w-12 h-12" />
+          <Loader2 className="animate-spin text-[var(--color-azure)] w-12 h-12" />
           <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">Đang đồng bộ danh sách lớp học...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {classes.map((cls) => (
-            <div key={cls._id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl dark:hover:border-slate-700 transition-all overflow-hidden group border-b-4 border-b-transparent hover:border-b-blue-600 flex flex-col justify-between">
-              <div className="p-7">
+            <motion.div
+              key={cls._id}
+              variants={itemVariants}
+              whileHover={{ y: -4 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="eg-cyber-card overflow-hidden group flex flex-col justify-between"
+            >
+              <div className="p-6 sm:p-7">
                 {/* 1. HEADER: TRẠNG THÁI & TÊN LỚP */}
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className={cn(
-                        "px-3 py-1 text-[10px] font-black rounded-lg uppercase border shadow-2xs",
-                        cls.status === 'Open' ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/50' :
-                          cls.status === 'Running' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/50' : 
-                          'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                        "px-3 py-1 text-[10px] font-black rounded-full uppercase border shadow-2xs",
+                        cls.status === 'Open' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                          cls.status === 'Running' ? 'bg-[var(--color-electric)]/15 text-[var(--color-azure)] border-[var(--color-azure)]/30' : 
+                          'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
                       )}>
                         {cls.status === 'Open' ? 'Đang tuyển sinh' : cls.status === 'Running' ? 'Đang giảng dạy' : 'Đã kết thúc'}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">ID: {cls._id?.slice(-6)}</span>
+                      <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase">ID: {cls._id?.slice(-6)}</span>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight group-hover:text-[var(--color-azure)] transition-colors line-clamp-1">
                       {cls.name}
                     </h3>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase mt-1 tracking-wide">
+                    <p className="text-xs text-[var(--color-azure)] font-bold uppercase mt-1 tracking-wide line-clamp-1">
                       {cls.course?.name || 'Chưa gán khóa học'}
                     </p>
                   </div>
 
-                  {/* Nút Sửa nhanh */}
+                  {/* Nút Sửa & Xóa nhanh */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditClick(cls)}
-                      className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 rounded-2xl transition-all shadow-xs cursor-pointer"
+                      className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-[#1951fc] hover:text-white rounded-xl transition-all cursor-pointer border border-slate-200/50 dark:border-white/10"
                       title="Chỉnh sửa lớp học"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDeleteClass(cls._id, cls.name)} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 bg-slate-50 dark:bg-slate-800 rounded-2xl transition-all shadow-xs cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    <button
+                      onClick={() => handleDeleteClass(cls._id, cls.name)}
+                      className="p-2.5 text-rose-500 hover:bg-rose-500 hover:text-white bg-rose-500/10 rounded-xl transition-all cursor-pointer border border-rose-500/20"
+                      title="Xóa lớp học"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
                 {/* 2. GRID THÔNG TIN CHI TIẾT */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Giảng viên */}
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                  <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-white/5">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-[var(--color-azure)] shrink-0">
                       <User className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -366,16 +415,16 @@ export default function Classes() {
                     </div>
                   </div>
 
-                  {/* Sĩ số thực tế (Cảnh báo nếu đầy) */}
+                  {/* Sĩ số thực tế */}
                   <div className={cn(
-                    "p-3.5 rounded-2xl flex items-center gap-3.5 border transition-all shadow-xs",
+                    "p-3.5 rounded-2xl flex items-center gap-3.5 border transition-all",
                     (cls.studentCount >= cls.capacity)
-                      ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/40 ring-1 ring-rose-200 dark:ring-rose-800/40"
-                      : "bg-slate-50 dark:bg-slate-950/60 border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                      ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/40"
+                      : "bg-slate-50 dark:bg-white/[0.03] border-slate-200/70 dark:border-white/5"
                   )}>
                     <div className={cn(
-                      "w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs shrink-0",
-                      (cls.studentCount >= cls.capacity) ? "text-rose-500" : "text-teal-600 dark:text-teal-400"
+                      "w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0",
+                      (cls.studentCount >= cls.capacity) ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
                     )}>
                       <Users className="w-4 h-4" />
                     </div>
@@ -391,8 +440,8 @@ export default function Classes() {
                   </div>
 
                   {/* Cơ sở / Địa điểm */}
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                  <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-white/5">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-[var(--color-azure)] shrink-0">
                       <Building2 className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -404,8 +453,8 @@ export default function Classes() {
                   </div>
 
                   {/* Tiến độ học tập */}
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-teal-600 dark:text-teal-400 shrink-0">
+                  <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-white/5">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                       <ListChecks className="w-4 h-4" />
                     </div>
                     <div>
@@ -417,8 +466,8 @@ export default function Classes() {
                   </div>
 
                   {/* Ngày khai giảng */}
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all col-span-full md:col-span-1">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs text-amber-500 shrink-0">
+                  <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl flex items-center gap-3.5 border border-slate-200/70 dark:border-white/5 col-span-full md:col-span-1">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-amber-500 shrink-0">
                       <Calendar className="w-4 h-4" />
                     </div>
                     <div>
@@ -431,17 +480,17 @@ export default function Classes() {
                 </div>
 
                 {/* 3. LỊCH HỌC CỐ ĐỊNH TRONG TUẦN */}
-                <div className="mt-5 p-4 bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40 flex items-start gap-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center shadow-xs text-blue-600 dark:text-blue-400 shrink-0">
+                <div className="mt-5 p-4 bg-[var(--color-electric)]/5 dark:bg-white/[0.02] rounded-2xl border border-[var(--color-azure)]/15 dark:border-white/5 flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-[var(--color-azure)]/20 dark:border-white/10 flex items-center justify-center text-[var(--color-azure)] shrink-0">
                     <Clock className="w-4 h-4" />
                   </div>
                   <div className="flex-1 space-y-1.5">
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em]">Lịch học hàng tuần</p>
+                    <p className="text-[10px] font-black text-[var(--color-azure)] uppercase tracking-wider">Lịch học hàng tuần</p>
                     <div className="flex flex-wrap gap-2">
                       {cls.schedule && cls.schedule.length > 0 ? (
                         cls.schedule.map((s: any, i: number) => (
-                          <div key={i} className="bg-white dark:bg-slate-800 px-3 py-1 rounded-xl border border-blue-100 dark:border-slate-700 shadow-2xs flex items-center gap-1.5 text-xs">
-                            <span className="font-black text-blue-600 dark:text-blue-400">
+                          <div key={i} className="bg-white dark:bg-white/5 px-3 py-1 rounded-full border border-[var(--color-azure)]/20 dark:border-white/10 flex items-center gap-1.5 text-xs">
+                            <span className="font-black text-[var(--color-azure)]">
                               {dayNames.find(d => d.value === s.day)?.label || 'Thứ ?'}:
                             </span>
                             <span className="font-semibold text-slate-700 dark:text-slate-300">{s.startTime} - {s.endTime}</span>
@@ -456,16 +505,16 @@ export default function Classes() {
               </div>
 
               {/* 4. FOOTER: NHÓM HỌC VIÊN & LINK CHI TIẾT */}
-              <div className="px-7 py-4 bg-slate-50/80 dark:bg-slate-950/70 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center group/footer">
+              <div className="px-6 sm:px-7 py-4 bg-slate-50/70 dark:bg-white/[0.02] border-t border-slate-200/60 dark:border-white/10 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-2 overflow-hidden">
                     {Array.from({ length: Math.min(cls.studentCount || 0, 4) }).map((_, i) => (
-                      <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-[10px] font-black text-blue-700 dark:text-blue-300 shadow-xs">
+                      <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-[#0B0C1E] bg-[var(--color-electric)]/20 flex items-center justify-center text-[10px] font-black text-[var(--color-azure)] shadow-xs">
                         {String.fromCharCode(65 + i)}
                       </div>
                     ))}
                     {(cls.studentCount > 4) && (
-                      <div className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-slate-800 dark:bg-slate-700 flex items-center justify-center text-[10px] font-black text-white shadow-xs">
+                      <div className="w-7 h-7 rounded-full border-2 border-white dark:border-[#0B0C1E] bg-slate-800 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-white shadow-xs">
                         +{cls.studentCount - 4}
                       </div>
                     )}
@@ -479,15 +528,15 @@ export default function Classes() {
 
                 <button
                   onClick={() => handleViewMembers(cls)}
-                  className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-wider hover:text-blue-700 dark:hover:text-blue-300 hover:gap-2 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 text-[var(--color-azure)] font-black text-xs uppercase tracking-wider hover:underline cursor-pointer"
                 >
-                  Danh sách học viên
+                  <span>Danh sách học viên</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* MODAL FORM TẠO/SỬA */}
@@ -649,8 +698,8 @@ export default function Classes() {
             <button
               type="submit"
               className={cn(
-                "flex-[2] py-3 text-white rounded-2xl font-black shadow-xl transition-all uppercase tracking-widest text-xs cursor-pointer active:scale-95",
-                shouldRegenerate ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20" : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+                "flex-[2] py-3 text-white rounded-2xl font-black shadow-md transition-all uppercase tracking-widest text-xs cursor-pointer active:scale-95",
+                shouldRegenerate ? "bg-rose-600 hover:bg-rose-700" : "eg-btn-gradient"
               )}
             >
               {editingClass
@@ -665,21 +714,21 @@ export default function Classes() {
       <Modal isOpen={isScheduleViewOpen} onClose={() => setIsScheduleViewOpen(false)} title={`Lịch dạy: ${editingClass?.name}`}>
         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           {currentClassSchedules.map((s) => (
-            <div key={s._id} className="flex gap-4 items-center p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700 transition-all">
+            <div key={s._id} className="flex gap-4 items-center p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-[var(--color-azure)]/50 transition-all">
               <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700 shadow-xs">
                 <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase leading-none">B.</span>
-                <span className="text-sm font-black text-blue-600 dark:text-blue-400">{s.sessionNumber}</span>
+                <span className="text-sm font-black text-[var(--color-azure)]">{s.sessionNumber}</span>
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-slate-900 dark:text-white text-xs">
                   {new Date(s.startTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </h4>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mt-0.5">
-                  <Clock className="w-3 h-3 text-teal-500" /> {new Date(s.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(s.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  <Clock className="w-3 h-3 text-[var(--color-azure)]" /> {new Date(s.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(s.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               <div className="text-right">
-                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border ${s.status === 'Scheduled' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' : 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800/40'}`}>
+                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border ${s.status === 'Scheduled' ? 'bg-[var(--color-electric)]/15 text-[var(--color-azure)] border-[var(--color-azure)]/30' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'}`}>
                   {s.status === 'Scheduled' ? 'Sắp dạy' : 'Đã dạy'}
                 </span>
                 <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-1 flex items-center justify-end gap-1 uppercase">
@@ -704,10 +753,10 @@ export default function Classes() {
       >
         <div className="space-y-6">
           {/* Khu vực tìm kiếm & thêm học viên */}
-          <div className="bg-blue-50/60 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/40">
-            <label className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 mb-2 block">Thêm học viên mới</label>
+          <div className="bg-[var(--color-electric)]/10 p-4 rounded-2xl border border-[var(--color-azure)]/30">
+            <label className="text-[10px] font-black uppercase text-[var(--color-azure)] mb-2 block">Thêm học viên mới</label>
             <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-blue-400 pointer-events-none" />
+              <Search className="absolute left-3 top-3 w-4 h-4 text-[var(--color-azure)] pointer-events-none" />
               <input
                 placeholder="Tìm tên hoặc email học viên..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none text-sm placeholder-slate-400"
@@ -816,6 +865,6 @@ export default function Classes() {
           </div>
         </div>
       </Modal>
-    </div>
+    </motion.div>
   );
 }
